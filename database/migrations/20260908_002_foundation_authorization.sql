@@ -39,6 +39,10 @@ CREATE TABLE user_role_assignments (
     KEY idx_assignment_user_school (user_id, school_id, status),
     CONSTRAINT fk_assignment_user
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT,
+    CONSTRAINT fk_assignment_membership
+      FOREIGN KEY (user_id, school_id)
+      REFERENCES school_memberships(user_id, school_id)
+      ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_assignment_school
       FOREIGN KEY (school_id) REFERENCES schools(id) ON DELETE RESTRICT,
     CONSTRAINT fk_assignment_role
