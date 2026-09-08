@@ -1,0 +1,180 @@
+@import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --info-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    --excel-green: #217346;
+    --excel-bg: #e6f2eb;
+    --bg-color: #f3f4f6;
+    --card-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --border-color: #d1d5db;
+}
+
+body, html {
+    font-family: 'Prompt', sans-serif;
+    background-color: #f8fafc;
+    background-image: radial-gradient(at 40% 20%, hsla(250, 100%, 74%, 0.1) 0px, transparent 50%),
+                      radial-gradient(at 80% 0%, hsla(189, 100%, 56%, 0.1) 0px, transparent 50%),
+                      radial-gradient(at 0% 50%, hsla(340, 100%, 76%, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+    color: var(--text-main);
+    min-height: 100vh;
+}
+
+/* Outer Card container (Still Premium) */
+.glass-card {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.05), 0 5px 15px -3px rgba(0, 0, 0, 0.02);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Header Text */
+.head-title {
+    font-weight: 700;
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.5px;
+}
+
+/* Badges */
+.badge-custom {
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-weight: 500;
+    box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    font-size: 0.85rem;
+}
+.badge-primary-custom { background: var(--primary-gradient); color: white; border: none; }
+.badge-info-custom { background: var(--info-gradient); color: white; border: none; }
+.badge-success-custom { background: var(--success-gradient); color: white; border: none; }
+
+/* -------------------------------------------
+   Excel-like Rigid Table Styling 
+------------------------------------------- */
+.table-grading {
+    background: white;
+    margin-bottom: 0;
+    border-collapse: collapse;
+}
+
+/* Table Borders */
+.table-grading th, .table-grading td {
+    border: 1px solid var(--border-color) !important;
+    vertical-align: middle;
+}
+
+/* Table Headers */
+.table-grading thead th {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    font-size: 0.85rem;
+    letter-spacing: 0.2px;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    font-weight: 600;
+}
+
+/* Hovering Row */
+.table-grading tbody tr:hover td.static-cell {
+    background-color: #f9fafb !important;
+}
+
+/* Static cells (ID, Name, Total Score, Grade) padding */
+.table-grading td.static-cell {
+    padding: 8px 12px !important;
+}
+
+/* Remove <td> padding for inputs so input fills perfectly */
+.table-grading td.input-cell {
+    padding: 0 !important;
+    position: relative;
+    background: #fff;
+}
+
+/* The Inputs themselves */
+.table-grading input[type="number"] {
+    width: 100%;
+    height: 100%;
+    min-height: 40px;
+    border: none; /* No individual borders, relying on table borders */
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+    border-radius: 0; /* Sharp corners */
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--text-main);
+    display: block;
+    cursor: cell;
+}
+
+/* When typing inside */
+.table-grading input[type="number"]:focus {
+    outline: none;
+    background: white;
+    box-shadow: inset 0 0 0 2px var(--excel-green) !important;
+    z-index: 10;
+    position: relative;
+    cursor: text;
+}
+
+/* Selected cells from dragging */
+.selected-cell {
+    background-color: var(--excel-bg) !important; 
+    box-shadow: inset 0 0 0 1px var(--excel-green) !important;
+    z-index: 5;
+    position: relative;
+    color: var(--excel-green) !important;
+}
+
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+    -webkit-appearance: none; margin: 0; 
+}
+
+/* Score Columns */
+.total-col {
+    font-weight: 600;
+    font-size: 1.05rem;
+    background: #f9fafb;
+    color: #374151;
+}
+.grade-col {
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+
+/* Grade Colors */
+.text-excellent { color: #059669; }
+.text-good { color: #2563eb; }
+.text-pass { color: #d97706; }
+.text-fail { color: #dc2626; }
+.bg-excellent { background-color: rgba(16, 185, 129, 0.1); color: #059669; }
+.bg-good { background-color: rgba(59, 130, 246, 0.1); color: #1d4ed8; }
+.bg-pass { background-color: rgba(245, 158, 11, 0.1); color: #b45309; }
+.bg-fail { background-color: rgba(239, 68, 68, 0.1); color: #b91c1c; }
+
+/* Action Button */
+.btn-save-custom {
+    background: var(--success-gradient);
+    border: none;
+    color: white;
+    padding: 10px 24px;
+    border-radius: 8px; /* More standard button */
+    font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+    transition: all 0.2s ease;
+}
+.btn-save-custom:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 8px -1px rgba(16, 185, 129, 0.3);
+    color: white;
+}
