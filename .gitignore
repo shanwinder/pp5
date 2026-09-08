@@ -1,0 +1,6 @@
+htdocs/vendor/
+htdocs/config/local.php
+htdocs/storage/logs/*
+htdocs/storage/temp/*
+.DS_Store
+.phpunit.result.cache
