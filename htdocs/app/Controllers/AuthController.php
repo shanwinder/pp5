@@ -7,6 +7,7 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
 use App\Services\AuthenticationService;
+use App\Support\AccessContext;
 use App\Support\Csrf;
 use App\Support\View;
 use DomainException;
@@ -44,10 +45,19 @@ final class AuthController
 
         $this->session->regenerate();
         $this->session->put('user_id', $result['user_id']);
-        $this->session->put('school_id', $result['school_id']);
-        $this->session->put('school_membership_id', $result['school_membership_id']);
+        $this->session->put('context_type', $result['context_type']);
         $this->session->put('display_name', $result['display_name']);
         $this->session->put('last_activity', time());
+
+        if ($result['context_type'] === AccessContext::SYSTEM) {
+            $this->session->forget('school_id');
+            $this->session->forget('school_membership_id');
+
+            return Response::redirect('/system/schools');
+        }
+
+        $this->session->put('school_id', $result['school_id']);
+        $this->session->put('school_membership_id', $result['school_membership_id']);
 
         return Response::redirect('/dashboard');
     }

@@ -10,6 +10,7 @@ use App\Http\Response;
 use App\Http\Session;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\SchoolContextMiddleware;
+use App\Repositories\AuthorizationRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
 use App\Repositories\UserRepository;
@@ -65,7 +66,7 @@ final class Application
         $session = new Session();
         $csrf = new Csrf();
         $controller = new AuthController(
-            new AuthenticationService($users, $memberships),
+            new AuthenticationService($users, $memberships, new AuthorizationRepository($pdo)),
             $session,
             $csrf
         );

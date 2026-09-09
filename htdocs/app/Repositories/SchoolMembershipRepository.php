@@ -9,6 +9,19 @@ final class SchoolMembershipRepository
 {
     public function __construct(private PDO $pdo) {}
 
+    public function findActiveRowsForUser(int $userId): array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT id, user_id, school_id
+             FROM school_memberships
+             WHERE user_id = ? AND status = 'ACTIVE'
+             ORDER BY id"
+        );
+        $statement->execute([$userId]);
+
+        return $statement->fetchAll();
+    }
+
     public function findActiveForUser(int $userId): array
     {
         $statement = $this->pdo->prepare(

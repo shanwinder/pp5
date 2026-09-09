@@ -43,6 +43,8 @@ final class SchoolIsolationTest extends TestCase
             'INSERT INTO school_memberships (user_id, school_id) VALUES (?, ?)',
             [$this->userId, $this->schoolId]
         );
+        $this->pdo->prepare("INSERT INTO user_role_assignments (user_id, school_id, role_id)
+            SELECT ?, ?, id FROM roles WHERE code = 'SCHOOL_ADMIN'")->execute([$this->userId, $this->schoolId]);
         $this->app = new Application($this->pdo);
     }
 
@@ -164,9 +166,11 @@ final class SchoolIsolationTest extends TestCase
     public function test_login_stores_only_server_resolved_identity_and_activity(): void
     {
         $before = time();
-        $this->login(['school_id' => $this->otherSchoolId, 'school_membership_id' => 0]);
+        $this->login(['school_id' => $this->otherSchoolId, 'school_membership_id' => 0, 'context_type' => 'SYSTEM'],
+            ['school_id' => $this->otherSchoolId, 'school_membership_id' => 0, 'context_type' => 'SYSTEM']);
 
         self::assertSame($this->userId, $_SESSION['user_id']);
+        self::assertSame('SCHOOL', $_SESSION['context_type'] ?? null);
         self::assertSame($this->schoolId, $_SESSION['school_id']);
         self::assertSame($this->membershipId, $_SESSION['school_membership_id']);
         self::assertSame('ครูทดสอบ', $_SESSION['display_name']);
@@ -248,20 +252,91 @@ final class SchoolIsolationTest extends TestCase
         self::assertSame('Internal Server Error', $response->body());
     }
 
-    private function login(array $extra = []): void
+    #[DataProvider('nonSchoolContexts')]
+    public function test_non_school_context_cannot_use_injected_valid_school_ids(mixed $context): void
+    {
+        $this->login();
+        $_SESSION['context_type'] = $context;
+
+        $response = $this->request('GET', '/dashboard');
+
+        self::assertSame(403, $response->status());
+        self::assertStringContainsString('ไม่มีสิทธิ์เข้าใช้งาน', $response->body());
+        self::assertStringNotContainsString('โรงเรียน A', $response->body());
+    }
+
+    public static function nonSchoolContexts(): array
+    {
+        return ['system' => ['SYSTEM'], 'missing' => [null], 'unknown' => ['UNKNOWN'], 'malformed' => [[]]];
+    }
+
+    public function test_system_login_clears_stale_school_keys_and_ignores_browser_context(): void
+    {
+        $this->login();
+        $systemUserId = $this->insert('INSERT INTO users (username, password_hash, display_name) VALUES (?, ?, ?)',
+            ['isolation-task3-system', password_hash('system-password', PASSWORD_DEFAULT), 'System Admin']);
+        $this->pdo->prepare("INSERT INTO user_role_assignments (user_id, school_id, role_id)
+            SELECT ?, NULL, id FROM roles WHERE code = 'SYSTEM_ADMIN'")->execute([$systemUserId]);
+        $before = time();
+        $forged = ['context_type' => 'SCHOOL', 'school_id' => $this->schoolId, 'school_membership_id' => $this->membershipId];
+
+        $response = $this->request('POST', '/login', array_merge($forged, [
+            '_token' => $_SESSION['csrf_token'],
+            'username' => 'isolation-task3-system',
+            'password' => 'system-password',
+        ]), $forged);
+
+        self::assertEquals(Response::redirect('/system/schools'), $response);
+        self::assertSame($systemUserId, $_SESSION['user_id']);
+        self::assertSame('SYSTEM', $_SESSION['context_type'] ?? null);
+        self::assertSame('System Admin', $_SESSION['display_name']);
+        self::assertArrayNotHasKey('school_id', $_SESSION);
+        self::assertArrayNotHasKey('school_membership_id', $_SESSION);
+        self::assertIsInt($_SESSION['last_activity']);
+        self::assertGreaterThanOrEqual($before, $_SESSION['last_activity']);
+        self::assertLessThanOrEqual(time(), $_SESSION['last_activity']);
+        self::assertArrayHasKey('csrf_token', $_SESSION);
+        self::assertSame(403, $this->request('GET', '/dashboard')->status());
+
+        $this->login();
+        self::assertSame('SCHOOL', $_SESSION['context_type']);
+        self::assertSame($this->schoolId, $_SESSION['school_id']);
+        self::assertSame($this->membershipId, $_SESSION['school_membership_id']);
+    }
+
+    public function test_browser_school_cannot_choose_between_two_active_membership_rows(): void
+    {
+        $this->insert('INSERT INTO school_memberships (user_id, school_id) VALUES (?, ?)', [$this->userId, $this->otherSchoolId]);
+        $this->pdo->prepare('UPDATE schools SET status = ? WHERE id = ?')->execute(['SUSPENDED', $this->otherSchoolId]);
+        $forged = ['school_id' => $this->schoolId, 'school_membership_id' => $this->membershipId, 'context_type' => 'SCHOOL'];
+
+        $response = $this->request('POST', '/login', array_merge($forged, [
+            '_token' => (new Csrf())->token(new Session()),
+            'username' => 'isolation-task6-user',
+            'password' => 'correct-password',
+        ]), $forged);
+
+        self::assertSame(422, $response->status());
+        self::assertArrayNotHasKey('user_id', $_SESSION);
+        self::assertArrayNotHasKey('context_type', $_SESSION);
+        self::assertArrayNotHasKey('school_id', $_SESSION);
+        self::assertArrayNotHasKey('school_membership_id', $_SESSION);
+    }
+
+    private function login(array $extra = [], array $query = []): void
     {
         $response = $this->request('POST', '/login', array_merge([
             '_token' => (new Csrf())->token(new Session()),
             'username' => 'isolation-task6-user',
             'password' => 'correct-password',
-        ], $extra));
+        ], $extra), $query);
 
         self::assertEquals(Response::redirect('/dashboard'), $response);
     }
 
-    private function request(string $method, string $path, array $post = []): Response
+    private function request(string $method, string $path, array $post = [], array $query = []): Response
     {
-        return $this->app->handle(new Request($method, $path, [], $post, []));
+        return $this->app->handle(new Request($method, $path, $query, $post, []));
     }
 
     private function insert(string $sql, array $parameters): int

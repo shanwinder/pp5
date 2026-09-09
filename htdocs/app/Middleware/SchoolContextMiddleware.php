@@ -8,6 +8,7 @@ use App\Http\Response;
 use App\Http\Session;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
+use App\Support\AccessContext;
 use App\Support\View;
 
 final class SchoolContextMiddleware
@@ -20,6 +21,10 @@ final class SchoolContextMiddleware
 
     public function handle(Request $request, callable $next): Response
     {
+        if ($this->session->get('context_type') !== AccessContext::SCHOOL) {
+            return new Response(View::render('errors/403'), 403);
+        }
+
         $userId = $this->session->get('user_id');
         $schoolId = $this->session->get('school_id');
         $membershipId = $this->session->get('school_membership_id');

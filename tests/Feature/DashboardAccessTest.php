@@ -187,6 +187,7 @@ final class DashboardAccessTest extends TestCase
     {
         $_SESSION = [
             'user_id' => $this->userId,
+            'context_type' => 'SCHOOL',
             'school_id' => $this->schoolId,
             'school_membership_id' => $this->membershipId,
             'display_name' => 'ครูทดสอบ Dashboard',
