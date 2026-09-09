@@ -364,6 +364,71 @@ final class SchoolUserAdministrationTest extends TestCase
         self::assertSame($before, $this->snapshot());
     }
 
+    #[DataProvider('staleRoleDefinitions')]
+    public function test_replacement_deactivates_stale_school_wide_assignments_without_touching_other_scopes(string $roleStatus, string $roleScope): void
+    {
+        $viewerId = $this->row('SELECT id FROM user_role_assignments WHERE user_id = ?', [$this->targetId])['id'];
+        $executiveId = $this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE');
+        $this->insert('INSERT INTO school_memberships (user_id, school_id, status) VALUES (?, ?, ?)',
+            [$this->targetId, $this->foreignSchoolId, 'SUSPENDED']);
+        $unrelatedIds = [
+            $this->assignment($this->targetId, $this->foreignSchoolId, 'EXECUTIVE'),
+            $this->assignment($this->foreignUserId, $this->foreignSchoolId, 'EXECUTIVE'),
+            $this->assignment($this->actorId, $this->schoolId, 'EXECUTIVE'),
+            $this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE', 'ACTIVE', 1),
+            $this->assignment($this->targetId, null, 'EXECUTIVE'),
+        ];
+        $unrelated = [];
+        foreach ($unrelatedIds as $id) {
+            $unrelated[$id] = $this->row('SELECT * FROM user_role_assignments WHERE id = ?', [$id]);
+        }
+        $this->pdo->prepare("UPDATE roles SET status = ?, scope_type = ? WHERE code = 'EXECUTIVE'")
+            ->execute([$roleStatus, $roleScope]);
+        $repository = new RoleAssignmentRepository($this->pdo);
+        self::assertSame(['VIEWER'], $repository->activeSchoolRoleCodes($this->targetId, $this->schoolId));
+
+        $service = $this->service();
+        $service->replaceRoles($this->schoolId, $this->actorId, $this->targetId, ['VIEWER'], '192.0.2.6');
+
+        self::assertSame('INACTIVE', $this->row('SELECT status FROM user_role_assignments WHERE id = ?', [$executiveId])['status']);
+        self::assertSame('ACTIVE', $this->row('SELECT status FROM user_role_assignments WHERE id = ?', [$viewerId])['status']);
+        self::assertSame([$viewerId, $executiveId], array_column($this->rows(
+            'SELECT id FROM user_role_assignments WHERE user_id = ? AND school_id = ? AND academic_year_id IS NULL ORDER BY id',
+            [$this->targetId, $this->schoolId]
+        ), 'id'));
+        foreach ($unrelated as $id => $assignment) {
+            self::assertSame($assignment, $this->row('SELECT * FROM user_role_assignments WHERE id = ?', [$id]));
+        }
+        $audit = $this->row('SELECT * FROM audit_logs');
+        self::assertSame('SCHOOL_ROLES_CHANGED', $audit['action']);
+        self::assertSame(['role_codes' => ['VIEWER']], json_decode($audit['old_value'], true, 512, JSON_THROW_ON_ERROR));
+        self::assertSame(['role_codes' => ['VIEWER']], json_decode($audit['new_value'], true, 512, JSON_THROW_ON_ERROR));
+        $this->assertAudit($audit, $this->targetId, 'users');
+        $this->assertNoSecrets($audit);
+        foreach (['SQLSTATE', 'SELECT ', 'UPDATE ', 'Stack trace'] as $unsafe) {
+            self::assertStringNotContainsString($unsafe, json_encode($audit, JSON_THROW_ON_ERROR));
+        }
+
+        // The first cleanup is audited; repeating it makes no assignment or audit changes.
+        $afterCleanup = $this->snapshot();
+        $service->replaceRoles($this->schoolId, $this->actorId, $this->targetId, ['VIEWER'], '192.0.2.6');
+        self::assertSame($afterCleanup, $this->snapshot());
+
+        // Restoring the definition must not silently restore the removed authorization.
+        $this->pdo->prepare("UPDATE roles SET status = 'ACTIVE', scope_type = 'SCHOOL' WHERE code = 'EXECUTIVE'")->execute();
+        self::assertSame(['VIEWER'], $repository->activeSchoolRoleCodes($this->targetId, $this->schoolId));
+        $service->replaceRoles($this->schoolId, $this->actorId, $this->targetId, ['EXECUTIVE', 'VIEWER'], '192.0.2.6');
+        self::assertSame('ACTIVE', $this->row('SELECT status FROM user_role_assignments WHERE id = ?', [$executiveId])['status']);
+        self::assertSame(['EXECUTIVE', 'VIEWER'], $repository->activeSchoolRoleCodes($this->targetId, $this->schoolId));
+        self::assertCount(2, $this->rows('SELECT id FROM user_role_assignments WHERE user_id = ? AND school_id = ? AND academic_year_id IS NULL',
+            [$this->targetId, $this->schoolId]));
+    }
+
+    public static function staleRoleDefinitions(): array
+    {
+        return ['inactive role definition' => ['INACTIVE', 'SCHOOL'], 'scope drift to system' => ['ACTIVE', 'SYSTEM']];
+    }
+
     public function test_actor_can_add_own_roles_but_cannot_remove_own_school_admin(): void
     {
         $before = $this->snapshot();

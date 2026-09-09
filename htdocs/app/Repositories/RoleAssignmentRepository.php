@@ -26,6 +26,19 @@ final class RoleAssignmentRepository
         return $statement->fetchAll(PDO::FETCH_COLUMN);
     }
 
+    /** ACTIVE school-wide assignments, independent of the role definition's status or scope. */
+    public function activeSchoolWideRoleIds(int $userId, int $schoolId): array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT DISTINCT role_id FROM user_role_assignments
+             WHERE user_id = ? AND school_id = ? AND academic_year_id IS NULL AND status = 'ACTIVE'
+             ORDER BY role_id"
+        );
+        $statement->execute([$userId, $schoolId]);
+
+        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+    }
+
     public function activateSchoolRole(int $userId, int $schoolId, int $roleId, int $assignedBy): void
     {
         $ownsTransaction = !$this->pdo->inTransaction();

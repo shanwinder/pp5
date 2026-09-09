@@ -122,15 +122,15 @@ final class SchoolUserAdministrationService
                 throw new DomainException('ไม่สามารถนำบทบาทผู้ดูแลโรงเรียนของตนเองออกได้');
             }
             $oldCodes = $this->assignments->activeSchoolRoleCodes($userId, $schoolId);
-            if ($oldCodes === $roleCodes) {
+            $removedRoleIds = array_diff(
+                $this->assignments->activeSchoolWideRoleIds($userId, $schoolId),
+                array_column($desiredRoles, 'id')
+            );
+            if ($oldCodes === $roleCodes && $removedRoleIds === []) {
                 return;
             }
-            foreach (array_diff($oldCodes, $roleCodes) as $code) {
-                $role = $this->roles->findActiveByCode($code);
-                if ($role === null) {
-                    throw new DomainException('ไม่พบบทบาทโรงเรียนที่ต้องการแก้ไข');
-                }
-                $this->assignments->deactivateSchoolRole($userId, $schoolId, (int) $role['id']);
+            foreach ($removedRoleIds as $roleId) {
+                $this->assignments->deactivateSchoolRole($userId, $schoolId, $roleId);
             }
             foreach ($desiredRoles as $role) {
                 $this->assignments->activateSchoolRole($userId, $schoolId, (int) $role['id'], $actorUserId);
