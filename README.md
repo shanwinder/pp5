@@ -44,8 +44,18 @@ Redis, cron หรือ database triggers
    `php tools/migrate.php --database=pp5` ตัว runner บันทึกไฟล์ที่ทำแล้วไว้ใน
    `schema_migrations` จึงรันซ้ำได้โดยไม่ apply migration เดิมซ้ำ
 
-7. Run seed SQL เมื่อมีการเพิ่ม role/permission seed ปัจจุบันยังไม่มี seed
-   หรือบัญชีเริ่มต้นใน repository อย่าสมมติว่ามี default login
+7. Run role/permission seeds สำหรับ development และ automated tests:
+
+   ```sh
+   php tools/seed.php
+   php tools/seed.php --database=pp5_test
+   ```
+
+   Seed สร้าง 7 roles และ 9 permissions ของ Milestone 2 โดย SYSTEM_ADMIN ได้
+   3 SYSTEM permissions และ SCHOOL_ADMIN ได้ 6 SCHOOL permissions ส่วน role อื่น
+   ยังไม่มี permissions ของ milestone นี้ ตัว runner บันทึกชื่อไฟล์ใน
+   `seed_migrations` และข้ามไฟล์ที่ apply แล้วเมื่อรันซ้ำ
+   Seeds ไม่มี default username/password และไม่สร้างบัญชีผู้ใช้หรือ default login
 8. Run PHPUnit:
 
    ```sh
@@ -53,7 +63,7 @@ Redis, cron หรือ database triggers
    ```
 
    Feature tests ใช้ `pp5_test` และ rollback fixtures หลังแต่ละ test
-   ต้องเปิด MAMP MySQL และ migrate `pp5_test` ก่อน
+   ต้องเปิด MAMP MySQL แล้ว migrate และ seed `pp5_test` ก่อน
 9. เปิด MAMP site ที่ตั้งไว้ เช่น `http://localhost:8888/` และ `/login`
    การทดสอบผ่าน browser ใช้ฐาน `pp5` จาก local config
 
