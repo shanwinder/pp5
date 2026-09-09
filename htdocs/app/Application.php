@@ -5,6 +5,7 @@ namespace App;
 
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
+use App\Controllers\SchoolUserController;
 use App\Controllers\SystemSchoolController;
 use App\Http\Request;
 use App\Http\Response;
@@ -21,6 +22,7 @@ use App\Repositories\SchoolRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthenticationService;
 use App\Services\AuthorizationService;
+use App\Services\SchoolUserAdministrationService;
 use App\Services\SystemSchoolAdministrationService;
 use App\Support\AccessContext;
 use App\Support\Csrf;
@@ -87,7 +89,17 @@ final class Application
             $session,
             $csrf
         );
-        $routeSchoolId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $schoolUsers = new SchoolUserController(
+            new SchoolUserAdministrationService($pdo, $users, $memberships,
+                new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo), $authorization),
+            $memberships,
+            new RoleRepository($pdo),
+            new RoleAssignmentRepository($pdo),
+            $session,
+            $csrf
+        );
+        $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
             'showLogin' => static fn (Request $request): Response => $controller->showLogin(),
             'login' => static fn (Request $request): Response => $controller->login($request),
@@ -96,7 +108,15 @@ final class Application
             'system.schools.index' => static fn (Request $request): Response => $systemSchools->index(),
             'system.schools.create' => static fn (Request $request): Response => $systemSchools->create(),
             'system.schools.store' => static fn (Request $request): Response => $systemSchools->store($request),
-            'system.schools.changeStatus' => static fn (Request $request): Response => $systemSchools->changeStatus($request, $routeSchoolId === false ? 0 : $routeSchoolId),
+            'system.schools.changeStatus' => static fn (Request $request): Response => $systemSchools->changeStatus($request, $routeId),
+            'admin.users.index' => static fn (Request $request): Response => $schoolUsers->index(),
+            'admin.users.create' => static fn (Request $request): Response => $schoolUsers->create(),
+            'admin.users.store' => static fn (Request $request): Response => $schoolUsers->store($request),
+            'admin.users.edit' => static fn (Request $request): Response => $schoolUsers->edit($routeId),
+            'admin.users.updateProfile' => static fn (Request $request): Response => $schoolUsers->updateProfile($request, $routeId),
+            'admin.users.changeMembershipStatus' => static fn (Request $request): Response => $schoolUsers->changeMembershipStatus($request, $routeId),
+            'admin.users.replaceRoles' => static fn (Request $request): Response => $schoolUsers->replaceRoles($request, $routeId),
+            'admin.users.resetPassword' => static fn (Request $request): Response => $schoolUsers->resetPassword($request, $routeId),
         };
 
         if ($handler['protected'] ?? false) {

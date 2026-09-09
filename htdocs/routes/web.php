@@ -26,4 +26,36 @@ return static function (RouteCollector $r): void {
         'action' => 'system.schools.changeStatus', 'protected' => true,
         'context' => AccessContext::SYSTEM, 'permission' => 'SYSTEM_SCHOOL_STATUS_MANAGE',
     ]);
+    $r->addRoute('GET', '/admin/users', [
+        'action' => 'admin.users.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_USER_VIEW',
+    ]);
+    $r->addRoute('GET', '/admin/users/create', [
+        'action' => 'admin.users.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_USER_CREATE',
+    ]);
+    $r->addRoute('POST', '/admin/users', [
+        'action' => 'admin.users.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_USER_CREATE',
+    ]);
+    $r->addRoute('GET', '/admin/users/{id:\d+}/edit', [
+        'action' => 'admin.users.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_USER_VIEW',
+    ]);
+    $r->addRoute('POST', '/admin/users/{id:\d+}/profile', [
+        'action' => 'admin.users.updateProfile', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_USER_UPDATE',
+    ]);
+    $r->addRoute('POST', '/admin/users/{id:\d+}/membership-status', [
+        'action' => 'admin.users.changeMembershipStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_MEMBERSHIP_STATUS_MANAGE',
+    ]);
+    $r->addRoute('POST', '/admin/users/{id:\d+}/roles', [
+        'action' => 'admin.users.replaceRoles', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_ROLE_MANAGE',
+    ]);
+    $r->addRoute('POST', '/admin/users/{id:\d+}/reset-password', [
+        'action' => 'admin.users.resetPassword', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_PASSWORD_RESET',
+    ]);
 };
