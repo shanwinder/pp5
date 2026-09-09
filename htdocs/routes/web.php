@@ -8,5 +8,5 @@ return static function (RouteCollector $r): void {
     $r->addRoute('GET', '/login', ['action' => 'showLogin']);
     $r->addRoute('POST', '/login', ['action' => 'login']);
     $r->addRoute('POST', '/logout', ['action' => 'logout']);
-    $r->addRoute('GET', '/dashboard', ['action' => 'dashboard', 'protected' => true]);
+    $r->addRoute('GET', '/dashboard', ['action' => 'dashboard.index', 'protected' => true]);
 };

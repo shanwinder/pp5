@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App;
 
 use App\Controllers\AuthController;
+use App\Controllers\DashboardController;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -15,6 +16,7 @@ use App\Repositories\UserRepository;
 use App\Services\AuthenticationService;
 use App\Support\Csrf;
 use App\Support\Database;
+use App\Support\View;
 use FastRoute\Dispatcher;
 use PDO;
 use Throwable;
@@ -40,7 +42,7 @@ final class Application
         $routeInfo = $dispatcher->dispatch($request->method(), $request->path());
 
         if ($routeInfo[0] === Dispatcher::NOT_FOUND) {
-            return new Response('Not Found', 404);
+            return new Response(View::render('errors/404'), 404);
         }
 
         if ($routeInfo[0] === Dispatcher::METHOD_NOT_ALLOWED) {
@@ -61,17 +63,18 @@ final class Application
         $memberships = new SchoolMembershipRepository($pdo);
         $schools = new SchoolRepository($pdo);
         $session = new Session();
+        $csrf = new Csrf();
         $controller = new AuthController(
             new AuthenticationService($users, $memberships),
             $session,
-            new Csrf()
+            $csrf
         );
+        $dashboard = new DashboardController($session, $schools, $csrf);
         $next = match ($handler['action']) {
             'showLogin' => static fn (Request $request): Response => $controller->showLogin(),
             'login' => static fn (Request $request): Response => $controller->login($request),
             'logout' => static fn (Request $request): Response => $controller->logout($request),
-            // Task 6 protected endpoint; dashboard content is added in Task 7.
-            'dashboard' => static fn (Request $request): Response => new Response('PP5'),
+            'dashboard.index' => static fn (Request $request): Response => $dashboard->index(),
         };
 
         if ($handler['protected'] ?? false) {

@@ -61,7 +61,7 @@ final class SchoolIsolationTest extends TestCase
         $response = $this->request('GET', '/dashboard');
 
         self::assertSame(200, $response->status());
-        self::assertSame('PP5', $response->body());
+        self::assertStringContainsString('โรงเรียน A', $response->body());
     }
 
     public function test_tampered_school_session_is_forbidden(): void
