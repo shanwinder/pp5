@@ -32,4 +32,14 @@ final class UserRepository
         );
         $statement->execute(['id' => $userId]);
     }
+
+    public function isActiveById(int $userId): bool
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT id FROM users WHERE id = :id AND status = 'ACTIVE' LIMIT 1"
+        );
+        $statement->execute(['id' => $userId]);
+
+        return $statement->fetchColumn() !== false;
+    }
 }
