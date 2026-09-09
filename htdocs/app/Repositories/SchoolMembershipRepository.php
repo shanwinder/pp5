@@ -9,6 +9,16 @@ final class SchoolMembershipRepository
 {
     public function __construct(private PDO $pdo) {}
 
+    public function create(int $userId, int $schoolId, ?int $createdBy): int
+    {
+        $statement = $this->pdo->prepare(
+            "INSERT INTO school_memberships (user_id, school_id, created_by, status) VALUES (?, ?, ?, 'ACTIVE')"
+        );
+        $statement->execute([$userId, $schoolId, $createdBy]);
+
+        return (int) $this->pdo->lastInsertId();
+    }
+
     public function findActiveRowsForUser(int $userId): array
     {
         $statement = $this->pdo->prepare(

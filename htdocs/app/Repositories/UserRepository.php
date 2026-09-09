@@ -4,10 +4,52 @@ declare(strict_types=1);
 namespace App\Repositories;
 
 use PDO;
+use PDOException;
+use DomainException;
 
 final class UserRepository
 {
     public function __construct(private PDO $pdo) {}
+
+    public function findByUsername(string $username): ?array
+    {
+        $statement = $this->pdo->prepare('SELECT id, username, email, display_name, status FROM users WHERE username = ? LIMIT 1');
+        $statement->execute([$username]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    public function findByEmail(string $email): ?array
+    {
+        $statement = $this->pdo->prepare('SELECT id, username, email, display_name, status FROM users WHERE email = ? LIMIT 1');
+        $statement->execute([$email]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    public function create(
+        string $username,
+        ?string $email,
+        #[\SensitiveParameter] string $passwordHash,
+        string $displayName
+    ): int
+    {
+        try {
+            $statement = $this->pdo->prepare(
+                "INSERT INTO users (username, email, password_hash, display_name, status) VALUES (?, ?, ?, ?, 'ACTIVE')"
+            );
+            $statement->execute([$username, $email, $passwordHash, $displayName]);
+        } catch (PDOException $exception) {
+            if (($exception->errorInfo[1] ?? null) === 1062) {
+                throw new DomainException('ชื่อผู้ใช้หรืออีเมลนี้ถูกใช้งานแล้ว กรุณาใช้ข้อมูลอื่น');
+            }
+            throw $exception;
+        }
+
+        return (int) $this->pdo->lastInsertId();
+    }
 
     public function findActiveByUsername(string $username): ?array
     {
