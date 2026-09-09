@@ -15,8 +15,8 @@
 - Keep MVC-lite: Browser → Controller → Service → Repository → PDO → Database → View.
 - No Laravel, React/Vue SPA, Node backend, Redis, queue worker, cron dependency, database trigger, public REST platform, or public self-registration.
 - Normal users never choose a school during login; `school_id` comes from DB/session context only.
-- Normal users may have at most one ACTIVE school membership.
-- `SYSTEM_ADMIN` is platform-level with `school_id = NULL`; in Milestone 2 a SYSTEM_ADMIN account must have zero ACTIVE school memberships.
+- Normal users may have at most one ACTIVE `school_memberships` row, regardless of the related school's status.
+- `SYSTEM_ADMIN` is platform-level with `school_id = NULL`; in Milestone 2 a SYSTEM_ADMIN account must have zero ACTIVE `school_memberships` rows, including rows in ACTIVE, SUSPENDED, or INACTIVE schools.
 - School-scoped admin roles keep the existing `(user_id, school_id)` membership integrity.
 - Implement only `SYSTEM` and `SCHOOL` scopes now. Academic-year/classroom/subject scopes are deferred until those entities exist.
 - SCHOOL_ADMIN may manage only users belonging to the current session school.
@@ -71,9 +71,9 @@ SYSTEM sessions contain no `school_id` and no `school_membership_id`.
 
 ### 2. System Admin authentication
 
-An ACTIVE user with an ACTIVE global `SYSTEM_ADMIN` assignment (`school_id IS NULL`, `academic_year_id IS NULL`) may login in SYSTEM context only if they have zero ACTIVE school memberships. If a SYSTEM_ADMIN also has an ACTIVE school membership, deny login as invalid account configuration rather than selecting a context.
+An ACTIVE user with an ACTIVE global `SYSTEM_ADMIN` assignment (`school_id IS NULL`, `academic_year_id IS NULL`) may login in SYSTEM context only if they have zero ACTIVE `school_memberships` rows. Count these rows independently of `schools.status`: an ACTIVE row in a SUSPENDED or INACTIVE school still makes this an invalid SYSTEM_ADMIN account configuration and must deny login rather than select a context.
 
-Normal users still require exactly one ACTIVE membership in an ACTIVE school plus at least one ACTIVE SCHOOL-scope role for that school.
+Normal users require exactly one ACTIVE `school_memberships` row before checking the school. Only after that count is exactly one, verify that the row's membership and school are still ACTIVE and that the user has at least one ACTIVE SCHOOL-scope role for that school. Two ACTIVE rows must deny login even when one school is SUSPENDED or INACTIVE.
 
 ### 3. Permission codes
 
@@ -328,6 +328,7 @@ Stop for review.
 **Files:**
 - Create: `htdocs/app/Support/AccessContext.php`
 - Modify: `htdocs/app/Services/AuthenticationService.php`
+- Modify: `htdocs/app/Repositories/SchoolMembershipRepository.php`
 - Modify: `htdocs/app/Controllers/AuthController.php`
 - Modify: `htdocs/app/Middleware/SchoolContextMiddleware.php`
 - Modify: `tests/Feature/AuthenticationTest.php`
@@ -338,13 +339,25 @@ Stop for review.
 ```php
 AccessContext::SYSTEM = 'SYSTEM'
 AccessContext::SCHOOL = 'SCHOOL'
+SchoolMembershipRepository::findActiveRowsForUser(int $userId): array
+SchoolMembershipRepository::isActiveMembership(int $membershipId, int $userId, int $schoolId): bool
+AuthenticationService::attempt(string $username, string $password): array
 ```
 
-`AuthenticationService::attempt()` always returns `context_type`, `user_id`, `school_id`, `school_membership_id`, `display_name`; school fields are null for SYSTEM.
+`AuthenticationService::attempt` always returns `context_type`, `user_id`, `school_id`, `school_membership_id`, `display_name`; school fields are null for SYSTEM.
+
+`findActiveRowsForUser` returns rows containing `id`, `user_id`, and `school_id` for the requested user where `school_memberships.status = 'ACTIVE'`, ordered by membership ID. It must not filter by `schools.status`. Use this method for membership cardinality; do not use the existing `findActiveForUser` for that count because it filters out non-ACTIVE schools. Keep `isActiveMembership` for the subsequent membership/school status check.
 
 - [ ] **Step 1: Add RED tests**
 
 Cover SYSTEM_ADMIN with zero memberships, SYSTEM_ADMIN + ACTIVE membership denied, normal user with one membership + active school role, roleless membership denied, role in wrong school denied, inactive system assignment denied.
+
+Add explicit RED cases for:
+
+- SYSTEM_ADMIN + ACTIVE membership row in a SUSPENDED school → deny.
+- SYSTEM_ADMIN + ACTIVE membership row in an INACTIVE school → deny.
+- Normal user with two ACTIVE membership rows, one in an ACTIVE school and one in a SUSPENDED school → deny.
+- Normal user with exactly one ACTIVE membership row in a SUSPENDED school → deny.
 
 - [ ] **Step 2: Add `AccessContext` constants**
 
@@ -363,9 +376,13 @@ Decision order:
 
 ```text
 valid credentials
+→ findActiveRowsForUser(user_id): count ACTIVE membership rows without filtering schools.status
 → hasActiveSystemAdmin?
-   yes: ACTIVE memberships must be 0 → SYSTEM
-   no: ACTIVE memberships must be exactly 1
+   yes: ACTIVE membership rows must be 0 → SYSTEM
+        any ACTIVE row, regardless of school status → deny
+   no: ACTIVE membership rows must be exactly 1; otherwise deny
+       + isActiveMembership(row.id, user_id, row.school_id) must be true
+         (recheck both membership and school are ACTIVE)
        + hasActiveSchoolRole(user, school) → SCHOOL
 ```
 
@@ -413,6 +430,7 @@ Stop for review.
 
 ```php
 SchoolRepository::all(): array
+SchoolRepository::findById(int $schoolId): ?array
 SchoolRepository::findByCode(string $schoolCode): ?array
 SchoolRepository::create(string $schoolCode, string $nameTh): int
 SchoolRepository::updateStatus(int $schoolId, string $status): void
@@ -421,11 +439,38 @@ UserRepository::findByEmail(string $email): ?array
 UserRepository::create(string $username, ?string $email, string $passwordHash, string $displayName): int
 SchoolMembershipRepository::create(int $userId, int $schoolId, ?int $createdBy): int
 RoleRepository::findActiveByCode(string $code): ?array
+RoleAssignmentRepository::assignSystemRole(int $userId, int $roleId, ?int $assignedBy = null): int
 RoleAssignmentRepository::assignSchoolRole(int $userId, int $schoolId, int $roleId, int $assignedBy): int
-AuditLogRepository::record(...): void
-SystemSchoolAdministrationService::createSchoolWithAdmin(...): array
-SystemSchoolAdministrationService::changeSchoolStatus(...): void
+AuditLogRepository::record(
+    ?int $schoolId,
+    ?int $userId,
+    string $action,
+    string $entityType,
+    ?int $entityId,
+    ?array $oldValue,
+    ?array $newValue,
+    ?string $reason,
+    ?string $ipAddress
+): void
+SystemSchoolAdministrationService::createSchoolWithAdmin(
+    string $schoolCode,
+    string $schoolName,
+    string $adminUsername,
+    string $adminDisplayName,
+    ?string $adminEmail,
+    string $adminPassword,
+    int $actorUserId,
+    ?string $ipAddress = null
+): array
+SystemSchoolAdministrationService::changeSchoolStatus(
+    int $schoolId,
+    string $status,
+    int $actorUserId,
+    ?string $ipAddress = null
+): void
 ```
+
+`SchoolRepository::findById` returns `id`, `school_code`, `name_th`, and `status` regardless of school status, or null when absent, so status changes can load SUSPENDED/INACTIVE schools. `assignSystemRole` creates an ACTIVE global assignment with `school_id = NULL` and `academic_year_id = NULL`; `assignSchoolRole` creates an ACTIVE assignment for the supplied school with `academic_year_id = NULL`. Both return the assignment ID.
 
 - [ ] **Step 1: Write RED service tests**
 
@@ -437,7 +482,7 @@ Keep SQL in repositories. Translate duplicate-key PDO failures to friendly `Doma
 
 - [ ] **Step 3: Implement AuditLogRepository**
 
-Encode arrays with `JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR`. Repository must never receive password data.
+Encode arrays with `JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR`. Repository must never receive password data. Callers supply all arguments explicitly; pass null for absent old/new values, reason, or IP. The service actor is the audit `userId`; the target is identified by `entityType`/`entityId`.
 
 - [ ] **Step 4: Implement transactional school creation**
 
@@ -559,16 +604,56 @@ Stop for review.
 SchoolMembershipRepository::findForSchoolUser(int $schoolId, int $userId): ?array
 SchoolMembershipRepository::listForSchool(int $schoolId): array
 SchoolMembershipRepository::updateStatus(int $membershipId, string $status): void
+UserRepository::updateProfile(int $schoolId, int $userId, string $displayName, ?string $email): void
+UserRepository::updatePasswordHash(int $schoolId, int $userId, string $passwordHash): void
 RoleRepository::listActiveSchoolRoles(): array
 RoleAssignmentRepository::activeSchoolRoleCodes(int $userId, int $schoolId): array
-RoleAssignmentRepository::activateSchoolRole(...)
-RoleAssignmentRepository::deactivateSchoolRole(...)
-SchoolUserAdministrationService::createUser(...)
-SchoolUserAdministrationService::updateProfile(...)
-SchoolUserAdministrationService::changeMembershipStatus(...)
-SchoolUserAdministrationService::replaceRoles(...)
-SchoolUserAdministrationService::resetPassword(...)
+RoleAssignmentRepository::activateSchoolRole(int $userId, int $schoolId, int $roleId, int $assignedBy): void
+RoleAssignmentRepository::deactivateSchoolRole(int $userId, int $schoolId, int $roleId): void
+SchoolUserAdministrationService::createUser(
+    int $schoolId,
+    int $actorUserId,
+    string $username,
+    string $displayName,
+    ?string $email,
+    string $password,
+    array $roleCodes,
+    ?string $ipAddress = null
+): int
+SchoolUserAdministrationService::updateProfile(
+    int $schoolId,
+    int $actorUserId,
+    int $userId,
+    string $displayName,
+    ?string $email,
+    ?string $ipAddress = null
+): void
+SchoolUserAdministrationService::changeMembershipStatus(
+    int $schoolId,
+    int $actorUserId,
+    int $userId,
+    string $status,
+    ?string $ipAddress = null
+): void
+SchoolUserAdministrationService::replaceRoles(
+    int $schoolId,
+    int $actorUserId,
+    int $userId,
+    array $roleCodes,
+    ?string $ipAddress = null
+): void
+SchoolUserAdministrationService::resetPassword(
+    int $schoolId,
+    int $actorUserId,
+    int $userId,
+    string $password,
+    ?string $ipAddress = null
+): void
 ```
+
+For these services, `schoolId` and `actorUserId` come from the authenticated session; `userId` is the target account. `roleCodes` is an array of role-code strings. Profile/password repository writes include the supplied school/user pair and require an ACTIVE or SUSPENDED membership, preserving the same tenant boundary as target reads. Services hash passwords before calling `updatePasswordHash` and pass null audit reasons when no reason is supplied by this milestone's workflow.
+
+`activeSchoolRoleCodes` returns distinct ACTIVE SCHOOL-scope role codes for ACTIVE assignments in the supplied school with `academic_year_id = NULL`. `activateSchoolRole` reactivates an existing assignment or creates one if absent, recording `assignedBy`; `deactivateSchoolRole` marks matching assignments INACTIVE. Both operate only on the supplied user/school/role and `academic_year_id = NULL`.
 
 - [ ] **Step 1: Write RED domain tests**
 
@@ -715,6 +800,8 @@ Verify active user + global SYSTEM_ADMIN assignment, NULL school/year, duplicate
 
 Require `PHP_SAPI === 'cli'`, parse flags, transactionally create user + global SYSTEM_ADMIN role. Output only `Created SYSTEM_ADMIN user: <username>`.
 
+Resolve the seeded role with `RoleRepository::findActiveByCode(string $code): ?array`, create the account through `UserRepository::create(string $username, ?string $email, string $passwordHash, string $displayName): int`, then use `RoleAssignmentRepository::assignSystemRole(int $userId, int $roleId, ?int $assignedBy = null): int` with null `assignedBy` for bootstrap. Keep all SQL in repositories: the CLI tool must not contain direct SQL queries, including inserts into `user_role_assignments`. The CLI may coordinate the PDO transaction around repository calls.
+
 - [ ] **Step 3: Add dashboard navigation**
 
 Use AuthorizationService to compute `SCHOOL_USER_VIEW`; render “จัดการผู้ใช้” only when allowed. Middleware remains the security boundary.
@@ -792,11 +879,13 @@ Inspect `audit_logs` for expected action codes, correct school/actor, and no pas
 ```text
 [ ] seven roles and nine permissions seed reproducibly
 [ ] no default credentials committed
-[ ] SYSTEM_ADMIN authenticates without school membership
-[ ] SYSTEM_ADMIN + ACTIVE school membership is denied
+[ ] SYSTEM_ADMIN authenticates only with zero ACTIVE membership rows, regardless of school status
+[ ] SYSTEM_ADMIN + ACTIVE membership in ACTIVE/SUSPENDED/INACTIVE school is denied
 [ ] SYSTEM_ADMIN creates school + first SCHOOL_ADMIN atomically
 [ ] SYSTEM_ADMIN suspends/reactivates schools
-[ ] normal login still auto-resolves one school with no chooser
+[ ] normal login counts exactly one ACTIVE membership row before verifying its school is ACTIVE; no chooser
+[ ] two ACTIVE membership rows are denied even when one school is SUSPENDED
+[ ] exactly one ACTIVE membership row in a SUSPENDED school is denied
 [ ] normal user requires at least one ACTIVE school role
 [ ] PermissionMiddleware enforces backend authorization
 [ ] SCHOOL_ADMIN lists/creates/updates only own-school users
