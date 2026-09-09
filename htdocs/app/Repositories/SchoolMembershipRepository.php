@@ -9,6 +9,41 @@ final class SchoolMembershipRepository
 {
     public function __construct(private PDO $pdo) {}
 
+    public function findForSchoolUser(int $schoolId, int $userId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT sm.id, sm.user_id, sm.school_id, sm.status, u.username, u.display_name, u.email, u.status AS user_status
+             FROM school_memberships sm
+             INNER JOIN users u ON u.id = sm.user_id
+             WHERE sm.school_id = ? AND sm.user_id = ?
+             LIMIT 1 FOR UPDATE'
+        );
+        $statement->execute([$schoolId, $userId]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
+
+    public function listForSchool(int $schoolId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT sm.id, sm.user_id, sm.school_id, sm.status, u.username, u.display_name, u.email, u.status AS user_status
+             FROM school_memberships sm
+             INNER JOIN users u ON u.id = sm.user_id
+             WHERE sm.school_id = ?
+             ORDER BY sm.id'
+        );
+        $statement->execute([$schoolId]);
+
+        return $statement->fetchAll();
+    }
+
+    public function updateStatus(int $membershipId, string $status): void
+    {
+        $statement = $this->pdo->prepare('UPDATE school_memberships SET status = ? WHERE id = ?');
+        $statement->execute([$status, $membershipId]);
+    }
+
     public function create(int $userId, int $schoolId, ?int $createdBy): int
     {
         $statement = $this->pdo->prepare(

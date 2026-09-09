@@ -11,6 +11,35 @@ final class UserRepository
 {
     public function __construct(private PDO $pdo) {}
 
+    public function updateProfile(int $schoolId, int $userId, string $displayName, ?string $email): void
+    {
+        try {
+            $statement = $this->pdo->prepare(
+                "UPDATE users u
+                 INNER JOIN school_memberships sm ON sm.user_id = u.id
+                 SET u.display_name = ?, u.email = ?
+                 WHERE sm.school_id = ? AND sm.user_id = ? AND sm.status IN ('ACTIVE', 'SUSPENDED')"
+            );
+            $statement->execute([$displayName, $email, $schoolId, $userId]);
+        } catch (PDOException $exception) {
+            if (($exception->errorInfo[1] ?? null) === 1062) {
+                throw new DomainException('อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น');
+            }
+            throw $exception;
+        }
+    }
+
+    public function updatePasswordHash(int $schoolId, int $userId, #[\SensitiveParameter] string $passwordHash): void
+    {
+        $statement = $this->pdo->prepare(
+            "UPDATE users u
+             INNER JOIN school_memberships sm ON sm.user_id = u.id
+             SET u.password_hash = ?
+             WHERE sm.school_id = ? AND sm.user_id = ? AND sm.status IN ('ACTIVE', 'SUSPENDED')"
+        );
+        $statement->execute([$passwordHash, $schoolId, $userId]);
+    }
+
     public function findByUsername(string $username): ?array
     {
         $statement = $this->pdo->prepare('SELECT id, username, email, display_name, status FROM users WHERE username = ? LIMIT 1');
