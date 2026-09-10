@@ -3,15 +3,18 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Repositories\AuthorizationRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\UserRepository;
+use App\Support\AccessContext;
 use DomainException;
 
 final class AuthenticationService
 {
     public function __construct(
         private UserRepository $users,
-        private SchoolMembershipRepository $memberships
+        private SchoolMembershipRepository $memberships,
+        private AuthorizationRepository $authorization
     ) {}
 
     public function attempt(string $username, string $password): array
@@ -22,27 +25,38 @@ final class AuthenticationService
             throw new DomainException('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
         }
 
-        $memberships = $this->memberships->findActiveForUser((int) $user['id']);
+        $userId = (int) $user['id'];
+        $memberships = $this->memberships->findActiveRowsForUser($userId);
+        $schoolId = null;
+        $membershipId = null;
 
-        if (count($memberships) === 0) {
-            throw new DomainException(
-                'บัญชีนี้ยังไม่ได้รับสิทธิ์เข้าใช้งานโรงเรียน กรุณาติดต่อผู้ดูแลระบบ'
-            );
+        if ($this->authorization->hasActiveSystemAdmin($userId)) {
+            if (count($memberships) !== 0) {
+                throw new DomainException('สิทธิ์บัญชีผู้ดูแลระบบไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ');
+            }
+            $contextType = AccessContext::SYSTEM;
+        } else {
+            if (count($memberships) !== 1) {
+                throw new DomainException('บัญชีนี้ต้องมีโรงเรียนที่ใช้งานหนึ่งแห่ง กรุณาติดต่อผู้ดูแลระบบ');
+            }
+
+            $membership = $memberships[0];
+            $schoolId = (int) $membership['school_id'];
+            $membershipId = (int) $membership['id'];
+            if (!$this->memberships->isActiveMembership($membershipId, $userId, $schoolId)
+                || !$this->authorization->hasActiveSchoolRole($userId, $schoolId)) {
+                throw new DomainException('บัญชีนี้ยังไม่ได้รับสิทธิ์เข้าใช้งานโรงเรียน กรุณาติดต่อผู้ดูแลระบบ');
+            }
+            $contextType = AccessContext::SCHOOL;
         }
 
-        if (count($memberships) > 1) {
-            throw new DomainException(
-                'บัญชีนี้มีโรงเรียนที่ใช้งานมากกว่าหนึ่งแห่ง กรุณาติดต่อผู้ดูแลระบบ'
-            );
-        }
-
-        $membership = $memberships[0];
-        $this->users->recordLogin((int) $user['id']);
+        $this->users->recordLogin($userId);
 
         return [
-            'user_id' => (int) $user['id'],
-            'school_id' => (int) $membership['school_id'],
-            'school_membership_id' => (int) $membership['id'],
+            'context_type' => $contextType,
+            'user_id' => $userId,
+            'school_id' => $schoolId,
+            'school_membership_id' => $membershipId,
             'display_name' => (string) $user['display_name'],
         ];
     }

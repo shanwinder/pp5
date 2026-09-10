@@ -5,15 +5,26 @@ namespace App;
 
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
+use App\Controllers\SchoolUserController;
+use App\Controllers\SystemSchoolController;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
 use App\Middleware\AuthMiddleware;
+use App\Middleware\PermissionMiddleware;
 use App\Middleware\SchoolContextMiddleware;
+use App\Repositories\AuthorizationRepository;
+use App\Repositories\AuditLogRepository;
+use App\Repositories\RoleAssignmentRepository;
+use App\Repositories\RoleRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthenticationService;
+use App\Services\AuthorizationService;
+use App\Services\SchoolUserAdministrationService;
+use App\Services\SystemSchoolAdministrationService;
+use App\Support\AccessContext;
 use App\Support\Csrf;
 use App\Support\Database;
 use App\Support\View;
@@ -64,27 +75,71 @@ final class Application
         $schools = new SchoolRepository($pdo);
         $session = new Session();
         $csrf = new Csrf();
+        $authorization = new AuthorizationRepository($pdo);
         $controller = new AuthController(
-            new AuthenticationService($users, $memberships),
+            new AuthenticationService($users, $memberships, $authorization),
             $session,
             $csrf
         );
-        $dashboard = new DashboardController($session, $schools, $csrf);
+        $dashboard = new DashboardController($session, $schools, $csrf, new AuthorizationService($authorization));
+        $systemSchools = new SystemSchoolController(
+            new SystemSchoolAdministrationService($pdo, $schools, $users, $memberships,
+                new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo)),
+            $schools,
+            $session,
+            $csrf
+        );
+        $schoolUsers = new SchoolUserController(
+            new SchoolUserAdministrationService($pdo, $users, $memberships,
+                new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo), $authorization),
+            $memberships,
+            new RoleRepository($pdo),
+            new RoleAssignmentRepository($pdo),
+            $session,
+            $csrf
+        );
+        $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
             'showLogin' => static fn (Request $request): Response => $controller->showLogin(),
             'login' => static fn (Request $request): Response => $controller->login($request),
             'logout' => static fn (Request $request): Response => $controller->logout($request),
             'dashboard.index' => static fn (Request $request): Response => $dashboard->index(),
+            'system.schools.index' => static fn (Request $request): Response => $systemSchools->index(),
+            'system.schools.create' => static fn (Request $request): Response => $systemSchools->create(),
+            'system.schools.store' => static fn (Request $request): Response => $systemSchools->store($request),
+            'system.schools.changeStatus' => static fn (Request $request): Response => $systemSchools->changeStatus($request, $routeId),
+            'admin.users.index' => static fn (Request $request): Response => $schoolUsers->index(),
+            'admin.users.create' => static fn (Request $request): Response => $schoolUsers->create(),
+            'admin.users.store' => static fn (Request $request): Response => $schoolUsers->store($request),
+            'admin.users.edit' => static fn (Request $request): Response => $schoolUsers->edit($routeId),
+            'admin.users.updateProfile' => static fn (Request $request): Response => $schoolUsers->updateProfile($request, $routeId),
+            'admin.users.changeMembershipStatus' => static fn (Request $request): Response => $schoolUsers->changeMembershipStatus($request, $routeId),
+            'admin.users.replaceRoles' => static fn (Request $request): Response => $schoolUsers->replaceRoles($request, $routeId),
+            'admin.users.resetPassword' => static fn (Request $request): Response => $schoolUsers->resetPassword($request, $routeId),
         };
 
         if ($handler['protected'] ?? false) {
             $auth = new AuthMiddleware($session, $users);
-            $schoolContext = new SchoolContextMiddleware($session, $memberships, $schools);
+            $context = $handler['context'] ?? AccessContext::SCHOOL;
+            if ($context === AccessContext::SYSTEM) {
+                $handlerNext = $next;
+                $next = static fn (Request $request): Response => $session->get('context_type') === AccessContext::SYSTEM
+                    ? $handlerNext($request)
+                    : new Response(View::render('errors/403'), 403);
+            }
+            if (isset($handler['permission'])) {
+                $permission = new PermissionMiddleware($session, new AuthorizationService($authorization), $handler['permission']);
+                $permissionNext = $next;
+                $next = static fn (Request $request): Response => $permission->handle($request, $permissionNext);
+            }
+            if ($context === AccessContext::SCHOOL) {
+                $schoolContext = new SchoolContextMiddleware($session, $memberships, $schools);
+                $schoolNext = $next;
+                $next = static fn (Request $request): Response => $schoolContext->handle($request, $schoolNext);
+            }
 
-            return $auth->handle(
-                $request,
-                static fn (Request $request): Response => $schoolContext->handle($request, $next)
-            );
+            return $auth->handle($request, $next);
         }
 
         return $next($request);

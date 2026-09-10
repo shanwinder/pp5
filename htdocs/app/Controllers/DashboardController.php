@@ -6,6 +6,8 @@ namespace App\Controllers;
 use App\Http\Response;
 use App\Http\Session;
 use App\Repositories\SchoolRepository;
+use App\Services\AuthorizationService;
+use App\Support\AccessContext;
 use App\Support\Csrf;
 use App\Support\View;
 
@@ -14,7 +16,8 @@ final class DashboardController
     public function __construct(
         private Session $session,
         private SchoolRepository $schools,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AuthorizationService $authorization
     ) {}
 
     public function index(): Response
@@ -29,6 +32,10 @@ final class DashboardController
             'school' => $school,
             'displayName' => (string) $this->session->get('display_name', ''),
             'csrfToken' => $this->csrf->token($this->session),
+            'canManageUsers' => $this->authorization->hasPermission(
+                $this->session->get('user_id'), AccessContext::SCHOOL,
+                $this->session->get('school_id'), 'SCHOOL_USER_VIEW'
+            ),
         ]));
     }
 }

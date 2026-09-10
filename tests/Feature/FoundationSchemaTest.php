@@ -137,7 +137,7 @@ final class FoundationSchemaTest extends TestCase
     {
         return $this->insert(
             'INSERT INTO roles (code, name_th, scope_type) VALUES (?, ?, ?)',
-            [$code, 'บทบาททดสอบ', $scope]
+            ['SCHEMA_TEST_' . $code, 'บทบาททดสอบ', $scope]
         );
     }
 

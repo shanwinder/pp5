@@ -20,6 +20,9 @@
 <main>
   <h1>แดชบอร์ด</h1>
   <p>ยินดีต้อนรับเข้าสู่ระบบ ปพ.5</p>
+  <?php if ($canManageUsers): ?>
+    <p><a href="/admin/users">จัดการผู้ใช้</a></p>
+  <?php endif; ?>
 </main>
 </body>
 </html>
