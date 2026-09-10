@@ -81,7 +81,7 @@ final class Application
             $session,
             $csrf
         );
-        $dashboard = new DashboardController($session, $schools, $csrf);
+        $dashboard = new DashboardController($session, $schools, $csrf, new AuthorizationService($authorization));
         $systemSchools = new SystemSchoolController(
             new SystemSchoolAdministrationService($pdo, $schools, $users, $memberships,
                 new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo)),

@@ -7,6 +7,8 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
 use App\Repositories\SchoolRepository;
+use App\Repositories\AuthorizationRepository;
+use App\Services\AuthorizationService;
 use App\Support\Csrf;
 use App\Support\Database;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -87,6 +89,44 @@ final class DashboardAccessTest extends TestCase
         $response = $this->app->handle(new Request('POST', '/logout', [], ['_token' => $token], []));
         self::assertEquals(Response::redirect('/login'), $response);
         self::assertSame([], $_SESSION);
+    }
+
+    public function test_user_management_link_follows_permission_changes_and_backend_gate(): void
+    {
+        $this->authenticate();
+        $this->pdo->prepare("INSERT INTO user_role_assignments (user_id, school_id, role_id)
+            SELECT ?, ?, id FROM roles WHERE code = 'SCHOOL_ADMIN'")->execute([$this->userId, $this->schoolId]);
+
+        self::assertStringContainsString('<a href="/admin/users">จัดการผู้ใช้</a>', $this->dashboard()->body());
+        self::assertSame(200, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
+
+        $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id
+            WHERE p.code = 'SCHOOL_USER_VIEW'")->execute();
+
+        self::assertStringNotContainsString('/admin/users', $this->dashboard()->body());
+        self::assertSame(403, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
+    }
+
+    public function test_non_admin_role_with_view_permission_gets_navigation_for_current_school_only(): void
+    {
+        $this->authenticate();
+        $this->pdo->prepare("INSERT INTO user_role_assignments (user_id, school_id, role_id)
+            SELECT ?, ?, id FROM roles WHERE code = 'SUBJECT_TEACHER'")->execute([$this->userId, $this->schoolId]);
+        self::assertStringNotContainsString('/admin/users', $this->dashboard()->body());
+        self::assertSame(403, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
+
+        $this->pdo->prepare("INSERT INTO role_permissions (role_id, permission_id)
+            SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+            WHERE r.code = 'SUBJECT_TEACHER' AND p.code = 'SCHOOL_USER_VIEW'")->execute();
+        self::assertStringContainsString('<a href="/admin/users">จัดการผู้ใช้</a>', $this->dashboard()->body());
+        self::assertSame(200, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
+
+        $this->pdo->prepare("INSERT INTO school_memberships (user_id, school_id, status) VALUES (?, ?, 'SUSPENDED')")
+            ->execute([$this->userId, $this->otherSchoolId]);
+        $this->pdo->prepare('UPDATE user_role_assignments SET school_id = ? WHERE user_id = ?')
+            ->execute([$this->otherSchoolId, $this->userId]);
+        self::assertStringNotContainsString('/admin/users', $this->dashboard()->body());
+        self::assertSame(403, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
     }
 
     public function test_browser_school_identifier_cannot_select_another_tenant(): void
@@ -175,7 +215,8 @@ final class DashboardAccessTest extends TestCase
     {
         $this->authenticate();
         $this->pdo->prepare('UPDATE schools SET status = ? WHERE id = ?')->execute(['INACTIVE', $this->schoolId]);
-        $controller = new DashboardController(new Session(), new SchoolRepository($this->pdo), new Csrf());
+        $controller = new DashboardController(new Session(), new SchoolRepository($this->pdo), new Csrf(),
+            new AuthorizationService(new AuthorizationRepository($this->pdo)));
 
         $response = $controller->index();
 
