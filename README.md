@@ -1,10 +1,10 @@
 # ระบบ ปพ.5 — School Administration
 
-Milestone 2 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
+ฐาน Milestone 2 และ Milestone 3 Task 1 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
 โดย SQL รองรับ MariaDB ด้วย ไม่ใช้ Laravel, Node.js backend, Redis, queue, cron
 หรือ database triggers
 
-## Local setup ของ Milestone 2
+## Local setup
 
 รันคำสั่งจาก project root ใช้ PHP CLI 8.2 ขึ้นไปจาก MAMP และ Composer
 ตรวจ `php -v` และให้มี extension `pdo_mysql`
@@ -13,7 +13,7 @@ Milestone 2 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session �
 
    ```sh
    git checkout main && git pull
-   git checkout -b milestone/2-school-administration
+   git checkout -b milestone/3-academic-structure
    ```
 
    สร้าง branch เพียงครั้งแรก หากมี branch นี้อยู่แล้วให้ checkout branch เดิม
@@ -49,9 +49,19 @@ Milestone 2 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session �
 
    คำสั่งที่ไม่ระบุ database ใช้ค่าจาก local config ซึ่งต้องตั้งเป็น `pp5`
    Runner บันทึกไฟล์ที่ apply แล้วใน `schema_migrations` และ `seed_migrations`
-   จึงรันซ้ำได้ Seeds มี 7 roles, 9 permissions และ 9 role-permission mappings:
-   SYSTEM_ADMIN ได้ 3 SYSTEM permissions และ SCHOOL_ADMIN ได้ 6 SCHOOL permissions
-   role อื่นยังไม่มี permissions สำหรับจัดการโรงเรียน/ผู้ใช้
+   จึงรันซ้ำได้ โดยต้องรัน migrations ก่อน seeds เสมอ ไฟล์ถูก apply ตามลำดับชื่อ
+   รวม migration `20260910_001_academic_structure.sql` และ seed
+   `20260910_001_academic_structure_reference.sql` หลังไฟล์ของ Milestone 1–2
+
+   Seeded baseline มี **7 roles, 14 permissions และ 19 role-permission mappings**:
+   SYSTEM_ADMIN ได้ 3 SYSTEM permissions เดิม ส่วน SCHOOL_ADMIN ได้ 6 SCHOOL
+   administration permissions เดิมและ 5 academic permissions ใหม่;
+   ACADEMIC_ADMIN ได้ 5 academic permissions เดียวกัน ได้แก่ `ACADEMIC_SETUP_VIEW`,
+   `ACADEMIC_YEAR_MANAGE`, `CLASSROOM_MANAGE`, `SUBJECT_MANAGE`, `SUBJECT_OFFERING_MANAGE`
+   HOMEROOM_TEACHER, SUBJECT_TEACHER, EXECUTIVE และ VIEWER ไม่ได้รับสิทธิ์ทั้งห้านี้
+
+   Global grade levels มีเฉพาะ P1–P6 (ประถมศึกษาปีที่ 1–6), sort_order 10–60
+   เพิ่มครั้งละ 10 และ status ACTIVE ทุกแถว Seed SQL รันซ้ำได้โดยไม่เพิ่มแถวซ้ำ
 
 5. Bootstrap SYSTEM_ADMIN สำหรับเครื่อง local หลัง seed โดยผู้ดูแลระบุ credentials เอง
    แทนค่าตัวอย่างทั้งหมดก่อนรัน (`--email` ไม่บังคับ):
@@ -151,6 +161,12 @@ Application ไม่ส่ง SQL, credentials, stack trace หรือ filesy
 Private paths ต้องตอบ HTTP 403 เช่น `/config/database.php`, `/app/Application.php`,
 `/views/admin/users/index.php`, `/views/system/schools/index.php`, `/vendor/autoload.php`
 `/tools/bootstrap_system_admin.php` ต้องไม่ web reachable เพราะอยู่นอก Document Root
+
+Milestone 3 Task 1 เพิ่มเฉพาะ schema/reference infrastructure: `grade_levels`,
+`academic_years`, `classrooms`, `subjects`, `subject_offerings` และ composite FK
+ที่ป้องกัน parent ข้ามโรงเรียน/ข้ามปี รวม FK ของ `user_role_assignments`
+ไปยังปีการศึกษาของโรงเรียนเดียวกัน การตรวจสิทธิ์เดิมยังใช้ `academic_year_id IS NULL`
+ยังไม่มี academic setup UI หรือ service สำหรับจัดการโครงสร้างวิชาการ
 
 Milestone 2 ครอบคลุม SYSTEM/SCHOOL authentication และการจัดการโรงเรียน/ผู้ใช้
 ยังไม่มี school chooser, user transfer, academic setup, student/DMC workflow,

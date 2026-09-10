@@ -17,6 +17,7 @@ final class SchoolUserAdministrationTest extends TestCase
     private SchoolUserTestPDO $pdo;
     private int $schoolId;
     private int $foreignSchoolId;
+    private int $academicYearId;
     private int $actorId;
     private int $targetId;
     private int $foreignUserId;
@@ -37,6 +38,7 @@ final class SchoolUserAdministrationTest extends TestCase
         self::$originalHash ??= password_hash(self::ORIGINAL_PASSWORD, PASSWORD_DEFAULT);
         $this->schoolId = $this->insert('INSERT INTO schools (school_code, name_th) VALUES (?, ?)', ['school-user-a', 'School A']);
         $this->foreignSchoolId = $this->insert('INSERT INTO schools (school_code, name_th) VALUES (?, ?)', ['school-user-b', 'School B']);
+        $this->academicYearId = $this->insert('INSERT INTO academic_years (school_id, year_be) VALUES (?, ?)', [$this->schoolId, 2569]);
         $this->actorId = $this->fixtureUser('school-user-actor', $this->schoolId, 'SCHOOL_ADMIN');
         $this->targetId = $this->fixtureUser('school-user-target', $this->schoolId, 'VIEWER');
         $this->foreignUserId = $this->fixtureUser('school-user-foreign', $this->foreignSchoolId, 'VIEWER');
@@ -375,7 +377,7 @@ final class SchoolUserAdministrationTest extends TestCase
             $this->assignment($this->targetId, $this->foreignSchoolId, 'EXECUTIVE'),
             $this->assignment($this->foreignUserId, $this->foreignSchoolId, 'EXECUTIVE'),
             $this->assignment($this->actorId, $this->schoolId, 'EXECUTIVE'),
-            $this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE', 'ACTIVE', 1),
+            $this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE', 'ACTIVE', $this->academicYearId),
             $this->assignment($this->targetId, null, 'EXECUTIVE'),
         ];
         $unrelated = [];
@@ -552,7 +554,7 @@ final class SchoolUserAdministrationTest extends TestCase
         $this->assignment($this->targetId, $this->schoolId, 'VIEWER');
         $this->assignment($this->targetId, $this->schoolId, 'HOMEROOM_TEACHER');
         $this->assignment($this->targetId, $this->schoolId, 'SUBJECT_TEACHER', 'INACTIVE');
-        $this->assignment($this->targetId, $this->schoolId, 'ACADEMIC_ADMIN', 'ACTIVE', 1);
+        $this->assignment($this->targetId, $this->schoolId, 'ACADEMIC_ADMIN', 'ACTIVE', $this->academicYearId);
         $this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE');
         $this->pdo->prepare("UPDATE roles SET status = 'INACTIVE' WHERE code = 'EXECUTIVE'")->execute();
         $this->assignment($this->targetId, null, 'SYSTEM_ADMIN');
@@ -568,7 +570,7 @@ final class SchoolUserAdministrationTest extends TestCase
         $this->service();
         $roleId = $this->roleId('VIEWER');
         $viewerId = $this->row('SELECT id FROM user_role_assignments WHERE user_id = ?', [$this->targetId])['id'];
-        $yearId = $this->assignment($this->targetId, $this->schoolId, 'VIEWER', 'ACTIVE', 1);
+        $yearId = $this->assignment($this->targetId, $this->schoolId, 'VIEWER', 'ACTIVE', $this->academicYearId);
         $repository = new RoleAssignmentRepository($this->pdo);
         $foreignBefore = $this->rows('SELECT * FROM user_role_assignments WHERE user_id = ?', [$this->foreignUserId]);
         $repository->deactivateSchoolRole($this->targetId, $this->schoolId, $roleId);
