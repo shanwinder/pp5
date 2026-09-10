@@ -82,4 +82,28 @@ return static function (RouteCollector $r): void {
         'action' => 'academic.years.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
     ]);
+    $r->addRoute('GET', '/academic/classrooms', [
+        'action' => 'academic.classrooms.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/classrooms/create', [
+        'action' => 'academic.classrooms.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/classrooms', [
+        'action' => 'academic.classrooms.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/classrooms/{id:\d+}/edit', [
+        'action' => 'academic.classrooms.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/classrooms/{id:\d+}', [
+        'action' => 'academic.classrooms.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/classrooms/{id:\d+}/status', [
+        'action' => 'academic.classrooms.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
 };

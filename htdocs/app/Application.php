@@ -5,6 +5,7 @@ namespace App;
 
 use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
+use App\Controllers\ClassroomController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
 use App\Controllers\SystemSchoolController;
@@ -17,6 +18,8 @@ use App\Middleware\SchoolContextMiddleware;
 use App\Repositories\AcademicYearRepository;
 use App\Repositories\AuthorizationRepository;
 use App\Repositories\AuditLogRepository;
+use App\Repositories\ClassroomRepository;
+use App\Repositories\GradeLevelRepository;
 use App\Repositories\RoleAssignmentRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\SchoolMembershipRepository;
@@ -25,6 +28,7 @@ use App\Repositories\UserRepository;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
 use App\Services\AuthorizationService;
+use App\Services\ClassroomAdministrationService;
 use App\Services\SchoolUserAdministrationService;
 use App\Services\SystemSchoolAdministrationService;
 use App\Support\AccessContext;
@@ -108,6 +112,16 @@ final class Application
             $session,
             $csrf
         );
+        $grades = new GradeLevelRepository($pdo);
+        $classrooms = new ClassroomRepository($pdo);
+        $classroomController = new ClassroomController(
+            new ClassroomAdministrationService($pdo, $schools, $years, $grades, $classrooms, new AuditLogRepository($pdo)),
+            $classrooms,
+            $years,
+            $grades,
+            $session,
+            $csrf
+        );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
@@ -133,6 +147,12 @@ final class Application
             'academic.years.edit' => static fn (Request $request): Response => $academicYears->edit($routeId),
             'academic.years.update' => static fn (Request $request): Response => $academicYears->update($request, $routeId),
             'academic.years.changeStatus' => static fn (Request $request): Response => $academicYears->changeStatus($request, $routeId),
+            'academic.classrooms.index' => static fn (Request $request): Response => $classroomController->index($request),
+            'academic.classrooms.create' => static fn (Request $request): Response => $classroomController->create($request),
+            'academic.classrooms.store' => static fn (Request $request): Response => $classroomController->store($request),
+            'academic.classrooms.edit' => static fn (Request $request): Response => $classroomController->edit($routeId),
+            'academic.classrooms.update' => static fn (Request $request): Response => $classroomController->update($request, $routeId),
+            'academic.classrooms.changeStatus' => static fn (Request $request): Response => $classroomController->changeStatus($request, $routeId),
         };
 
         if ($handler['protected'] ?? false) {
