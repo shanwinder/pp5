@@ -72,4 +72,16 @@ final class SchoolRepository
 
         return $row === false ? null : $row;
     }
+
+    public function lockActiveById(int $schoolId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            "SELECT id, school_code, name_th, status FROM schools
+             WHERE id = ? AND status = 'ACTIVE' LIMIT 1 FOR UPDATE"
+        );
+        $statement->execute([$schoolId]);
+        $row = $statement->fetch();
+
+        return $row === false ? null : $row;
+    }
 }
