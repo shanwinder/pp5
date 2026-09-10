@@ -58,4 +58,28 @@ return static function (RouteCollector $r): void {
         'action' => 'admin.users.resetPassword', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_PASSWORD_RESET',
     ]);
+    $r->addRoute('GET', '/academic/years', [
+        'action' => 'academic.years.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/years/create', [
+        'action' => 'academic.years.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/years', [
+        'action' => 'academic.years.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/years/{id:\d+}/edit', [
+        'action' => 'academic.years.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/years/{id:\d+}', [
+        'action' => 'academic.years.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/years/{id:\d+}/status', [
+        'action' => 'academic.years.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
 };

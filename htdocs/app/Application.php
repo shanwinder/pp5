@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
@@ -13,6 +14,7 @@ use App\Http\Session;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\PermissionMiddleware;
 use App\Middleware\SchoolContextMiddleware;
+use App\Repositories\AcademicYearRepository;
 use App\Repositories\AuthorizationRepository;
 use App\Repositories\AuditLogRepository;
 use App\Repositories\RoleAssignmentRepository;
@@ -20,6 +22,7 @@ use App\Repositories\RoleRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
 use App\Repositories\UserRepository;
+use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
 use App\Services\AuthorizationService;
 use App\Services\SchoolUserAdministrationService;
@@ -98,6 +101,13 @@ final class Application
             $session,
             $csrf
         );
+        $years = new AcademicYearRepository($pdo);
+        $academicYears = new AcademicYearController(
+            new AcademicYearAdministrationService($pdo, $schools, $years, new AuditLogRepository($pdo)),
+            $years,
+            $session,
+            $csrf
+        );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
@@ -117,6 +127,12 @@ final class Application
             'admin.users.changeMembershipStatus' => static fn (Request $request): Response => $schoolUsers->changeMembershipStatus($request, $routeId),
             'admin.users.replaceRoles' => static fn (Request $request): Response => $schoolUsers->replaceRoles($request, $routeId),
             'admin.users.resetPassword' => static fn (Request $request): Response => $schoolUsers->resetPassword($request, $routeId),
+            'academic.years.index' => static fn (Request $request): Response => $academicYears->index(),
+            'academic.years.create' => static fn (Request $request): Response => $academicYears->create(),
+            'academic.years.store' => static fn (Request $request): Response => $academicYears->store($request),
+            'academic.years.edit' => static fn (Request $request): Response => $academicYears->edit($routeId),
+            'academic.years.update' => static fn (Request $request): Response => $academicYears->update($request, $routeId),
+            'academic.years.changeStatus' => static fn (Request $request): Response => $academicYears->changeStatus($request, $routeId),
         };
 
         if ($handler['protected'] ?? false) {
