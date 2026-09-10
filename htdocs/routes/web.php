@@ -106,4 +106,28 @@ return static function (RouteCollector $r): void {
         'action' => 'academic.classrooms.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
     ]);
+    $r->addRoute('GET', '/academic/subjects', [
+        'action' => 'academic.subjects.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/subjects/create', [
+        'action' => 'academic.subjects.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/subjects', [
+        'action' => 'academic.subjects.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/subjects/{id:\d+}/edit', [
+        'action' => 'academic.subjects.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/subjects/{id:\d+}', [
+        'action' => 'academic.subjects.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/subjects/{id:\d+}/status', [
+        'action' => 'academic.subjects.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
 };
