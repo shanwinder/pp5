@@ -9,6 +9,7 @@ use App\Controllers\ClassroomController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
 use App\Controllers\SubjectController;
+use App\Controllers\SubjectOfferingController;
 use App\Controllers\SystemSchoolController;
 use App\Http\Request;
 use App\Http\Response;
@@ -26,6 +27,7 @@ use App\Repositories\RoleRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
 use App\Repositories\SubjectRepository;
+use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\UserRepository;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
@@ -33,6 +35,7 @@ use App\Services\AuthorizationService;
 use App\Services\ClassroomAdministrationService;
 use App\Services\SchoolUserAdministrationService;
 use App\Services\SubjectAdministrationService;
+use App\Services\SubjectOfferingAdministrationService;
 use App\Services\SystemSchoolAdministrationService;
 use App\Support\AccessContext;
 use App\Support\Csrf;
@@ -132,6 +135,16 @@ final class Application
             $session,
             $csrf
         );
+        $offerings = new SubjectOfferingRepository($pdo);
+        $offeringController = new SubjectOfferingController(
+            new SubjectOfferingAdministrationService($pdo, $schools, $years, $classrooms, $subjects, $offerings, new AuditLogRepository($pdo)),
+            $offerings,
+            $years,
+            $classrooms,
+            $subjects,
+            $session,
+            $csrf
+        );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
@@ -169,6 +182,12 @@ final class Application
             'academic.subjects.edit' => static fn (Request $request): Response => $subjectController->edit($routeId),
             'academic.subjects.update' => static fn (Request $request): Response => $subjectController->update($request, $routeId),
             'academic.subjects.changeStatus' => static fn (Request $request): Response => $subjectController->changeStatus($request, $routeId),
+            'academic.offerings.index' => static fn (Request $request): Response => $offeringController->index($request),
+            'academic.offerings.create' => static fn (Request $request): Response => $offeringController->create($request),
+            'academic.offerings.store' => static fn (Request $request): Response => $offeringController->store($request),
+            'academic.offerings.edit' => static fn (Request $request): Response => $offeringController->edit($routeId),
+            'academic.offerings.update' => static fn (Request $request): Response => $offeringController->update($request, $routeId),
+            'academic.offerings.changeStatus' => static fn (Request $request): Response => $offeringController->changeStatus($request, $routeId),
         };
 
         if ($handler['protected'] ?? false) {

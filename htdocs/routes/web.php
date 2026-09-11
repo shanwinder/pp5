@@ -130,4 +130,28 @@ return static function (RouteCollector $r): void {
         'action' => 'academic.subjects.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
     ]);
+    $r->addRoute('GET', '/academic/offerings', [
+        'action' => 'academic.offerings.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/offerings/create', [
+        'action' => 'academic.offerings.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/offerings', [
+        'action' => 'academic.offerings.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/offerings/{id:\d+}/edit', [
+        'action' => 'academic.offerings.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/offerings/{id:\d+}', [
+        'action' => 'academic.offerings.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/offerings/{id:\d+}/status', [
+        'action' => 'academic.offerings.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
 };
