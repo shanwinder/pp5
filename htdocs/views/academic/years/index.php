@@ -3,6 +3,11 @@
 <head><meta charset="utf-8"><title>ปีการศึกษา — PP5</title></head>
 <body>
 <h1>ปีการศึกษา</h1>
+<nav>
+    <a href="/academic/classrooms">ห้องเรียน</a>
+    <a href="/academic/subjects">รายวิชา</a>
+    <a href="/academic/offerings">การเปิดรายวิชา</a>
+</nav>
 <p><a href="/academic/years/create">เพิ่มปีการศึกษา</a></p>
 <p>ปีการศึกษาระบุเป็น พ.ศ. ส่วนวันที่ระบุเป็น ค.ศ.</p>
 <table>
