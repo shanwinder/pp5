@@ -51,12 +51,15 @@
    รวม migration `20260910_001_academic_structure.sql` และ seed
    `20260910_001_academic_structure_reference.sql` หลังไฟล์ของ Milestone 1–2
 
-   Seeded baseline มี **7 roles, 14 permissions และ 19 role-permission mappings**:
+   Seeded baseline หลัง Milestone 4 Task 1 มี **7 roles, 18 permissions และ 27 role-permission mappings**:
    SYSTEM_ADMIN ได้ 3 SYSTEM permissions เดิม ส่วน SCHOOL_ADMIN ได้ 6 SCHOOL
    administration permissions เดิมและ 5 academic permissions ใหม่;
    ACADEMIC_ADMIN ได้ 5 academic permissions เดียวกัน ได้แก่ `ACADEMIC_SETUP_VIEW`,
    `ACADEMIC_YEAR_MANAGE`, `CLASSROOM_MANAGE`, `SUBJECT_MANAGE`, `SUBJECT_OFFERING_MANAGE`
    HOMEROOM_TEACHER, SUBJECT_TEACHER, EXECUTIVE และ VIEWER ไม่ได้รับสิทธิ์ทั้งห้านี้
+   Milestone 4 seed เพิ่ม `STUDENT_VIEW`, `STUDENT_MANAGE`, `ENROLLMENT_MANAGE`,
+   `STUDENT_IMPORT` ให้ SCHOOL_ADMIN และ ACADEMIC_ADMIN เท่านั้น โดย roles อื่นไม่ได้รับ
+   สิทธิ์ทั้งสี่เพิ่ม และ global grade levels ยังคง 6 แถวเดิม
 
    Global grade levels มีเฉพาะ P1–P6 (ประถมศึกษาปีที่ 1–6), sort_order 10–60
    เพิ่มครั้งละ 10 และ status ACTIVE ทุกแถว Seed SQL รันซ้ำได้โดยไม่เพิ่มแถวซ้ำ
