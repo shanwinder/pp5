@@ -18,6 +18,7 @@ final class SchoolAdminHttpTest extends TestCase
     private Application $app;
     private int $schoolId;
     private int $foreignSchoolId;
+    private int $academicYearId;
     private int $actorId;
     private int $targetId;
     private int $foreignUserId;
@@ -40,6 +41,7 @@ final class SchoolAdminHttpTest extends TestCase
         self::$fixtureHash ??= password_hash(self::OLD_PASSWORD, PASSWORD_DEFAULT);
         $this->schoolId = $this->insert('INSERT INTO schools (school_code, name_th) VALUES (?, ?)', ['http7-a', 'School A']);
         $this->foreignSchoolId = $this->insert('INSERT INTO schools (school_code, name_th) VALUES (?, ?)', ['http7-b', 'School B']);
+        $this->academicYearId = $this->insert('INSERT INTO academic_years (school_id, year_be) VALUES (?, ?)', [$this->schoolId, 2569]);
         $this->actorId = $this->fixtureUser('http7-admin', $this->schoolId, 'SCHOOL_ADMIN');
         $this->targetId = $this->fixtureUser('http7-target', $this->schoolId, 'VIEWER');
         $this->foreignUserId = $this->fixtureUser('http7-foreign', $this->foreignSchoolId, 'SCHOOL_ADMIN');
@@ -503,7 +505,7 @@ final class SchoolAdminHttpTest extends TestCase
         $staleId = $this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE');
         $this->insert('INSERT INTO school_memberships (user_id, school_id, status) VALUES (?, ?, ?)', [$this->targetId, $this->foreignSchoolId, 'SUSPENDED']);
         $unrelated = [];
-        foreach ([$this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE', 1),
+        foreach ([$this->assignment($this->targetId, $this->schoolId, 'EXECUTIVE', $this->academicYearId),
             $this->assignment($this->targetId, $this->foreignSchoolId, 'EXECUTIVE'),
             $this->assignment($this->foreignUserId, $this->foreignSchoolId, 'EXECUTIVE'),
             $this->assignment($this->actorId, $this->schoolId, 'EXECUTIVE'),

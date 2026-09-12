@@ -58,4 +58,100 @@ return static function (RouteCollector $r): void {
         'action' => 'admin.users.resetPassword', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'SCHOOL_PASSWORD_RESET',
     ]);
+    $r->addRoute('GET', '/academic/years', [
+        'action' => 'academic.years.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/years/create', [
+        'action' => 'academic.years.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/years', [
+        'action' => 'academic.years.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/years/{id:\d+}/edit', [
+        'action' => 'academic.years.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/years/{id:\d+}', [
+        'action' => 'academic.years.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/years/{id:\d+}/status', [
+        'action' => 'academic.years.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_YEAR_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/classrooms', [
+        'action' => 'academic.classrooms.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/classrooms/create', [
+        'action' => 'academic.classrooms.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/classrooms', [
+        'action' => 'academic.classrooms.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/classrooms/{id:\d+}/edit', [
+        'action' => 'academic.classrooms.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/classrooms/{id:\d+}', [
+        'action' => 'academic.classrooms.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/classrooms/{id:\d+}/status', [
+        'action' => 'academic.classrooms.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'CLASSROOM_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/subjects', [
+        'action' => 'academic.subjects.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/subjects/create', [
+        'action' => 'academic.subjects.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/subjects', [
+        'action' => 'academic.subjects.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/subjects/{id:\d+}/edit', [
+        'action' => 'academic.subjects.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/subjects/{id:\d+}', [
+        'action' => 'academic.subjects.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/subjects/{id:\d+}/status', [
+        'action' => 'academic.subjects.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/offerings', [
+        'action' => 'academic.offerings.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ACADEMIC_SETUP_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/offerings/create', [
+        'action' => 'academic.offerings.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/offerings', [
+        'action' => 'academic.offerings.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/offerings/{id:\d+}/edit', [
+        'action' => 'academic.offerings.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/offerings/{id:\d+}', [
+        'action' => 'academic.offerings.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/offerings/{id:\d+}/status', [
+        'action' => 'academic.offerings.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
+    ]);
 };

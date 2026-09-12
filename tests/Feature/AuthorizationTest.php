@@ -19,6 +19,7 @@ final class AuthorizationTest extends TestCase
     private int $schoolId;
     private int $otherSchoolId;
     private int $membershipId;
+    private int $academicYearId;
 
     protected function setUp(): void
     {
@@ -33,6 +34,7 @@ final class AuthorizationTest extends TestCase
             ['authorization-test-other', 'unused-fixture-hash', 'Other User']);
         $this->schoolId = $this->insert('INSERT INTO schools (school_code, name_th) VALUES (?, ?)', ['authorization-test-a', 'School A']);
         $this->otherSchoolId = $this->insert('INSERT INTO schools (school_code, name_th) VALUES (?, ?)', ['authorization-test-b', 'School B']);
+        $this->academicYearId = $this->insert('INSERT INTO academic_years (school_id, year_be) VALUES (?, ?)', [$this->schoolId, 2569]);
         $this->membershipId = $this->insert('INSERT INTO school_memberships (user_id, school_id) VALUES (?, ?)', [$this->userId, $this->schoolId]);
     }
 
@@ -48,7 +50,7 @@ final class AuthorizationTest extends TestCase
     public function test_system_authorization_checks_assignment_scope_and_permission(array $options, bool $expectedRole, bool $expectedPermission): void
     {
         $roleId = $this->roleId('SYSTEM_ADMIN');
-        $this->assign($roleId, ($options['school'] ?? false) ? $this->schoolId : null, $options['assignment'] ?? 'ACTIVE', $options['year'] ?? null);
+        $this->assign($roleId, ($options['school'] ?? false) ? $this->schoolId : null, $options['assignment'] ?? 'ACTIVE', ($options['year'] ?? false) ? $this->academicYearId : null);
         $this->pdo->prepare('UPDATE roles SET status = ?, scope_type = ? WHERE id = ?')
             ->execute([$options['role_status'] ?? 'ACTIVE', $options['scope'] ?? 'SYSTEM', $roleId]);
         $repository = new AuthorizationRepository($this->pdo);
@@ -65,7 +67,7 @@ final class AuthorizationTest extends TestCase
             'inactive assignment' => [['assignment' => 'INACTIVE'], false, false],
             'inactive role' => [['role_status' => 'INACTIVE'], false, false],
             'school-bound assignment' => [['school' => true], false, false],
-            'year-bound assignment' => [['year' => 1], false, false],
+            'year-bound assignment' => [['year' => true], false, false],
             'other user' => [['other_user' => true], false, false],
             'school scope role' => [['scope' => 'SCHOOL'], false, false],
             'permission not granted' => [['permission' => 'SCHOOL_USER_VIEW'], true, false],
@@ -77,7 +79,7 @@ final class AuthorizationTest extends TestCase
     public function test_school_authorization_checks_tenant_status_and_permission(array $options, bool $expectedRole, bool $expectedPermission): void
     {
         $roleId = $this->roleId($options['role'] ?? 'SCHOOL_ADMIN');
-        $this->assign($roleId, ($options['global'] ?? false) ? null : $this->schoolId, $options['assignment'] ?? 'ACTIVE', $options['year'] ?? null);
+        $this->assign($roleId, ($options['global'] ?? false) ? null : $this->schoolId, $options['assignment'] ?? 'ACTIVE', ($options['year'] ?? false) ? $this->academicYearId : null);
         $this->pdo->prepare('UPDATE roles SET status = ?, scope_type = ? WHERE id = ?')
             ->execute([$options['role_status'] ?? 'ACTIVE', $options['scope'] ?? 'SCHOOL', $roleId]);
         $this->pdo->prepare('UPDATE school_memberships SET status = ? WHERE id = ?')
@@ -103,7 +105,7 @@ final class AuthorizationTest extends TestCase
             'inactive role' => [['role_status' => 'INACTIVE'], false, false],
             'system scope role' => [['scope' => 'SYSTEM'], false, false],
             'global assignment' => [['global' => true], false, false],
-            'year-bound assignment' => [['year' => 1], false, false],
+            'year-bound assignment' => [['year' => true], false, false],
             'suspended membership' => [['membership' => 'SUSPENDED'], false, false],
             'inactive membership' => [['membership' => 'INACTIVE'], false, false],
             'suspended school' => [['school_status' => 'SUSPENDED'], false, false],

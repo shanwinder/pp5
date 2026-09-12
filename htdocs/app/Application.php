@@ -3,9 +3,13 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
+use App\Controllers\ClassroomController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
+use App\Controllers\SubjectController;
+use App\Controllers\SubjectOfferingController;
 use App\Controllers\SystemSchoolController;
 use App\Http\Request;
 use App\Http\Response;
@@ -13,16 +17,25 @@ use App\Http\Session;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\PermissionMiddleware;
 use App\Middleware\SchoolContextMiddleware;
+use App\Repositories\AcademicYearRepository;
 use App\Repositories\AuthorizationRepository;
 use App\Repositories\AuditLogRepository;
+use App\Repositories\ClassroomRepository;
+use App\Repositories\GradeLevelRepository;
 use App\Repositories\RoleAssignmentRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
+use App\Repositories\SubjectRepository;
+use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\UserRepository;
+use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
 use App\Services\AuthorizationService;
+use App\Services\ClassroomAdministrationService;
 use App\Services\SchoolUserAdministrationService;
+use App\Services\SubjectAdministrationService;
+use App\Services\SubjectOfferingAdministrationService;
 use App\Services\SystemSchoolAdministrationService;
 use App\Support\AccessContext;
 use App\Support\Csrf;
@@ -98,6 +111,40 @@ final class Application
             $session,
             $csrf
         );
+        $years = new AcademicYearRepository($pdo);
+        $academicYears = new AcademicYearController(
+            new AcademicYearAdministrationService($pdo, $schools, $years, new AuditLogRepository($pdo)),
+            $years,
+            $session,
+            $csrf
+        );
+        $grades = new GradeLevelRepository($pdo);
+        $classrooms = new ClassroomRepository($pdo);
+        $classroomController = new ClassroomController(
+            new ClassroomAdministrationService($pdo, $schools, $years, $grades, $classrooms, new AuditLogRepository($pdo)),
+            $classrooms,
+            $years,
+            $grades,
+            $session,
+            $csrf
+        );
+        $subjects = new SubjectRepository($pdo);
+        $subjectController = new SubjectController(
+            new SubjectAdministrationService($pdo, $schools, $subjects, new AuditLogRepository($pdo)),
+            $subjects,
+            $session,
+            $csrf
+        );
+        $offerings = new SubjectOfferingRepository($pdo);
+        $offeringController = new SubjectOfferingController(
+            new SubjectOfferingAdministrationService($pdo, $schools, $years, $classrooms, $subjects, $offerings, new AuditLogRepository($pdo)),
+            $offerings,
+            $years,
+            $classrooms,
+            $subjects,
+            $session,
+            $csrf
+        );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
@@ -117,6 +164,30 @@ final class Application
             'admin.users.changeMembershipStatus' => static fn (Request $request): Response => $schoolUsers->changeMembershipStatus($request, $routeId),
             'admin.users.replaceRoles' => static fn (Request $request): Response => $schoolUsers->replaceRoles($request, $routeId),
             'admin.users.resetPassword' => static fn (Request $request): Response => $schoolUsers->resetPassword($request, $routeId),
+            'academic.years.index' => static fn (Request $request): Response => $academicYears->index(),
+            'academic.years.create' => static fn (Request $request): Response => $academicYears->create(),
+            'academic.years.store' => static fn (Request $request): Response => $academicYears->store($request),
+            'academic.years.edit' => static fn (Request $request): Response => $academicYears->edit($routeId),
+            'academic.years.update' => static fn (Request $request): Response => $academicYears->update($request, $routeId),
+            'academic.years.changeStatus' => static fn (Request $request): Response => $academicYears->changeStatus($request, $routeId),
+            'academic.classrooms.index' => static fn (Request $request): Response => $classroomController->index($request),
+            'academic.classrooms.create' => static fn (Request $request): Response => $classroomController->create($request),
+            'academic.classrooms.store' => static fn (Request $request): Response => $classroomController->store($request),
+            'academic.classrooms.edit' => static fn (Request $request): Response => $classroomController->edit($routeId),
+            'academic.classrooms.update' => static fn (Request $request): Response => $classroomController->update($request, $routeId),
+            'academic.classrooms.changeStatus' => static fn (Request $request): Response => $classroomController->changeStatus($request, $routeId),
+            'academic.subjects.index' => static fn (Request $request): Response => $subjectController->index(),
+            'academic.subjects.create' => static fn (Request $request): Response => $subjectController->create(),
+            'academic.subjects.store' => static fn (Request $request): Response => $subjectController->store($request),
+            'academic.subjects.edit' => static fn (Request $request): Response => $subjectController->edit($routeId),
+            'academic.subjects.update' => static fn (Request $request): Response => $subjectController->update($request, $routeId),
+            'academic.subjects.changeStatus' => static fn (Request $request): Response => $subjectController->changeStatus($request, $routeId),
+            'academic.offerings.index' => static fn (Request $request): Response => $offeringController->index($request),
+            'academic.offerings.create' => static fn (Request $request): Response => $offeringController->create($request),
+            'academic.offerings.store' => static fn (Request $request): Response => $offeringController->store($request),
+            'academic.offerings.edit' => static fn (Request $request): Response => $offeringController->edit($routeId),
+            'academic.offerings.update' => static fn (Request $request): Response => $offeringController->update($request, $routeId),
+            'academic.offerings.changeStatus' => static fn (Request $request): Response => $offeringController->changeStatus($request, $routeId),
         };
 
         if ($handler['protected'] ?? false) {

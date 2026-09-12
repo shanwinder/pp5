@@ -23,6 +23,9 @@
   <?php if ($canManageUsers): ?>
     <p><a href="/admin/users">จัดการผู้ใช้</a></p>
   <?php endif; ?>
+  <?php if ($canViewAcademicSetup): ?>
+    <p><a href="/academic/years">จัดการโครงสร้างวิชาการ</a></p>
+  <?php endif; ?>
 </main>
 </body>
 </html>

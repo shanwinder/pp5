@@ -224,6 +224,113 @@ final class DashboardAccessTest extends TestCase
         self::assertStringContainsString('ไม่มีสิทธิ์เข้าใช้งาน', $response->body());
     }
 
+    #[DataProvider('academicAdminRoles')]
+    public function test_academic_navigation_follows_exact_permission_independently_of_user_management(string $role, bool $managesUsers): void
+    {
+        $this->authenticate();
+        $this->assignRole($role, $this->schoolId);
+        $this->assertAcademicNavigation($this->dashboard(), true);
+        $this->assertAcademicLists(200);
+        self::assertSame($managesUsers, str_contains($this->dashboard()->body(), '<a href="/admin/users">จัดการผู้ใช้</a>'));
+
+        $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN roles r ON r.id = rp.role_id
+            JOIN permissions p ON p.id = rp.permission_id WHERE r.code = ? AND p.code = 'ACADEMIC_SETUP_VIEW'")->execute([$role]);
+
+        $this->assertAcademicNavigation($this->dashboard(), false);
+        $this->assertAcademicLists(403);
+        self::assertSame($managesUsers, str_contains($this->dashboard()->body(), '<a href="/admin/users">จัดการผู้ใช้</a>'));
+    }
+
+    public static function academicAdminRoles(): array { return [['SCHOOL_ADMIN', true], ['ACADEMIC_ADMIN', false]]; }
+
+    #[DataProvider('nonAcademicRoles')]
+    public function test_direct_permission_grant_shows_academic_navigation_for_normally_unauthorized_role(string $role): void
+    {
+        $this->authenticate();
+        $this->assignRole($role, $this->schoolId);
+        $this->assertAcademicNavigation($this->dashboard(), false);
+        $this->assertAcademicLists(403);
+
+        $this->grantAcademicView($role);
+        $this->assertAcademicNavigation($this->dashboard(), true);
+        $this->assertAcademicLists(200);
+        self::assertStringNotContainsString('/admin/users', $this->dashboard()->body());
+    }
+
+    public static function nonAcademicRoles(): array
+    {
+        return [['VIEWER'], ['SUBJECT_TEACHER'], ['HOMEROOM_TEACHER'], ['EXECUTIVE']];
+    }
+
+    public function test_academic_navigation_ignores_browser_school_user_and_role_fields(): void
+    {
+        $this->authenticate();
+        $this->assignRole('VIEWER', $this->schoolId);
+        $otherUser = $this->insert('INSERT INTO users (username, password_hash, display_name) VALUES (?, ?, ?)', ['dashboard-academic-other', 'unused', 'Other admin']);
+        $this->insert('INSERT INTO school_memberships (user_id, school_id) VALUES (?, ?)', [$otherUser, $this->otherSchoolId]);
+        $this->pdo->prepare("INSERT INTO user_role_assignments (user_id, school_id, role_id)
+            SELECT ?, ?, id FROM roles WHERE code = 'SCHOOL_ADMIN'")->execute([$otherUser, $this->otherSchoolId]);
+        (new Csrf())->token(new Session());
+        $session = $_SESSION;
+        $forged = ['school_id' => $this->otherSchoolId, 'user_id' => $otherUser, 'role' => 'SCHOOL_ADMIN', 'context_type' => 'SYSTEM'];
+        foreach ([false, true] as $allowed) {
+            if ($allowed) { $this->grantAcademicView('VIEWER'); }
+            $this->assertAcademicNavigation($this->app->handle(new Request('GET', '/dashboard', $forged, $forged, [])), $allowed);
+            self::assertSame($_SESSION, $session);
+            foreach (['years', 'classrooms', 'subjects', 'offerings'] as $resource) {
+                self::assertSame($allowed ? 200 : 403, $this->app->handle(new Request('GET', '/academic/' . $resource, $forged, $forged, []))->status());
+            }
+            self::assertSame(405, $this->app->handle(new Request('POST', '/dashboard', $forged, $forged, []))->status());
+        }
+        $_SESSION['school_id'] = $this->otherSchoolId;
+        $response = $this->app->handle(new Request('GET', '/dashboard', ['school_id' => $this->schoolId], ['user_id' => $this->userId], []));
+        self::assertSame(403, $response->status());
+        self::assertStringNotContainsString('/academic/years', $response->body());
+        self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
+    }
+
+    public function test_academic_navigation_requires_assignment_for_session_school_without_year_scope(): void
+    {
+        $this->authenticate();
+        $this->assignRole('ACADEMIC_ADMIN', $this->schoolId);
+        $this->assertAcademicNavigation($this->dashboard(), true);
+        $year = $this->insert('INSERT INTO academic_years (school_id, year_be) VALUES (?, ?)', [$this->schoolId, 2569]);
+        $this->pdo->prepare('UPDATE user_role_assignments SET academic_year_id = ? WHERE user_id = ?')->execute([$year, $this->userId]);
+        $this->assertAcademicNavigation($this->dashboard(), false);
+        $this->assertAcademicLists(403);
+
+        $this->insert("INSERT INTO school_memberships (school_id, user_id, status) VALUES (?, ?, 'SUSPENDED')", [$this->otherSchoolId, $this->userId]);
+        $this->pdo->prepare('UPDATE user_role_assignments SET academic_year_id = NULL, school_id = ? WHERE user_id = ?')->execute([$this->otherSchoolId, $this->userId]);
+        $this->assertAcademicNavigation($this->dashboard(), false);
+        $this->assertAcademicLists(403);
+    }
+
+    private function assignRole(string $role, int $school): void
+    {
+        $this->pdo->prepare('INSERT INTO user_role_assignments (user_id, school_id, role_id) SELECT ?, ?, id FROM roles WHERE code = ?')->execute([$this->userId, $school, $role]);
+    }
+
+    private function grantAcademicView(string $role): void
+    {
+        $this->pdo->prepare("INSERT INTO role_permissions (role_id, permission_id) SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+            WHERE r.code = ? AND p.code = 'ACADEMIC_SETUP_VIEW'")->execute([$role]);
+    }
+
+    private function assertAcademicLists(int $status): void
+    {
+        foreach (['years', 'classrooms', 'subjects', 'offerings'] as $resource) {
+            self::assertSame($status, $this->app->handle(new Request('GET', '/academic/' . $resource, [], [], []))->status());
+        }
+    }
+
+    private function assertAcademicNavigation(Response $response, bool $visible): void
+    {
+        self::assertSame(200, $response->status());
+        self::assertSame($visible ? 1 : 0, substr_count($response->body(), '<a href="/academic/years">จัดการโครงสร้างวิชาการ</a>'));
+        self::assertSame($visible ? 1 : 0, substr_count($response->body(), 'href="/academic/years"'));
+        self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
+    }
+
     private function authenticate(): void
     {
         $_SESSION = [

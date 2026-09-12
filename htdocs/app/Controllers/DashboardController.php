@@ -36,6 +36,10 @@ final class DashboardController
                 $this->session->get('user_id'), AccessContext::SCHOOL,
                 $this->session->get('school_id'), 'SCHOOL_USER_VIEW'
             ),
+            'canViewAcademicSetup' => $this->authorization->hasPermission(
+                $this->session->get('user_id'), AccessContext::SCHOOL,
+                $this->session->get('school_id'), 'ACADEMIC_SETUP_VIEW'
+            ),
         ]));
     }
 }
