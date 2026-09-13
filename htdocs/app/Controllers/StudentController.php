@@ -7,6 +7,8 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
 use App\Repositories\StudentRepository;
+use App\Repositories\StudentEnrollmentRepository;
+use App\Repositories\StudentClassroomPlacementRepository;
 use App\Services\AuthorizationService;
 use App\Services\StudentAdministrationService;
 use App\Support\AccessContext;
@@ -21,7 +23,9 @@ final class StudentController
         private StudentRepository $students,
         private Session $session,
         private Csrf $csrf,
-        private AuthorizationService $authorization
+        private AuthorizationService $authorization,
+        private StudentEnrollmentRepository $enrollments,
+        private StudentClassroomPlacementRepository $placements
     ) {}
 
     public function index(Request $request): Response
@@ -72,9 +76,15 @@ final class StudentController
         }
         $maskedNationalId = $target['national_id'] === null ? null : '*********' . substr($target['national_id'], -4);
         unset($target['national_id']);
+        $history = $this->enrollments->listForStudent($this->session->get('school_id'), $studentId);
+        foreach ($history as &$enrollment) {
+            $enrollment['placements'] = $this->placements->listForEnrollment($this->session->get('school_id'), $enrollment['id']);
+        }
+        unset($enrollment);
 
         return new Response(View::render('students/show', [
             'target' => $target, 'maskedNationalId' => $maskedNationalId, 'canManage' => $this->can('STUDENT_MANAGE'),
+            'history' => $history, 'canManageEnrollment' => $this->can('ENROLLMENT_MANAGE'),
         ]));
     }
 

@@ -373,6 +373,43 @@ final class StudentHttpTest extends TestCase
         }
     }
 
+    public function test_student_history_is_newest_first_tenant_scoped_masked_and_keeps_ended_placements(): void
+    {
+        $this->login('VIEWER'); $this->grant('VIEWER','STUDENT_VIEW');
+        $grade=(int)$this->pdo->query("SELECT id FROM grade_levels WHERE code='P1'")->fetchColumn();
+        foreach ([[$this->school,$this->student,2568,'CLOSED','WITHDRAWN','Old class'],[$this->school,$this->student,2569,'ACTIVE','ACTIVE','Current class'],[$this->foreignSchool,$this->foreignStudent,2579,'CLOSED','WITHDRAWN','FOREIGN_SECRET']] as [$school,$student,$yearBe,$yearStatus,$status,$roomName]) {
+            $year=$this->insert('INSERT INTO academic_years (school_id,year_be,status) VALUES (?,?,?)',[$school,$yearBe,$yearStatus]);
+            $enrollment=$this->insert('INSERT INTO student_enrollments (school_id,academic_year_id,student_id,grade_level_id,entry_date,exit_date,status) VALUES (?,?,?,?,?,?,?)',[$school,$year,$student,$grade,'2025-05-01',$status==='ACTIVE' ? null : '2026-03-01',$status]);
+            $room=$this->insert('INSERT INTO classrooms (school_id,academic_year_id,grade_level_id,code,name_th) VALUES (?,?,?,?,?)',[$school,$year,$grade,'R',$roomName]);
+            $this->insert('INSERT INTO student_classroom_placements (school_id,academic_year_id,grade_level_id,enrollment_id,classroom_id,status,started_at,ended_at) VALUES (?,?,?,?,?,?,?,?)',[$school,$year,$grade,$enrollment,$room,$status==='ACTIVE' ? 'ACTIVE' : 'ENDED','2025-05-01 08:00:00',$status==='ACTIVE' ? null : '2026-03-01 16:00:00']);
+        }
+        $before=[$this->rows('SELECT * FROM student_enrollments ORDER BY id'),$this->rows('SELECT * FROM student_classroom_placements ORDER BY id'),$this->snapshot()];
+        $response=$this->request('GET',$this->path('/students/{id}'),[],['school_id'=>$this->foreignSchool]);
+        self::assertSame(200,$response->status()); $this->assertSafe($response);
+        $xpath=$this->xpath($response->body());
+        self::assertSame(['ปีการศึกษา 2569','ปีการศึกษา 2568'],$this->values($xpath->query('//section[@class="enrollment-history"]/h3')));
+        foreach (['*********0123','Current class','Old class','WITHDRAWN','ENDED','2025-05-01','2026-03-01','ห้องล่าสุด','ห้องปัจจุบัน'] as $value) { self::assertStringContainsString($value,$response->body()); }
+        self::assertStringNotContainsString('/academic/enrollments/',$response->body());
+        self::assertSame($before,[$this->rows('SELECT * FROM student_enrollments ORDER BY id'),$this->rows('SELECT * FROM student_classroom_placements ORDER BY id'),$this->snapshot()]);
+        $this->pdo->prepare('UPDATE classrooms SET name_th=? WHERE school_id=?')->execute([self::HOSTILE,$this->school]);
+        $response=$this->request('GET',$this->path('/students/{id}'));
+        self::assertStringContainsString(htmlspecialchars(self::HOSTILE,ENT_QUOTES,'UTF-8'),$response->body());
+        self::assertSame(0,$this->xpath($response->body())->query('//script')->length); $this->assertSafe($response);
+    }
+
+    public function test_student_without_enrollments_shows_empty_history(): void
+    {
+        $this->login(); $response=$this->request('GET',$this->path('/students/{id}'));
+        self::assertSame(200,$response->status()); self::assertStringContainsString('ยังไม่มีประวัติการลงทะเบียน',$response->body()); $this->assertSafe($response);
+    }
+
+    public function test_student_history_repository_failure_is_safe(): void
+    {
+        $this->login(); $this->pdo->failPrepare='FROM student_enrollments';
+        $response=$this->request('GET',$this->path('/students/{id}'));
+        self::assertSame(500,$response->status()); self::assertTrue($this->pdo->failureTriggered); $this->assertSafe($response);
+    }
+
     private function login(string $role = 'SCHOOL_ADMIN'): void
     {
         $user = $this->users[$role];
