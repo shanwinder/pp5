@@ -9,6 +9,7 @@ use App\Controllers\ClassroomController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
 use App\Controllers\SubjectController;
+use App\Controllers\StudentController;
 use App\Controllers\SubjectOfferingController;
 use App\Controllers\SystemSchoolController;
 use App\Http\Request;
@@ -27,6 +28,8 @@ use App\Repositories\RoleRepository;
 use App\Repositories\SchoolMembershipRepository;
 use App\Repositories\SchoolRepository;
 use App\Repositories\SubjectRepository;
+use App\Repositories\StudentRepository;
+use App\Repositories\StudentEnrollmentRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\UserRepository;
 use App\Services\AcademicYearAdministrationService;
@@ -35,6 +38,7 @@ use App\Services\AuthorizationService;
 use App\Services\ClassroomAdministrationService;
 use App\Services\SchoolUserAdministrationService;
 use App\Services\SubjectAdministrationService;
+use App\Services\StudentAdministrationService;
 use App\Services\SubjectOfferingAdministrationService;
 use App\Services\SystemSchoolAdministrationService;
 use App\Support\AccessContext;
@@ -145,9 +149,24 @@ final class Application
             $session,
             $csrf
         );
+        $students = new StudentRepository($pdo);
+        $studentController = new StudentController(
+            new StudentAdministrationService($pdo, $schools, $students, new StudentEnrollmentRepository($pdo), new AuditLogRepository($pdo)),
+            $students,
+            $session,
+            $csrf,
+            new AuthorizationService($authorization)
+        );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
+            'students.index' => static fn (Request $request): Response => $studentController->index($request),
+            'students.create' => static fn (Request $request): Response => $studentController->create(),
+            'students.store' => static fn (Request $request): Response => $studentController->store($request),
+            'students.show' => static fn (Request $request): Response => $studentController->show($routeId),
+            'students.edit' => static fn (Request $request): Response => $studentController->edit($routeId),
+            'students.update' => static fn (Request $request): Response => $studentController->update($request, $routeId),
+            'students.changeStatus' => static fn (Request $request): Response => $studentController->changeStatus($request, $routeId),
             'showLogin' => static fn (Request $request): Response => $controller->showLogin(),
             'login' => static fn (Request $request): Response => $controller->login($request),
             'logout' => static fn (Request $request): Response => $controller->logout($request),

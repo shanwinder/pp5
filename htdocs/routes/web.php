@@ -5,6 +5,34 @@ use FastRoute\RouteCollector;
 use App\Support\AccessContext;
 
 return static function (RouteCollector $r): void {
+    $r->addRoute('GET', '/students', [
+        'action' => 'students.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_VIEW',
+    ]);
+    $r->addRoute('GET', '/students/create', [
+        'action' => 'students.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/students', [
+        'action' => 'students.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/students/{id:\d+}', [
+        'action' => 'students.show', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_VIEW',
+    ]);
+    $r->addRoute('GET', '/students/{id:\d+}/edit', [
+        'action' => 'students.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/students/{id:\d+}', [
+        'action' => 'students.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/students/{id:\d+}/status', [
+        'action' => 'students.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
     $r->addRoute('GET', '/', static fn (): string => 'PP5');
     $r->addRoute('GET', '/login', ['action' => 'showLogin']);
     $r->addRoute('POST', '/login', ['action' => 'login']);
