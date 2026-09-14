@@ -26,6 +26,10 @@
   <?php if ($canViewAcademicSetup): ?>
     <p><a href="/academic/years">จัดการโครงสร้างวิชาการ</a></p>
   <?php endif; ?>
+  <?php if ($canViewStudents): ?>
+    <p><a href="/students">จัดการนักเรียน</a></p>
+    <p><a href="/academic/enrollments">การลงทะเบียนนักเรียน</a></p>
+  <?php endif; ?>
 </main>
 </body>
 </html>
