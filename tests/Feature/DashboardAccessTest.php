@@ -16,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 
 final class DashboardAccessTest extends TestCase
 {
-    private PDO $pdo;
+    private DashboardAccessPDO $pdo;
     private Application $app;
     private int $userId;
     private int $schoolId;
@@ -28,7 +28,10 @@ final class DashboardAccessTest extends TestCase
         $_SESSION = [];
         $config = require dirname(__DIR__, 2) . '/htdocs/config/database.php';
         $config['database'] = 'pp5_test';
-        $this->pdo = Database::connect($config);
+        $this->pdo = new DashboardAccessPDO(Database::dsn($config), $config['username'], $config['password'], [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ]);
         $this->pdo->beginTransaction();
         $this->userId = $this->insert(
             'INSERT INTO users (username, password_hash, display_name) VALUES (?, ?, ?)',
@@ -409,6 +412,27 @@ final class DashboardAccessTest extends TestCase
         }
     }
 
+    public function test_import_navigation_uses_its_own_permission_with_direct_grant_and_revocation(): void
+    {
+        $this->authenticate();
+        $this->assignRole('VIEWER', $this->schoolId);
+        self::assertStringNotContainsString('/academic/student-import', $this->dashboard()->body());
+        $this->grantStudentView('VIEWER');
+        $this->assertStudentNavigation($this->dashboard(), true);
+        self::assertStringNotContainsString('/academic/student-import', $this->dashboard()->body());
+        $this->pdo->exec("INSERT INTO role_permissions (role_id, permission_id) SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+            WHERE r.code = 'VIEWER' AND p.code = 'STUDENT_IMPORT'");
+        self::assertStringContainsString('<a href="/academic/student-import">นำเข้านักเรียน</a>', $this->dashboard()->body());
+        self::assertSame(200, $this->app->handle(new Request('GET', '/academic/student-import', [], [], []))->status());
+        $this->removeStudentView('VIEWER');
+        $this->assertStudentNavigation($this->dashboard(), false);
+        self::assertStringContainsString('<a href="/academic/student-import">นำเข้านักเรียน</a>', $this->dashboard()->body());
+        $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id = rp.role_id JOIN permissions p ON p.id = rp.permission_id
+            WHERE r.code = 'VIEWER' AND p.code = 'STUDENT_IMPORT'");
+        self::assertStringNotContainsString('/academic/student-import', $this->dashboard()->body());
+        self::assertSame(403, $this->app->handle(new Request('GET', '/academic/student-import', [], [], []))->status());
+    }
+
     private function grantStudentView(string $role): void
     {
         $this->pdo->prepare("INSERT INTO role_permissions (role_id, permission_id)
@@ -435,8 +459,6 @@ final class DashboardAccessTest extends TestCase
             self::assertSame($visible ? 1 : 0, substr_count($response->body(), '<a href="' . $path . '">' . $label . '</a>'), $path);
             self::assertSame($visible ? 1 : 0, substr_count($response->body(), 'href="' . $path . '"'), $path);
         }
-        self::assertStringNotContainsString('นำเข้านักเรียน', $response->body());
-        self::assertStringNotContainsString('/academic/student-import', $response->body());
         self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
     }
 
@@ -496,5 +518,36 @@ final class DashboardAccessTest extends TestCase
         $this->pdo->prepare($sql)->execute($parameters);
 
         return (int) $this->pdo->lastInsertId();
+    }
+}
+
+/** Preserve real PDO/service transaction behavior while containing commits in fixture savepoints. */
+final class DashboardAccessPDO extends PDO
+{
+    private int $depth = 0;
+
+    public function beginTransaction(): bool
+    {
+        $ok = $this->depth === 0 ? parent::beginTransaction() : $this->exec('SAVEPOINT dashboard_access_' . $this->depth) !== false;
+        ++$this->depth;
+        return $ok;
+    }
+
+    public function commit(): bool
+    {
+        $ok = $this->depth === 1 ? parent::commit() : $this->exec('RELEASE SAVEPOINT dashboard_access_' . ($this->depth - 1)) !== false;
+        --$this->depth;
+        return $ok;
+    }
+
+    public function rollBack(): bool
+    {
+        if ($this->depth === 1) { $ok = parent::rollBack(); }
+        else {
+            $ok = $this->exec('ROLLBACK TO SAVEPOINT dashboard_access_' . ($this->depth - 1)) !== false;
+            $this->exec('RELEASE SAVEPOINT dashboard_access_' . ($this->depth - 1));
+        }
+        --$this->depth;
+        return $ok;
     }
 }

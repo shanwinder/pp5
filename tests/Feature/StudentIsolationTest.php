@@ -210,6 +210,103 @@ final class StudentIsolationTest extends TestCase
         }
     }
 
+    public function test_import_batch_reads_apply_and_cancel_are_tenant_scoped_and_non_enumerating(): void
+    {
+        $session = $_SESSION;
+        $_SESSION = ['user_id' => $this->b['user'], 'school_id' => $this->b['school'],
+            'school_membership_id' => $this->b['membership'], 'context_type' => 'SCHOOL'];
+        (new Csrf())->token(new Session());
+        $foreign = $this->importPreview($this->b, ['student_code' => 'IMPORT_B', 'first_name_th' => 'FOREIGN_SECRET_IMPORT']);
+        $_SESSION = $session;
+        $own = $this->importPreview($this->a);
+        self::assertSame(302, $this->request('POST', '/academic/student-import/' . $own . '/apply', ['_token' => $_SESSION['csrf_token']])->status());
+        foreach ([$this->a['school'], $this->b['school']] as $school) {
+            $forged = $this->browserAuthority($school);
+            foreach ([['GET', ''], ['POST', '/apply'], ['POST', '/cancel']] as [$method, $suffix]) {
+                $responses = [];
+                foreach ([$foreign, self::MISSING] as $id) {
+                    $before = $this->importSnapshot();
+                    $response = $this->request($method, '/academic/student-import/' . $id . $suffix,
+                        ['_token' => $_SESSION['csrf_token']] + $forged, $forged);
+                    self::assertSame($method === 'GET' ? 404 : 422, $response->status());
+                    self::assertSame($before, $this->importSnapshot());
+                    $this->assertSafe($response);
+                    $responses[] = $response;
+                }
+                self::assertEquals($responses[0], $responses[1]);
+            }
+        }
+    }
+
+    public function test_import_foreign_year_is_rejected_and_foreign_classroom_cannot_resolve(): void
+    {
+        foreach ([$this->a['school'], $this->b['school']] as $school) {
+            $responses = [];
+            foreach ([$this->b['year'], self::MISSING] as $year) {
+                $before = $this->importSnapshot();
+                $response = $this->importRequest($this->a, [], $this->browserAuthority($school), $year);
+                self::assertSame(422, $response->status()); self::assertSame($before, $this->importSnapshot());
+                $this->assertSafe($response); $responses[] = $response;
+            }
+            self::assertEquals($responses[0], $responses[1]);
+            $before = $this->snapshot();
+            $batch = $this->importPreview($this->a, ['classroom_code' => 'FOREIGN_SECRET_ROOM'], $this->browserAuthority($school));
+            self::assertSame($before, $this->snapshot());
+            $rows = (new App\Repositories\StudentImportRowRepository($this->pdo))->listForBatch($this->a['school'], $batch);
+            self::assertSame('ERROR', $rows[0]['error_code']);
+            $before = $this->importSnapshot();
+            $response = $this->request('POST', '/academic/student-import/' . $batch . '/apply', ['_token' => $_SESSION['csrf_token']] + $this->browserAuthority($school));
+            self::assertSame(422, $response->status()); self::assertSame($before, $this->importSnapshot()); $this->assertSafe($response);
+        }
+    }
+
+    public function test_import_matching_never_uses_foreign_student_and_malformed_authority_cannot_override_session(): void
+    {
+        foreach ([$this->a['school'], $this->b['school'], [], new stdClass()] as $school) {
+            $forged = ['school_id' => $school, 'user_id' => [], 'actor_user_id' => new stdClass(), 'role' => ['SCHOOL_ADMIN'], 'context_type' => new stdClass()];
+            $before = $this->snapshot();
+            $batch = $this->importPreview($this->a, ['student_code' => 'FOREIGN_SECRET_CODE', 'national_id' => self::NATIONAL], $forged);
+            self::assertSame($before, $this->snapshot());
+            $staged = (new App\Repositories\StudentImportRowRepository($this->pdo))->listForBatch($this->a['school'], $batch)[0];
+            self::assertSame(null, $staged['matched_student_id']);
+            self::assertSame('CREATE', $staged['student_action']); self::assertSame('CREATE', $staged['enrollment_action']);
+            $meta = (new App\Repositories\StudentImportBatchRepository($this->pdo))->findForSchool($this->a['school'], $batch);
+            self::assertSame($this->a['school'], $meta['school_id']); self::assertSame($this->a['user'], $meta['created_by']);
+        }
+    }
+
+    private function importPreview(array $scope, array $row = [], array $forged = []): int
+    {
+        $before = $this->snapshot();
+        $response = $this->importRequest($scope, $row, $forged);
+        self::assertSame(302, $response->status()); self::assertSame($before, $this->snapshot());
+        $this->assertSafe($response);
+        return (int) $this->pdo->query('SELECT MAX(id) FROM student_import_batches')->fetchColumn();
+    }
+
+    private function importRequest(array $scope, array $row = [], array $forged = [], ?int $year = null): Response
+    {
+        $values = array_replace(['student_code' => 'OWN_IMPORT', 'national_id' => '', 'prefix_th' => 'ด.ช.', 'first_name_th' => 'Import',
+            'last_name_th' => 'Student', 'gender_code' => '', 'birth_date' => '', 'grade_level_code' => 'P1',
+            'classroom_code' => $scope['school'] === $this->a['school'] ? 'OWN_ROOM' : 'FOREIGN_SECRET_ROOM', 'entry_date' => '2026-05-01'], $row);
+        $path = tempnam(sys_get_temp_dir(), 'pp5-isolation-import-');
+        try {
+            $stream = fopen($path, 'w'); fputcsv($stream, array_keys($values), ',', '"', ''); fputcsv($stream, array_values($values), ',', '"', ''); fclose($stream);
+            return $this->app->handle(new Request('POST', '/academic/student-import/preview', $forged,
+                ['_token' => $_SESSION['csrf_token'], 'academic_year_id' => $year ?? $scope['year']] + $forged, [],
+                ['student_file' => ['name' => 'isolation.csv', 'tmp_name' => $path, 'size' => filesize($path), 'error' => UPLOAD_ERR_OK]]));
+        } finally { unlink($path); }
+    }
+
+    private function importSnapshot(): array
+    {
+        $snapshot = $this->snapshot();
+        foreach (['student_import_batches', 'student_import_rows'] as $table) {
+            $snapshot[$table] = $this->pdo->query('SELECT * FROM ' . $table . ' ORDER BY id')->fetchAll();
+        }
+        return $snapshot;
+    }
+
     /** Real HTTP writes succeed, with a real audit actor, then a savepoint restores every row. */
     private function assertOwnControl(string $operation): void
     {

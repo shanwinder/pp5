@@ -30,6 +30,9 @@
     <p><a href="/students">จัดการนักเรียน</a></p>
     <p><a href="/academic/enrollments">การลงทะเบียนนักเรียน</a></p>
   <?php endif; ?>
+  <?php if ($canImportStudents): ?>
+    <p><a href="/academic/student-import">นำเข้านักเรียน</a></p>
+  <?php endif; ?>
 </main>
 </body>
 </html>

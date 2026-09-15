@@ -5,6 +5,26 @@ use FastRoute\RouteCollector;
 use App\Support\AccessContext;
 
 return static function (RouteCollector $r): void {
+    $r->addRoute('GET', '/academic/student-import', [
+        'action' => 'studentImport.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('POST', '/academic/student-import/preview', [
+        'action' => 'studentImport.preview', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('GET', '/academic/student-import/{id:\d+}', [
+        'action' => 'studentImport.show', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('POST', '/academic/student-import/{id:\d+}/apply', [
+        'action' => 'studentImport.apply', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('POST', '/academic/student-import/{id:\d+}/cancel', [
+        'action' => 'studentImport.cancel', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
     $r->addRoute('GET', '/academic/enrollments', [
         'action' => 'enrollments.index', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_VIEW',

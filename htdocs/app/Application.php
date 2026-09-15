@@ -168,9 +168,22 @@ final class Application
             new EnrollmentAdministrationService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements, new AuditLogRepository($pdo)),
             $enrollments, $placements, $students, $years, $grades, $classrooms, $session, $csrf, new AuthorizationService($authorization)
         );
+        $importBatches = new \App\Repositories\StudentImportBatchRepository($pdo);
+        $importRows = new \App\Repositories\StudentImportRowRepository($pdo);
+        $studentImport = new \App\Controllers\StudentImportController(
+            new \App\Services\StudentImportService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements,
+                $importBatches, $importRows, new AuditLogRepository($pdo)),
+            $importBatches, $importRows, $years, new \App\Support\CanonicalStudentCsvReader(), $session, $csrf
+        );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
         $next = match ($handler['action']) {
+            'studentImport.index' => static fn (Request $request): Response => $studentImport->index(),
+            'studentImport.preview' => static fn (Request $request): Response => $studentImport->preview($request),
+            'studentImport.show' => static fn (Request $request): Response => $studentImport->show($routeId),
+            'studentImport.apply' => static fn (Request $request): Response => $studentImport->apply($request, $routeId),
+            'studentImport.cancel' => static fn (Request $request): Response => $studentImport->cancel($request, $routeId),
+
             'enrollments.index' => static fn (Request $request): Response => $enrollmentController->index($request),
             'enrollments.create' => static fn (Request $request): Response => $enrollmentController->create($request),
             'enrollments.store' => static fn (Request $request): Response => $enrollmentController->store($request),
