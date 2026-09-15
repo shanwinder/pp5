@@ -10,7 +10,8 @@ final class Request
         private string $path,
         private array $query,
         private array $post,
-        private array $server
+        private array $server,
+        private array $files = []
     ) {}
 
     public static function fromGlobals(): self
@@ -22,8 +23,14 @@ final class Request
             $path,
             $_GET,
             $_POST,
-            $_SERVER
+            $_SERVER,
+            $_FILES
         );
+    }
+
+    public function file(string $key, mixed $default = null): mixed
+    {
+        return $this->files[$key] ?? $default;
     }
 
     public function method(): string

@@ -101,7 +101,7 @@ final class AcademicStructureSchemaTest extends TestCase
         return [
             ['grade_levels', [['id'], ['code']]],
             ['academic_years', [['id'], ['school_id', 'year_be'], ['id', 'school_id']]],
-            ['classrooms', [['id'], ['school_id', 'academic_year_id', 'code'], ['id', 'school_id', 'academic_year_id']]],
+            ['classrooms', [['id'], ['school_id', 'academic_year_id', 'code'], ['id', 'school_id', 'academic_year_id'], ['id', 'school_id', 'academic_year_id', 'grade_level_id']]],
             ['subjects', [['id'], ['school_id', 'code'], ['id', 'school_id']]],
             ['subject_offerings', [['id'], ['school_id', 'academic_year_id', 'classroom_id', 'subject_id', 'term_no']]],
         ];

@@ -40,6 +40,14 @@ final class DashboardController
                 $this->session->get('user_id'), AccessContext::SCHOOL,
                 $this->session->get('school_id'), 'ACADEMIC_SETUP_VIEW'
             ),
+            'canImportStudents' => $this->authorization->hasPermission(
+                $this->session->get('user_id'), AccessContext::SCHOOL,
+                $this->session->get('school_id'), 'STUDENT_IMPORT'
+            ),
+            'canViewStudents' => $this->authorization->hasPermission(
+                $this->session->get('user_id'), AccessContext::SCHOOL,
+                $this->session->get('school_id'), 'STUDENT_VIEW'
+            ),
         ]));
     }
 }

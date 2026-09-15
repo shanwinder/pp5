@@ -1,6 +1,6 @@
 # ระบบ ปพ.5 — School Administration
 
-ฐานที่พัฒนาครบ Milestone 1–3 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
+ฐานที่พัฒนาครบ Milestone 1–4 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
 โดย SQL รองรับ MariaDB ด้วย ไม่ใช้ Laravel, Node.js backend, Redis, queue, cron
 หรือ database triggers
 
@@ -9,10 +9,10 @@
 รันคำสั่งจาก project root ใช้ PHP CLI 8.2 ขึ้นไปจาก MAMP และ Composer
 ตรวจ `php -v` และให้มี extension `pdo_mysql`
 
-1. ใช้ branch ของ Milestone 3 ที่พัฒนาแล้ว:
+1. ใช้ branch ของ Milestone 4 ที่พัฒนาแล้ว:
 
    ```sh
-   git checkout milestone/3-academic-structure
+   git checkout milestone/4-student-core-enrollment
    ```
 
    การพัฒนาครบใน milestone branch ยังแยกจากการอนุมัติ review และ merge เข้า main
@@ -50,13 +50,18 @@
    จึงรันซ้ำได้ โดยต้องรัน migrations ก่อน seeds เสมอ ไฟล์ถูก apply ตามลำดับชื่อ
    รวม migration `20260910_001_academic_structure.sql` และ seed
    `20260910_001_academic_structure_reference.sql` หลังไฟล์ของ Milestone 1–2
+   ตามด้วย `20260912_001_student_core_enrollment.sql` และ
+   `20260912_001_student_core_permissions.sql` ของ Milestone 4
 
-   Seeded baseline มี **7 roles, 14 permissions และ 19 role-permission mappings**:
+   Seeded baseline Milestone 4 มี **7 roles, 18 permissions และ 27 role-permission mappings**:
    SYSTEM_ADMIN ได้ 3 SYSTEM permissions เดิม ส่วน SCHOOL_ADMIN ได้ 6 SCHOOL
    administration permissions เดิมและ 5 academic permissions ใหม่;
    ACADEMIC_ADMIN ได้ 5 academic permissions เดียวกัน ได้แก่ `ACADEMIC_SETUP_VIEW`,
    `ACADEMIC_YEAR_MANAGE`, `CLASSROOM_MANAGE`, `SUBJECT_MANAGE`, `SUBJECT_OFFERING_MANAGE`
    HOMEROOM_TEACHER, SUBJECT_TEACHER, EXECUTIVE และ VIEWER ไม่ได้รับสิทธิ์ทั้งห้านี้
+   Milestone 4 seed เพิ่ม `STUDENT_VIEW`, `STUDENT_MANAGE`, `ENROLLMENT_MANAGE`,
+   `STUDENT_IMPORT` ให้ SCHOOL_ADMIN และ ACADEMIC_ADMIN เท่านั้น โดย roles อื่นไม่ได้รับ
+   สิทธิ์ทั้งสี่เพิ่ม และ global grade levels ยังคง 6 แถวเดิม
 
    Global grade levels มีเฉพาะ P1–P6 (ประถมศึกษาปีที่ 1–6), sort_order 10–60
    เพิ่มครั้งละ 10 และ status ACTIVE ทุกแถว Seed SQL รันซ้ำได้โดยไม่เพิ่มแถวซ้ำ
@@ -209,7 +214,7 @@ Composite FK บังคับโรงเรียนของ parent แล�
 รวม FK `(academic_year_id, school_id)` ของ `user_role_assignments`
 
 School-wide permission checks ยังใช้เฉพาะ assignment ที่ `academic_year_id IS NULL`
-assignment ที่มี non-NULL academic year **ยังไม่มีผลต่อ authorization ใน Milestone 3**
+assignment ที่มี non-NULL academic year **ยังไม่มีผลต่อ authorization ใน Milestone 4**
 
 Academic POST ทุก mutation ตรวจ CSRF ก่อนเปลี่ยนข้อมูล; bad/missing token ได้ 419
 ทุกการสร้าง แก้ไข และเปลี่ยนสถานะที่สำคัญบันทึก audit ใน transaction เดียวกัน
@@ -223,6 +228,184 @@ Audit action codes มี 12 รายการ: `ACADEMIC_YEAR_CREATED`, `ACADE
 `SUBJECT_OFFERING_STATUS_CHANGED` พร้อม actor, school, entity และเวลา
 ไม่มี password/plaintext/hash, SQL หรือ stack/internal path ใน audit/error
 Dynamic HTML ใช้ output escaping
+
+## นักเรียนและการลงทะเบียน — Milestone 4
+
+ข้อมูลแยกเป็น **Student Master → Academic-Year Enrollment → Classroom Placement History**
+Student identity เป็นข้อมูลระดับโรงเรียน ไม่ผูกกับปีการศึกษา ห้องเรียน หรือระดับชั้น
+`students.id` คงเดิมเมื่อแก้รหัสนักเรียน และประวัติของทุกปียังอ้างถึง identity เดิม
+
+### Student master และ PII
+
+| Field | Rule |
+| --- | --- |
+| `student_code` | จำเป็น, 1–50 Unicode characters, unique ภายในโรงเรียน |
+| `national_id` | ไม่บังคับ; ว่างเป็น NULL หรือ 13 ASCII digits; non-NULL unique ภายในโรงเรียน |
+| `prefix_th` | จำเป็น, 1–50 Unicode characters |
+| `first_name_th`, `last_name_th` | จำเป็น, field ละ 1–100 Unicode characters |
+| `gender_code` | NULL / MALE / FEMALE / OTHER |
+| `birth_date` | NULL หรือ strict ISO `YYYY-MM-DD` ที่ไม่อยู่ในอนาคต |
+| `status` | ACTIVE / INACTIVE; สร้างใหม่เป็น ACTIVE |
+
+ข้อความต้องเป็น UTF-8 ใช้ Unicode trim และไม่รับ control characters
+รหัส/เลขประจำตัวประชาชนเดียวกันใช้ต่างโรงเรียนได้ ไม่มีการเชื่อม identity ข้ามโรงเรียนอัตโนมัติ
+Unique student code ใช้ `utf8mb4_unicode_ci`: ตัวพิมพ์ใหญ่–เล็กและอักขระที่เทียบเท่าตาม
+collation ถือว่าซ้ำ การตรวจ duplicate ภายใน CSV ใช้การเปรียบเทียบเดียวกับฐานข้อมูล
+ไม่มี national-ID checksum policy ใน Milestone 4
+
+ไม่แสดง raw national ID ใน student list/search HTML, import preview, audit, error หรือ logs
+ไม่ใช้ national ID เป็น GET query สำหรับค้นหา หน้ารายละเอียดสำหรับ `STUDENT_VIEW`
+แสดงเฉพาะเลขท้ายสี่หลักพร้อม masking; หน้าแก้ไขที่ผ่าน `STUDENT_MANAGE` เท่านั้นจึงอ่าน/แก้ค่าเต็มได้
+Audit profile เก็บชื่อ fields ที่เปลี่ยนและ safe metadata เช่น `has_national_id`
+ไม่เก็บค่าชื่อ–นามสกุลหรือ raw national ID
+
+Student status แยกจาก enrollment status: ACTIVE ↔ INACTIVE ได้ และสถานะเดิมเป็น no-op
+INACTIVE ยังอ่านประวัติได้ แต่รับ enrollment ใหม่ไม่ได้ ห้าม inactivate ขณะมี ACTIVE enrollment
+ในปี DRAFT/ACTIVE ใด ๆ ของโรงเรียน ส่วน enrollment ในปี CLOSED เพียงอย่างเดียวไม่ block
+การ inactivate การย้ายออก/ลาออกไม่เปลี่ยน student master status อัตโนมัติ
+
+### Enrollment และ placement history
+
+หนึ่งนักเรียนมี enrollment ได้ไม่เกินหนึ่งแถวต่อโรงเรียน/ปี รวมแถวที่สิ้นสุดแล้ว
+เลือก `grade_level_id` ตอนสร้างและแก้ grade ของ enrollment ไม่ได้ใน Milestone 4
+Enrollment สร้างเป็น ACTIVE และอาจไม่มี classroom placement ได้
+
+เปลี่ยนได้จาก ACTIVE → TRANSFERRED_OUT หรือ ACTIVE → WITHDRAWN โดยต้องมี `exit_date`
+Terminal enrollment ห้าม reopen หรือเปลี่ยนเป็น terminal อีกแบบ สถานะเดิมเป็น no-op เฉพาะปีที่เปิด
+`entry_date` ไม่บังคับ; entry/exit ต้องเป็น strict ISO date อยู่ในช่วงวันเริ่ม/สิ้นปีที่ระบุไว้
+และ exit ต้องไม่ก่อน entry ไม่มี delete/cancel endpoint สำหรับแก้ enrollment ที่สร้างผิด
+
+Placement แยกจาก enrollment และเก็บทุกแถวประวัติ มี ACTIVE ได้ไม่เกินหนึ่งแถวต่อ enrollment:
+
+- **Place:** ไม่มีห้องเดิม → สร้าง ACTIVE placement
+- **Move:** จบ placement เดิมด้วย ENDED/ended_at แล้วสร้าง ACTIVE placement ใหม่
+- **Unassign:** จบ placement เดิมโดยยังเก็บ enrollment ไว้แบบไม่มีห้อง
+- ห้องเดิมตรงเป้าหมายเป็น exact no-op ไม่สร้าง audit หรือประวัติซ้ำ
+
+ห้องเป้าหมายต้อง ACTIVE และตรง school/year/grade ของ enrollment ทุกมิติ
+ห้องเก่าที่ INACTIVE ไม่ขัดขวางการ move/unassign ออก เมื่อ transfer-out/withdraw
+จะจบ current placement ใน transaction เดียวกัน ประวัติไม่ถูก hard delete
+
+Enrollment/placement mutation และ import preview/apply ทำได้ในปี **DRAFT / ACTIVE** เท่านั้น
+ปี **CLOSED เป็น read-only** รวม same-state mutation; ยังอ่านประวัติได้
+Student master ยัง maintain ได้โดยแยกจาก lifecycle ของปี ไม่มี CLOSED override/unlock
+
+### Student permissions และ navigation
+
+| Permission | Access |
+| --- | --- |
+| `STUDENT_VIEW` | Student list/detail/history และ enrollment list |
+| `STUDENT_MANAGE` | Student create/edit/update/status |
+| `ENROLLMENT_MANAGE` | Enrollment create/edit/status และ place/move/unassign |
+| `STUDENT_IMPORT` | Import index/preview/show/apply/cancel |
+
+Seed ให้ทั้งสี่ permissions กับ **SCHOOL_ADMIN และ ACADEMIC_ADMIN** เท่านั้น
+SYSTEM_ADMIN คง SYSTEM permissions เดิม; HOMEROOM_TEACHER, SUBJECT_TEACHER, EXECUTIVE
+และ VIEWER ไม่ได้รับทั้งสี่โดย default Baseline คือ **7 roles / 18 permissions / 27 mappings / 6 grade levels**
+
+Dashboard ใช้ `AuthorizationService` ตรวจ permission จริงทุกครั้ง:
+“จัดการนักเรียน” → `/students` และ “การลงทะเบียนนักเรียน” → `/academic/enrollments`
+อาศัย `STUDENT_VIEW`; “นำเข้านักเรียน” → `/academic/student-import` อาศัย `STUDENT_IMPORT`
+ไม่ตรวจ role code/name หรือ username เพื่อ authorize UI การเพิ่ม/ถอด permission mapping มีผลทันที
+ผู้มี STUDENT_VIEW อย่างเดียวอ่าน list/history ได้ แต่ create/edit/mutation enrollment ถูกปฏิเสธ
+Navigation เป็น UI convenience; middleware เป็น security boundary
+
+### Student, enrollment และ import routes
+
+ทุก route ใช้ **Auth → SchoolContext → Permission → handler**; `{id}` รับตัวเลขเท่านั้น
+ทุก POST ตรวจ CSRF ก่อน business/staging/audit write
+
+| Method | Route | Permission |
+| --- | --- | --- |
+| GET | `/students` | STUDENT_VIEW |
+| GET | `/students/create` | STUDENT_MANAGE |
+| POST | `/students` | STUDENT_MANAGE |
+| GET | `/students/{id}` | STUDENT_VIEW |
+| GET | `/students/{id}/edit` | STUDENT_MANAGE |
+| POST | `/students/{id}` | STUDENT_MANAGE |
+| POST | `/students/{id}/status` | STUDENT_MANAGE |
+| GET | `/academic/enrollments` | STUDENT_VIEW |
+| GET | `/academic/enrollments/create` | ENROLLMENT_MANAGE |
+| POST | `/academic/enrollments` | ENROLLMENT_MANAGE |
+| GET | `/academic/enrollments/{id}/edit` | ENROLLMENT_MANAGE |
+| POST | `/academic/enrollments/{id}/placement` | ENROLLMENT_MANAGE |
+| POST | `/academic/enrollments/{id}/status` | ENROLLMENT_MANAGE |
+| GET | `/academic/student-import` | STUDENT_IMPORT |
+| POST | `/academic/student-import/preview` | STUDENT_IMPORT |
+| GET | `/academic/student-import/{id}` | STUDENT_IMPORT |
+| POST | `/academic/student-import/{id}/apply` | STUDENT_IMPORT |
+| POST | `/academic/student-import/{id}/cancel` | STUDENT_IMPORT |
+
+Student list รับ `q` สำหรับรหัส/ชื่อ ไม่ค้น national ID; enrollment list รับ
+`academic_year_id`, `grade_level_id`, `classroom_id`, `status`, `q` โดย resolve filters ในโรงเรียนของ session
+Target/parent IDs ไม่ใช่ authority: `school_id`, `user_id`, `actor_user_id`, role และ context
+ที่ browser ส่งมาเปลี่ยน tenant/actor ไม่ได้ Backend ตรวจ user/membership/school ซ้ำ
+ยังไม่มี non-NULL academic-year assignment authorization หรือ teacher scopes
+GET foreign/missing ให้ friendly 404 แบบไม่บอก existence; POST foreign/missing ให้ safe 422
+(หรือ 403 เมื่อ context/permission gate ปฏิเสธก่อน) และ malformed/missing CSRF ให้ 419
+โดยไม่เปลี่ยน business, staging หรือ audit ข้อมูล dynamic escape ก่อน render ทุกครั้ง
+
+### Canonical CSV: Preview → Apply / Cancel
+
+เลือกปีการศึกษาที่เปิด แล้ว upload field `student_file` เป็น UTF-8 CSV
+รับ UTF-8 BOM, comma delimiter และ header ตามลำดับนี้เท่านั้น:
+
+```text
+student_code,national_id,prefix_th,first_name_th,last_name_th,gender_code,birth_date,grade_level_code,classroom_code,entry_date
+```
+
+ขนาดสูงสุด **2 MiB / 1,000 data rows** (ไม่นับ header) ต้องมีข้อมูลอย่างน้อยหนึ่งแถว
+ใช้ validation student profile เดียวกับ manual form; `grade_level_code` จำเป็น
+`classroom_code` และ `entry_date` ไม่บังคับ Grade ต้อง ACTIVE; classroom code ต้อง resolve
+เป็น ACTIVE classroom ของโรงเรียน/ปี/grade ที่เลือก MIME จาก browser ไม่ใช่ security authority
+ไม่มีการ copy raw upload ไปเก็บใน repository storage
+
+Preview normalize/validate และเขียนเฉพาะ `student_import_batches` / `student_import_rows`
+ไม่เปลี่ยน students/enrollments/placements และไม่มี business audit โดยจัดแต่ละแถวเป็น:
+
+- **CREATE / CREATE:** ไม่พบ identity → สร้างนักเรียนและ enrollment ใหม่ตอน apply
+- **MATCH / CREATE:** identity/profile ตรงของเดิม แต่ยังไม่มี enrollment ในปีนี้
+- **MATCH / NOOP:** enrollment ACTIVE, grade และ current classroom/unplaced ตรงกัน
+- **CONFLICT / ERROR:** ตั้ง actions เป็น NONE, แสดงข้อความปลอดภัย และ block apply
+
+Matching แยกค้น national ID (ถ้ามี) กับ student code ภายในโรงเรียนเดียวกัน
+ถ้าชี้คนละคน, national ID ตรงแต่รหัสต่าง, หรือรหัสตรงแต่ profile/national ID ไม่ตรง ให้ conflict
+Import ไม่ update existing student profile, ไม่เปลี่ยน existing grade และไม่ move existing classroom
+Existing terminal enrollment, grade/classroom ที่ต่างจากเดิม และ inactive student ไม่ผ่าน
+รหัสนักเรียนหรือ non-NULL national ID ซ้ำในไฟล์เป็น ERROR; ไม่เผย raw national ID ในข้อความ/preview
+
+Apply ต้องไม่มี error และมี enrollment ใหม่อย่างน้อยหนึ่งรายการ **all-NOOP batch apply ไม่ได้**
+Service revalidate ทุกแถวใน transaction เดียว ไม่เชื่อ staging ว่าเป็นสิทธิ์หรือข้อมูลปัจจุบัน
+ใช้ lock school/year/batch แล้ว matched students/enrollments ตาม ID ก่อน placements/classrooms
+สร้างเฉพาะ missing entities, เขียน per-entity audits และ `STUDENT_IMPORT_APPLIED` summary
+จากนั้น mark APPLIED และลบ row staging หากขั้นตอนใดล้มเหลว rollback business/audit/batch/staging ทั้งหมด
+
+ไฟล์ที่ APPLIED แล้วห้ามนำเข้าซ้ำด้วย SHA-256 เดิมใน **school/year เดิม**
+Hash เดิมต่างโรงเรียนหรือปีใช้ได้ แต่ยังต้องผ่าน validation ทั้งหมด; ไม่มี global student matching
+Cancel ทำได้เฉพาะ PREVIEW ที่ยังไม่หมดอายุ → CANCELLED พร้อมลบ row staging และไม่มี business audit
+APPLIED/EXPIRED cancel ไม่ได้
+
+Preview มีอายุ **24 ชั่วโมง** Row staging อาจเก็บ raw national ID ระหว่าง live PREVIEW เท่านั้น
+การเปิด import index/batch หรือสร้าง preview ใหม่เรียก cleanup ของโรงเรียนใน session:
+PREVIEW ที่หมดอายุ → EXPIRED และลบ row staging โดยไม่เขียน business audit
+Cleanup เป็น **request-driven ไม่มี cron**; ข้อมูลหมดอายุอาจยังอยู่จนมี request มาเรียก cleanup
+แต่ apply/cancel ปฏิเสธทันทีเมื่อหมดอายุ แม้ cleanup ยังไม่ทำงาน
+
+**Milestone 4 ยังไม่รองรับ native DMC XLSX/XLSB** Canonical CSV ไม่ใช่การ claim DMC compatibility
+Future DMC adapter ต้องใช้ real approved DMC sample เพื่อกำหนด source mapping ก่อน
+
+### Student audit และ transaction guarantees
+
+ใช้ action codes เจ็ดรายการ:
+`STUDENT_CREATED`, `STUDENT_UPDATED`, `STUDENT_STATUS_CHANGED`,
+`STUDENT_ENROLLMENT_CREATED`, `STUDENT_ENROLLMENT_STATUS_CHANGED`,
+`STUDENT_CLASSROOM_PLACEMENT_CHANGED`, `STUDENT_IMPORT_APPLIED`
+
+ทุก mutation สำคัญบันทึก actor จาก session, school, entity type/ID และ timestamp
+Student audit เก็บ safe metadata/changed field names; enrollment/placement เก็บ IDs, status และวันที่
+Import summary เก็บ counts กับ source SHA-256 ไม่มี row PII หรือ password/hash ของรหัสผ่าน
+Exact no-op ไม่สร้าง audit noise; transactions rollback เมื่อ repository/audit ล้มเหลว
+Composite foreign keys บังคับ parent ให้ตรง tenant/year/grade เสริมจาก service validation
 
 ## MAMP smoke test และ cleanup
 
@@ -278,16 +461,84 @@ Private paths ต้องตอบ HTTP 403 เช่น `/config/database.php`
 `/views/academic/offerings/index.php`, `/vendor/autoload.php`
 `/tools/bootstrap_system_admin.php` ต้องไม่ web reachable เพราะอยู่นอก Document Root
 
+### Milestone 4 verification และ smoke checklist
+
+ตรวจ migration chain บน `pp5_test` ที่เริ่มจาก schema ว่างและไม่มีข้อมูลที่ต้องเก็บ
+ห้ามล้าง development `pp5` เพื่อทำขั้นตอนนี้ รันจาก project root:
+
+```sh
+php tools/migrate.php --database=pp5_test
+php tools/seed.php --database=pp5_test
+php tools/migrate.php --database=pp5_test
+php tools/seed.php --database=pp5_test
+```
+
+รอบแรก apply 5 migration files / 3 seed files; รอบสองไม่ apply ซ้ำ
+ตรวจ seed counts จากฐานข้อมูลให้เป็น 7 roles / 18 permissions / 27 mappings / 6 grade levels
+จากนั้นรัน full PHPUnit, project syntax และ `git diff --check` ตาม Local setup
+
+สำหรับ real MAMP smoke ใช้ `pp5`, login ผ่าน HTTP และ multipart upload จริง
+สร้าง School A/B และผู้ใช้ชั่วคราวด้วย unique marker พร้อมบันทึก IDs ทุกชุด:
+
+1. ตรวจ SCHOOL_ADMIN/ACADEMIC_ADMIN navigation และ direct URLs; VIEWER ถูกปฏิเสธ
+   ทดลอง direct STUDENT_VIEW mapping ให้ role เดิมแล้วอ่าน list/history ได้แต่ mutation/import ไม่ได้
+   ถอด mapping แล้วสิทธิ์ต้องหายทันที SYSTEM context เข้า SCHOOL student routes ไม่ได้
+2. สร้าง Thai/Unicode student ทั้งมี national ID และเว้นว่าง; ตรวจ NULL, same-school duplicates,
+   same identity ต่างโรงเรียน, แก้ code/profile โดย history คงเดิม, masked detail และ escaped HTML
+   ตรวจ open active enrollment block inactivation, CLOSED history-only ไม่ block และ reactivate ได้
+3. สร้าง DRAFT/ACTIVE enrollments รวม unplaced; place/move/unassign และ no-op
+   ตรวจ wrong school/year/grade, inactive target, move-away จาก inactive old classroom,
+   transfer-out/withdrawal พร้อมปิด placement, terminal reopen deny และ CLOSED read-only
+4. Upload CSV แบบ CREATE/CREATE, MATCH/CREATE, MATCH/NOOP; preview เปลี่ยน staging เท่านั้น
+   Apply สร้าง missing entities/audits ตามจำนวน, batch APPLIED และลบ staging
+   ตรวจ same-hash/school/year deny และใช้ hash เดิมต่าง school/year ได้เมื่อข้อมูลถูกต้อง
+5. ตรวจ profile/identity/grade/classroom conflicts, all-NOOP, duplicate codes ตาม DB collation,
+   bad header/upload representation, foreign year/batch/classroom และ stale preview
+   Rejected apply ต้องไม่มี partial entity/audit และ staging คงเดิม
+6. Cancel PREVIEW แล้ว staging หายแต่ business/audit คงเดิม; APPLIED/EXPIRED/foreign cancel ไม่ได้
+   ทดสอบหมดอายุโดยปรับเฉพาะ `expires_at` ของ recorded smoke batch ให้ผ่านเวลาแล้ว
+   Apply/cancel ต้องปฏิเสธก่อน cleanup; GET import ต้อง mark EXPIRED และลบ staging
+7. Missing/invalid CSRF ใน student create/update/status, enrollment create/status/placement,
+   import preview/apply/cancel ต้อง 419 ก่อน write เทียบ full snapshots ของ
+   `students`, `student_enrollments`, `student_classroom_placements`, `audit_logs`,
+   `student_import_batches`, `student_import_rows` ก่อน/หลังทุก rejected POST
+8. ตรวจ forged `school_id`, `user_id`, `actor_user_id`, role/context และ foreign parent/target IDs
+   GET foreign/missing ไม่แยก existence; responses ไม่มี foreign secret markers, raw national ID,
+   SQL/constraint/stack/path/credentials ตรวจ audit ทั้งเจ็ด codes และ exact no-op ไม่มี audit noise
+9. ตรวจ private paths รวม `/app/Services/StudentImportService.php`,
+   `/app/Support/CanonicalStudentCsvReader.php`, `/routes/web.php`, `/views/students/show.php`,
+   `/views/academic/enrollments/edit.php`, `/views/academic/student-import/preview.php`,
+   `/storage` และ subpaths ให้ 403 เช่นเดียวกับ private paths เดิม
+10. Logout temporary sessions แล้ว cleanup เฉพาะ recorded IDs ของ run จากลูกไปแม่:
+    import rows → batches → placements → enrollments → students → fixture audit rows
+    → classrooms/years → role assignments/memberships → users → schools
+    ถ้ามี temporary permission mapping ให้ลบเฉพาะคู่ที่เพิ่มเอง ตรวจข้อมูลทุกตารางกลับตรง
+    baseline ก่อนสร้าง fixtures เก็บ migration/seed/reference data และข้อมูลจริงไว้ทั้งหมด
+    ลบ temporary CSV/helpers/cookies; ห้าม commit fixtures, staging/PII/session dumps หรือ credentials
+
+ผล Task 8 บน MAMP วันที่ **2026-09-15**: PHP CLI 8.3.14, PHPUnit 11.5.56,
+Apache `localhost:8888`, MySQL 8.0.40; baseline **1,987 tests / 45,632 assertions**
+พบและแก้ preview duplicate-code collation mismatch ด้วย regression RED ก่อนแก้ production
+ครอบคลุม case/accent/Unicode composition/expansion, 1,000-code limit และ query-failure rollback
+หลังแก้ **1,994 tests / 45,807 assertions**; syntax ผ่าน **126 PHP files** (ไม่นับ vendor)
+
+Real MAMP smoke ผ่าน **3,823 checks** รวม response-leak checks และ snapshot invariants
+ชุด mixed import สร้าง student/enrollment/placement ใหม่ **1/2/2** ตามที่คาด และ NOOP ไม่เขียนซ้ำ
+Audit ทั้งเจ็ด codes ผ่าน, private paths ถูกปฏิเสธ, fixture cleanup คืนข้อมูลเดิมครบทุกตาราง
+Focused import/domain/HTTP/isolation ผ่าน **144 tests / 5,070 assertions**
+Oversized/>1,000 CSV rows และ injected write/audit failure rollback ยืนยันผ่าน automated regression
+ไม่ได้ทำ destructive failure injection ใน development; MariaDB ไม่ได้รัน smoke ในเครื่อง MAMP นี้
+
 ## ขอบเขต milestone ถัดไป
 
-Milestone 1–3 ครอบคลุม SYSTEM/SCHOOL authentication, โรงเรียน/ผู้ใช้ และโครงสร้างวิชาการ
-พร้อม service, UI, permission และ audit ฐานนี้เตรียมสำหรับ
-**Milestone 4 — Student Core + Enrollment** ซึ่งยังไม่ได้เริ่ม
+Milestone 1–4 ครอบคลุม SYSTEM/SCHOOL authentication, โรงเรียน/ผู้ใช้, โครงสร้างวิชาการ,
+student identity, yearly enrollment, placement history, transfer-out/withdrawal และ canonical CSV import
+พร้อม service, UI, permission และ audit การจบ milestone branch ยังต้องผ่าน review ก่อน PR/merge
 
-ยังไม่ได้ implement: students, DMC import, enrollments, transfer/promotion,
-staff profile subsystem, homeroom teacher assignments, subject teacher assignments,
+ยังไม่ได้ implement: native DMC XLSX/XLSB import, Excel PP5 migration, promotion/repeat-year/graduation,
+automatic cross-school transfer/linking, staff profile subsystem, homeroom/subject teacher assignments,
 fine-grained `permission_scopes`, non-NULL academic-year authorization,
 gradebook/scores, attendance, evaluations, competencies, activities, annual results,
-finalization, PP5/PP6 reports, XLSX import/export และ HTMX autosave
+finalization, PP5/PP6 reports, mPDF report generation, XLSX import/export และ HTMX autosave
 รวมถึง school chooser, user transfer, email invitation/reset, 2FA/SSO,
 audit browsing UI และ deployment automation

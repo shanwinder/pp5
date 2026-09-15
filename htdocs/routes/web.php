@@ -5,6 +5,78 @@ use FastRoute\RouteCollector;
 use App\Support\AccessContext;
 
 return static function (RouteCollector $r): void {
+    $r->addRoute('GET', '/academic/student-import', [
+        'action' => 'studentImport.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('POST', '/academic/student-import/preview', [
+        'action' => 'studentImport.preview', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('GET', '/academic/student-import/{id:\d+}', [
+        'action' => 'studentImport.show', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('POST', '/academic/student-import/{id:\d+}/apply', [
+        'action' => 'studentImport.apply', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('POST', '/academic/student-import/{id:\d+}/cancel', [
+        'action' => 'studentImport.cancel', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_IMPORT',
+    ]);
+    $r->addRoute('GET', '/academic/enrollments', [
+        'action' => 'enrollments.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_VIEW',
+    ]);
+    $r->addRoute('GET', '/academic/enrollments/create', [
+        'action' => 'enrollments.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ENROLLMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/enrollments', [
+        'action' => 'enrollments.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ENROLLMENT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/academic/enrollments/{id:\d+}/edit', [
+        'action' => 'enrollments.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ENROLLMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/enrollments/{id:\d+}/placement', [
+        'action' => 'enrollments.changePlacement', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ENROLLMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/enrollments/{id:\d+}/status', [
+        'action' => 'enrollments.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'ENROLLMENT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/students', [
+        'action' => 'students.index', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_VIEW',
+    ]);
+    $r->addRoute('GET', '/students/create', [
+        'action' => 'students.create', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/students', [
+        'action' => 'students.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/students/{id:\d+}', [
+        'action' => 'students.show', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_VIEW',
+    ]);
+    $r->addRoute('GET', '/students/{id:\d+}/edit', [
+        'action' => 'students.edit', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/students/{id:\d+}', [
+        'action' => 'students.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/students/{id:\d+}/status', [
+        'action' => 'students.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'STUDENT_MANAGE',
+    ]);
     $r->addRoute('GET', '/', static fn (): string => 'PP5');
     $r->addRoute('GET', '/login', ['action' => 'showLogin']);
     $r->addRoute('POST', '/login', ['action' => 'login']);

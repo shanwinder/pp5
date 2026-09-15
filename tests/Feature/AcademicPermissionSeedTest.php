@@ -46,7 +46,8 @@ final class AcademicPermissionSeedTest extends TestCase
             "SELECT code FROM permissions WHERE code NOT IN (
                 'SCHOOL_MEMBERSHIP_STATUS_MANAGE', 'SCHOOL_PASSWORD_RESET', 'SCHOOL_ROLE_MANAGE',
                 'SCHOOL_USER_CREATE', 'SCHOOL_USER_UPDATE', 'SCHOOL_USER_VIEW',
-                'SYSTEM_SCHOOL_CREATE', 'SYSTEM_SCHOOL_STATUS_MANAGE', 'SYSTEM_SCHOOL_VIEW'
+                'SYSTEM_SCHOOL_CREATE', 'SYSTEM_SCHOOL_STATUS_MANAGE', 'SYSTEM_SCHOOL_VIEW',
+                'ENROLLMENT_MANAGE', 'STUDENT_IMPORT', 'STUDENT_MANAGE', 'STUDENT_VIEW'
             ) ORDER BY code"
         )->fetchAll(PDO::FETCH_COLUMN));
     }
@@ -67,11 +68,15 @@ final class AcademicPermissionSeedTest extends TestCase
         return [
             'system administrator' => ['SYSTEM_ADMIN', ['SYSTEM_SCHOOL_CREATE', 'SYSTEM_SCHOOL_STATUS_MANAGE', 'SYSTEM_SCHOOL_VIEW']],
             'school administrator' => ['SCHOOL_ADMIN', [
-                'ACADEMIC_SETUP_VIEW', 'ACADEMIC_YEAR_MANAGE', 'CLASSROOM_MANAGE',
+                'ACADEMIC_SETUP_VIEW', 'ACADEMIC_YEAR_MANAGE', 'CLASSROOM_MANAGE', 'ENROLLMENT_MANAGE',
                 'SCHOOL_MEMBERSHIP_STATUS_MANAGE', 'SCHOOL_PASSWORD_RESET', 'SCHOOL_ROLE_MANAGE',
-                'SCHOOL_USER_CREATE', 'SCHOOL_USER_UPDATE', 'SCHOOL_USER_VIEW', 'SUBJECT_MANAGE', 'SUBJECT_OFFERING_MANAGE',
+                'SCHOOL_USER_CREATE', 'SCHOOL_USER_UPDATE', 'SCHOOL_USER_VIEW',
+                'STUDENT_IMPORT', 'STUDENT_MANAGE', 'STUDENT_VIEW', 'SUBJECT_MANAGE', 'SUBJECT_OFFERING_MANAGE',
             ]],
-            'academic administrator' => ['ACADEMIC_ADMIN', self::ACADEMIC_PERMISSIONS],
+            'academic administrator' => ['ACADEMIC_ADMIN', [
+                'ACADEMIC_SETUP_VIEW', 'ACADEMIC_YEAR_MANAGE', 'CLASSROOM_MANAGE', 'ENROLLMENT_MANAGE',
+                'STUDENT_IMPORT', 'STUDENT_MANAGE', 'STUDENT_VIEW', 'SUBJECT_MANAGE', 'SUBJECT_OFFERING_MANAGE',
+            ]],
             'homeroom teacher' => ['HOMEROOM_TEACHER', []],
             'subject teacher' => ['SUBJECT_TEACHER', []],
             'executive' => ['EXECUTIVE', []],
@@ -82,8 +87,8 @@ final class AcademicPermissionSeedTest extends TestCase
     public function test_seeded_baseline_has_exact_counts(): void
     {
         self::assertSame(7, (int) $this->pdo->query('SELECT COUNT(*) FROM roles')->fetchColumn());
-        self::assertSame(14, (int) $this->pdo->query('SELECT COUNT(*) FROM permissions')->fetchColumn());
-        self::assertSame(19, (int) $this->pdo->query('SELECT COUNT(*) FROM role_permissions')->fetchColumn());
+        self::assertSame(18, (int) $this->pdo->query('SELECT COUNT(*) FROM permissions')->fetchColumn());
+        self::assertSame(27, (int) $this->pdo->query('SELECT COUNT(*) FROM role_permissions')->fetchColumn());
         self::assertSame(6, (int) $this->pdo->query('SELECT COUNT(*) FROM grade_levels')->fetchColumn());
     }
 
@@ -91,6 +96,7 @@ final class AcademicPermissionSeedTest extends TestCase
     {
         self::assertSame([
             '20260909_001_roles_permissions.sql', '20260910_001_academic_structure_reference.sql',
+            '20260912_001_student_core_permissions.sql',
         ], $this->pdo->query('SELECT seed FROM seed_migrations ORDER BY seed')->fetchAll(PDO::FETCH_COLUMN));
     }
 
