@@ -26,6 +26,7 @@ final class StudentPermissionSeedTest extends TestCase
     public function test_exact_four_permissions_extend_the_existing_fourteen(): void
     {
         self::assertSame(self::PERMISSIONS, $this->pdo->query("SELECT code FROM permissions WHERE code NOT IN (
+            'GRADEBOOK_COMPONENT_MANAGE', 'GRADEBOOK_SCORE_ENTER', 'GRADEBOOK_VIEW', 'TEACHING_ASSIGNMENT_MANAGE',
             'ACADEMIC_SETUP_VIEW', 'ACADEMIC_YEAR_MANAGE', 'CLASSROOM_MANAGE', 'SUBJECT_MANAGE', 'SUBJECT_OFFERING_MANAGE',
             'SCHOOL_MEMBERSHIP_STATUS_MANAGE', 'SCHOOL_PASSWORD_RESET', 'SCHOOL_ROLE_MANAGE', 'SCHOOL_USER_CREATE',
             'SCHOOL_USER_UPDATE', 'SCHOOL_USER_VIEW', 'SYSTEM_SCHOOL_CREATE', 'SYSTEM_SCHOOL_STATUS_MANAGE', 'SYSTEM_SCHOOL_VIEW'
@@ -50,10 +51,10 @@ final class StudentPermissionSeedTest extends TestCase
 
     public function test_exact_seeded_baseline_and_migration_ledger(): void
     {
-        foreach (['roles' => 7, 'permissions' => 18, 'role_permissions' => 27, 'grade_levels' => 6] as $table => $expected) {
+        foreach (['roles' => 7, 'permissions' => 22, 'role_permissions' => 38, 'grade_levels' => 6] as $table => $expected) {
             self::assertSame($expected, (int) $this->pdo->query("SELECT COUNT(*) FROM {$table}")->fetchColumn(), $table);
         }
-        self::assertSame(['20260909_001_roles_permissions.sql', '20260910_001_academic_structure_reference.sql', '20260912_001_student_core_permissions.sql'],
+        self::assertSame(['20260909_001_roles_permissions.sql', '20260910_001_academic_structure_reference.sql', '20260912_001_student_core_permissions.sql', '20260915_001_teaching_gradebook_permissions.sql'],
             $this->pdo->query('SELECT seed FROM seed_migrations ORDER BY seed')->fetchAll(PDO::FETCH_COLUMN));
     }
 
