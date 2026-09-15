@@ -268,6 +268,68 @@ final class StudentImportTest extends StudentImportFixtureTestCase
 
     public static function duplicateFields(): array { return [['student_code'], ['national_id']]; }
 
+    #[DataProvider('equivalentStudentCodes')]
+    public function test_preview_rejects_codes_equivalent_under_student_unique_key(string $firstCode, string $secondCode): void
+    {
+        $first = $this->row(['student_code' => $firstCode, 'national_id' => null]);
+        $second = $this->row(['row_no' => 3, 'student_code' => $secondCode, 'national_id' => null]);
+        // Prove that this pair collides under the actual student identity constraint.
+        $this->pdo->beginTransaction();
+        $this->makeStudent($first);
+        $this->denied(fn () => $this->makeStudent($second));
+        $this->pdo->rollBack();
+
+        $before = $this->snapshot();
+        $batch = $this->preview([$first, $second, $this->row(['row_no' => 4, 'student_code' => 'DISTINCT', 'national_id' => null])]);
+        self::assertSame($before, $this->snapshot());
+        self::assertSame(['ERROR', 'ERROR', null], array_column($this->staging($batch), 'error_code'));
+        self::assertSame(2, $this->batch($batch)['error_count']);
+        self::assertSame(1, $this->batch($batch)['create_student_count']);
+        $before = $this->snapshot(true);
+        $this->denied(fn () => $this->service()->apply($this->school, $this->user, $batch));
+        self::assertSame($before, $this->snapshot(true));
+    }
+
+    public static function equivalentStudentCodes(): array
+    {
+        return [
+            'case' => ['CASE_DUP', 'case_dup'],
+            'accent' => ['eleve', 'élève'],
+            'Unicode composition' => ['é1', "e\u{0301}1"],
+            'collation expansion' => ['STRASSE', 'Straße'],
+        ];
+    }
+
+    public function test_code_comparison_handles_full_csv_limit_and_nonconsecutive_indexes(): void
+    {
+        $codes = [];
+        for ($index = 0; $index < 1000; ++$index) {
+            $codes[$index * 2] = 'นักเรียน-' . $index;
+        }
+        $repository = new App\Repositories\StudentRepository($this->pdo);
+        self::assertSame([], $repository->duplicateCodeIndexes($codes));
+        $codes[0] = 'DUP';
+        $codes[1000] = 'dup';
+        $codes[1998] = 'Dúp';
+        self::assertSame([0, 1000, 1998], $repository->duplicateCodeIndexes($codes));
+    }
+
+    #[DataProvider('codeComparisonFailurePhases')]
+    public function test_code_comparison_failure_preserves_business_and_staging(string $phase): void
+    {
+        $rows = [$this->row(), $this->row(['row_no' => 3, 'student_code' => 'SECOND', 'national_id' => null])];
+        $batch = $phase === 'apply' ? $this->preview($rows) : null;
+        $before = $this->snapshot(true);
+        $this->pdo->failSql = 'COUNT(*) OVER';
+        $this->denied(fn () => $phase === 'apply'
+            ? $this->service()->apply($this->school, $this->user, $batch)
+            : $this->preview($rows));
+        $this->pdo->failSql = null;
+        self::assertSame($before, $this->snapshot(true));
+    }
+
+    public static function codeComparisonFailurePhases(): array { return [['preview'], ['apply']]; }
+
     public function test_apply_creates_only_missing_entities_with_safe_audits_and_deletes_staging(): void
     {
         $service = $this->service();

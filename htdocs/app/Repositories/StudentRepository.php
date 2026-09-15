@@ -56,6 +56,27 @@ final class StudentRepository
             ['school_id' => $schoolId, 'national_id' => $nationalId]);
     }
 
+    /** Compare input codes using the same collation as the student unique key; reads no tenant rows. */
+    public function duplicateCodeIndexes(array $codes): array
+    {
+        if (count($codes) < 2) {
+            return [];
+        }
+        $selects = [];
+        $parameters = [];
+        foreach ($codes as $index => $code) {
+            $selects[] = 'SELECT CAST(? AS UNSIGNED) AS row_index, CONVERT(? USING utf8mb4) COLLATE utf8mb4_unicode_ci AS student_code';
+            array_push($parameters, $index, $code);
+        }
+        $statement = $this->pdo->prepare('SELECT row_index FROM (
+            SELECT row_index, COUNT(*) OVER (PARTITION BY student_code) AS occurrences
+            FROM (' . implode(' UNION ALL ', $selects) . ') AS input_codes
+        ) AS counted_codes WHERE occurrences > 1 ORDER BY row_index');
+        $statement->execute($parameters);
+
+        return array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN));
+    }
+
     public function create(int $schoolId, array $profile): int
     {
         $this->writeProfile(

@@ -160,12 +160,12 @@ final class StudentImportService
                 }
                 $profile = StudentProfileRules::normalize(...$profile);
                 $row = array_replace($row, $profile);
+                $codes[count($result)] = $row['student_code'];
                 $row['grade_level_code'] = $this->text($raw['grade_level_code'] ?? null, 20, true);
                 $row['classroom_code'] = $this->text($raw['classroom_code'] ?? null, 50);
                 $entry = $this->text($raw['entry_date'] ?? null, 10);
                 $this->date($entry, $year);
                 $row['entry_date'] = $entry;
-                $codes[$row['student_code']][] = count($result);
                 if ($row['national_id'] !== null) { $nationals[$row['national_id']][] = count($result); }
                 $grade = null;
                 foreach ($this->grades->listActive() as $candidate) { if ($candidate['code'] === $row['grade_level_code']) { $grade = $candidate; break; } }
@@ -199,8 +199,13 @@ final class StudentImportService
             } catch (DomainException $exception) { $row = $this->error($row, 'ERROR', $exception->getMessage()); }
             $result[] = $row;
         }
-        foreach ([$codes, $nationals] as $groups) {
-            foreach ($groups as $indexes) { if (count($indexes) > 1) { foreach ($indexes as $index) { $result[$index] = $this->error($result[$index], 'ERROR', 'ข้อมูลนักเรียนซ้ำภายในไฟล์'); } } }
+        foreach ($this->students->duplicateCodeIndexes($codes) as $index) {
+            $result[$index] = $this->error($result[$index], 'ERROR', 'ข้อมูลนักเรียนซ้ำภายในไฟล์');
+        }
+        foreach ($nationals as $indexes) {
+            if (count($indexes) > 1) {
+                foreach ($indexes as $index) { $result[$index] = $this->error($result[$index], 'ERROR', 'ข้อมูลนักเรียนซ้ำภายในไฟล์'); }
+            }
         }
         return $result;
     }
