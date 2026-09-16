@@ -44,6 +44,10 @@ final class DashboardController
                 $this->session->get('user_id'), AccessContext::SCHOOL,
                 $this->session->get('school_id'), 'STUDENT_IMPORT'
             ),
+            'canManageTeachingAssignments' => $this->authorization->hasPermission(
+                $this->session->get('user_id'), AccessContext::SCHOOL,
+                $this->session->get('school_id'), 'TEACHING_ASSIGNMENT_MANAGE'
+            ),
             'canViewStudents' => $this->authorization->hasPermission(
                 $this->session->get('user_id'), AccessContext::SCHOOL,
                 $this->session->get('school_id'), 'STUDENT_VIEW'

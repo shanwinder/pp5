@@ -226,4 +226,22 @@ return static function (RouteCollector $r): void {
         'action' => 'academic.offerings.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
     ]);
+    $r->addRoute('GET', '/academic/teaching-assignments', [
+        'action' => 'academic.teachingAssignments.index',
+        'protected' => true,
+        'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/teaching-assignments', [
+        'action' => 'academic.teachingAssignments.store',
+        'protected' => true,
+        'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/teaching-assignments/{id:\d+}/status', [
+        'action' => 'academic.teachingAssignments.changeStatus',
+        'protected' => true,
+        'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
 };

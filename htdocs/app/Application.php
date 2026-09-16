@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controllers\TeachingAssignmentController;
 use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
 use App\Controllers\ClassroomController;
@@ -19,6 +20,7 @@ use App\Http\Session;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\PermissionMiddleware;
 use App\Middleware\SchoolContextMiddleware;
+use App\Repositories\TeachingAssignmentRepository;
 use App\Repositories\AcademicYearRepository;
 use App\Repositories\AuthorizationRepository;
 use App\Repositories\AuditLogRepository;
@@ -34,6 +36,7 @@ use App\Repositories\StudentEnrollmentRepository;
 use App\Repositories\StudentClassroomPlacementRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\UserRepository;
+use App\Services\TeachingAssignmentService;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
 use App\Services\AuthorizationService;
@@ -152,6 +155,11 @@ final class Application
             $session,
             $csrf
         );
+        $teachingAssignments = new TeachingAssignmentRepository($pdo);
+        $teachingController = new TeachingAssignmentController(
+            new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo)),
+            $teachingAssignments, $years, $offerings, $session, $csrf
+        );
         $students = new StudentRepository($pdo);
         $enrollments = new StudentEnrollmentRepository($pdo);
         $placements = new StudentClassroomPlacementRepository($pdo);
@@ -231,6 +239,9 @@ final class Application
             'academic.subjects.edit' => static fn (Request $request): Response => $subjectController->edit($routeId),
             'academic.subjects.update' => static fn (Request $request): Response => $subjectController->update($request, $routeId),
             'academic.subjects.changeStatus' => static fn (Request $request): Response => $subjectController->changeStatus($request, $routeId),
+            'academic.teachingAssignments.index' => static fn (Request $request): Response => $teachingController->index($request),
+            'academic.teachingAssignments.store' => static fn (Request $request): Response => $teachingController->store($request),
+            'academic.teachingAssignments.changeStatus' => static fn (Request $request): Response => $teachingController->changeStatus($request, $routeId),
             'academic.offerings.index' => static fn (Request $request): Response => $offeringController->index($request),
             'academic.offerings.create' => static fn (Request $request): Response => $offeringController->create($request),
             'academic.offerings.store' => static fn (Request $request): Response => $offeringController->store($request),

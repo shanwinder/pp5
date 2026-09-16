@@ -41,6 +41,37 @@ final class TeachingAssignmentRepository
         return $row === false ? null : $this->castIds($row);
     }
 
+    public function listDetailedForSchool(int $schoolId, ?int $academicYearId = null): array
+    {
+        // Retained history is independent of current teacher, offering, and year eligibility.
+        $sql = 'SELECT ps.id, ps.school_id, ps.academic_year_id, ps.user_role_assignment_id,
+                ps.subject_offering_id, ps.status, ps.created_at, ps.updated_at,
+                y.year_be, y.status AS academic_year_status, o.term_no, o.status AS offering_status,
+                c.code AS classroom_code, c.name_th AS classroom_name,
+                s.code AS subject_code, s.name_th AS subject_name,
+                ura.user_id, u.display_name AS teacher_display_name
+            FROM permission_scopes ps
+            JOIN academic_years y ON y.id = ps.academic_year_id AND y.school_id = ps.school_id
+            JOIN subject_offerings o ON o.id = ps.subject_offering_id AND o.school_id = ps.school_id
+                AND o.academic_year_id = ps.academic_year_id
+            JOIN classrooms c ON c.id = o.classroom_id AND c.school_id = o.school_id
+                AND c.academic_year_id = o.academic_year_id
+            JOIN subjects s ON s.id = o.subject_id AND s.school_id = o.school_id
+            JOIN user_role_assignments ura ON ura.id = ps.user_role_assignment_id AND ura.school_id = ps.school_id
+            JOIN users u ON u.id = ura.user_id
+            WHERE ps.school_id = ?';
+        $parameters = [$schoolId];
+        if ($academicYearId !== null) {
+            $sql .= ' AND ps.academic_year_id = ?';
+            $parameters[] = $academicYearId;
+        }
+        $sql .= ' ORDER BY y.year_be DESC, c.code ASC, s.code ASC, o.term_no ASC, u.display_name ASC, ps.id ASC';
+        $statement = $this->pdo->prepare($sql);
+        $statement->execute($parameters);
+
+        return array_map($this->castIds(...), $statement->fetchAll());
+    }
+
     public function listForSchool(int $schoolId): array
     {
         // History includes inactive scopes and closed years.
