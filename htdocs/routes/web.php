@@ -244,4 +244,20 @@ return static function (RouteCollector $r): void {
         'context' => AccessContext::SCHOOL,
         'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
     ]);
+    $r->addRoute('GET', '/gradebook/{offeringId:\d+}/setup', [
+        'action' => 'gradebook.components.setup', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/gradebook/{offeringId:\d+}/components', [
+        'action' => 'gradebook.components.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/gradebook/{offeringId:\d+}/components/{componentId:\d+}', [
+        'action' => 'gradebook.components.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/gradebook/{offeringId:\d+}/components/{componentId:\d+}/status', [
+        'action' => 'gradebook.components.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
 };

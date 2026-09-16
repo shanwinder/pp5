@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace App;
 
 use App\Controllers\TeachingAssignmentController;
+use App\Controllers\GradebookComponentController;
 use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
 use App\Controllers\ClassroomController;
@@ -21,6 +22,7 @@ use App\Middleware\AuthMiddleware;
 use App\Middleware\PermissionMiddleware;
 use App\Middleware\SchoolContextMiddleware;
 use App\Repositories\TeachingAssignmentRepository;
+use App\Repositories\GradebookComponentRepository;
 use App\Repositories\AcademicYearRepository;
 use App\Repositories\AuthorizationRepository;
 use App\Repositories\AuditLogRepository;
@@ -37,6 +39,7 @@ use App\Repositories\StudentClassroomPlacementRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\UserRepository;
 use App\Services\TeachingAssignmentService;
+use App\Services\GradebookComponentService;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
 use App\Services\AuthorizationService;
@@ -153,7 +156,13 @@ final class Application
             $classrooms,
             $subjects,
             $session,
-            $csrf
+            $csrf,
+            new AuthorizationService($authorization)
+        );
+        $gradebookComponents = new GradebookComponentRepository($pdo);
+        $componentController = new GradebookComponentController(
+            new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
+            $gradebookComponents, $offerings, $session, $csrf
         );
         $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $teachingController = new TeachingAssignmentController(
@@ -185,7 +194,16 @@ final class Application
         );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
+        $offeringId = filter_var($routeInfo[2]['offeringId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $offeringId = $offeringId === false ? 0 : $offeringId;
+        $componentId = filter_var($routeInfo[2]['componentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $componentId = $componentId === false ? 0 : $componentId;
         $next = match ($handler['action']) {
+            'gradebook.components.setup' => static fn (Request $request): Response => $componentController->setup($offeringId),
+            'gradebook.components.store' => static fn (Request $request): Response => $componentController->store($request, $offeringId),
+            'gradebook.components.update' => static fn (Request $request): Response => $componentController->update($request, $offeringId, $componentId),
+            'gradebook.components.changeStatus' => static fn (Request $request): Response => $componentController->changeStatus($request, $offeringId, $componentId),
+
             'studentImport.index' => static fn (Request $request): Response => $studentImport->index(),
             'studentImport.preview' => static fn (Request $request): Response => $studentImport->preview($request),
             'studentImport.show' => static fn (Request $request): Response => $studentImport->show($routeId),
