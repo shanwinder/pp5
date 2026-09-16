@@ -260,4 +260,7 @@ return static function (RouteCollector $r): void {
         'action' => 'gradebook.components.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
     ]);
+    $r->addRoute('GET', '/gradebook/{offeringId:\d+}', [
+        'action' => 'gradebook.view', 'protected' => true, 'context' => AccessContext::SCHOOL,
+    ]);
 };

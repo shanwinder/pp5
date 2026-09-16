@@ -36,6 +36,19 @@
   <?php if ($canImportStudents): ?>
     <p><a href="/academic/student-import">นำเข้านักเรียน</a></p>
   <?php endif; ?>
+  <?php if ($gradebookOfferings !== []): ?>
+    <section aria-labelledby="gradebooks-heading">
+      <h2 id="gradebooks-heading">สมุดคะแนน</h2>
+      <ul>
+        <?php foreach ($gradebookOfferings as $offering): ?>
+          <li><a href="/gradebook/<?= htmlspecialchars((string) $offering['id'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(
+              $offering['year_be'] . ' / ' . $offering['classroom_code'] . ' ' . $offering['classroom_name'] . ' / '
+              . $offering['subject_code'] . ' ' . $offering['subject_name'] . ' / ภาคเรียน ' . $offering['term_no'], ENT_QUOTES, 'UTF-8') ?></a>
+            — <?= htmlspecialchars($offering['academic_year_status'] . ' / ' . $offering['status'], ENT_QUOTES, 'UTF-8') ?></li>
+        <?php endforeach; ?>
+      </ul>
+    </section>
+  <?php endif; ?>
 </main>
 </body>
 </html>

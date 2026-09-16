@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App;
 
+use App\Controllers\GradebookController;
 use App\Controllers\TeachingAssignmentController;
 use App\Controllers\GradebookComponentController;
 use App\Controllers\AcademicYearController;
@@ -21,6 +22,7 @@ use App\Http\Session;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\PermissionMiddleware;
 use App\Middleware\SchoolContextMiddleware;
+use App\Repositories\GradebookRepository;
 use App\Repositories\TeachingAssignmentRepository;
 use App\Repositories\GradebookComponentRepository;
 use App\Repositories\AcademicYearRepository;
@@ -38,6 +40,7 @@ use App\Repositories\StudentEnrollmentRepository;
 use App\Repositories\StudentClassroomPlacementRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\UserRepository;
+use App\Services\GradebookReadService;
 use App\Services\TeachingAssignmentService;
 use App\Services\GradebookComponentService;
 use App\Services\AcademicYearAdministrationService;
@@ -107,7 +110,12 @@ final class Application
             $session,
             $csrf
         );
-        $dashboard = new DashboardController($session, $schools, $csrf, new AuthorizationService($authorization));
+        $offerings = new SubjectOfferingRepository($pdo);
+        $gradebookComponents = new GradebookComponentRepository($pdo);
+        $gradebookRead = new GradebookReadService(new AuthorizationService($authorization), $offerings,
+            $gradebookComponents, new GradebookRepository($pdo));
+        $gradebookController = new GradebookController($gradebookRead, $session);
+        $dashboard = new DashboardController($session, $schools, $csrf, new AuthorizationService($authorization), $gradebookRead);
         $systemSchools = new SystemSchoolController(
             new SystemSchoolAdministrationService($pdo, $schools, $users, $memberships,
                 new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo)),
@@ -148,7 +156,6 @@ final class Application
             $session,
             $csrf
         );
-        $offerings = new SubjectOfferingRepository($pdo);
         $offeringController = new SubjectOfferingController(
             new SubjectOfferingAdministrationService($pdo, $schools, $years, $classrooms, $subjects, $offerings, new AuditLogRepository($pdo)),
             $offerings,
@@ -159,7 +166,6 @@ final class Application
             $csrf,
             new AuthorizationService($authorization)
         );
-        $gradebookComponents = new GradebookComponentRepository($pdo);
         $componentController = new GradebookComponentController(
             new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
             $gradebookComponents, $offerings, $session, $csrf
@@ -199,6 +205,7 @@ final class Application
         $componentId = filter_var($routeInfo[2]['componentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $componentId = $componentId === false ? 0 : $componentId;
         $next = match ($handler['action']) {
+            'gradebook.view' => static fn (Request $request): Response => $gradebookController->show($offeringId),
             'gradebook.components.setup' => static fn (Request $request): Response => $componentController->setup($offeringId),
             'gradebook.components.store' => static fn (Request $request): Response => $componentController->store($request, $offeringId),
             'gradebook.components.update' => static fn (Request $request): Response => $componentController->update($request, $offeringId, $componentId),
@@ -288,7 +295,13 @@ final class Application
                 $next = static fn (Request $request): Response => $schoolContext->handle($request, $schoolNext);
             }
 
-            return $auth->handle($request, $next);
+            $response = $auth->handle($request, $next);
+            // A gradebook target must not reveal existence through context/auth denial either.
+            if ($handler['action'] === 'gradebook.view' && $response->status() === 403) {
+                return new Response(View::render('errors/404'), 404);
+            }
+
+            return $response;
         }
 
         return $next($request);
