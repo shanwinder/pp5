@@ -24,7 +24,7 @@ final class GradebookReadHttpTest extends TestCase
     }
     public static function readers(): iterable { foreach (['SCHOOL_ADMIN','ACADEMIC_ADMIN','EXECUTIVE','SUBJECT_TEACHER'] as $role) { yield [$role]; } }
     #[DataProvider('readers')]
-    public function testReadOnlyPageRendersIdentityRosterCellsAndTotals(string $role): void
+    public function testPageRendersIdentityRosterCellsAndTotalsWithoutReadSideEffects(string $role): void
     {
         $this->login($role); $before=$this->readSnapshot(); $r=$this->request('GET',$this->readPath());
         self::assertSame(200,$r->status()); $this->assertReadSafe($r->body()); $x=$this->xpath($r->body());
@@ -39,7 +39,8 @@ final class GradebookReadHttpTest extends TestCase
         self::assertStringContainsString('ประวัติ',$this->rowText($x,'moved')); self::assertStringContainsString('อ่านอย่างเดียว',$this->rowText($x,'moved'));
         self::assertStringContainsString('ครบ',$this->rowText($x,'complete')); self::assertStringContainsString('ยังไม่ครบ',$this->rowText($x,'null'));
         self::assertStringContainsString('2 / 2',$this->rowText($x,'complete'));
-        self::assertSame(0,$x->query('//form|//input|//textarea|//select|//script|//*[@contenteditable]|//*[@hx-post]')->length);
+        self::assertSame($role === 'EXECUTIVE' ? 0 : 8,$x->query('//input[@hx-post]')->length);
+        self::assertSame(0,$x->query('//form|//textarea|//select|//script[not(@src)]|//*[@contenteditable]')->length);
         self::assertSame($before,$this->readSnapshot());
     }
     public static function revocations(): iterable { foreach (['scope','assignment','role','membership','permission','school'] as $kind) { yield [$kind]; } }
@@ -99,17 +100,16 @@ final class GradebookReadHttpTest extends TestCase
         foreach ([$this->readPath(),'/dashboard'] as $path) {
             $r=$this->request('GET',$path); self::assertSame(200,$r->status());
             self::assertStringContainsString(htmlspecialchars($hostile,ENT_QUOTES,'UTF-8'),$r->body()); self::assertStringNotContainsString($hostile,$r->body());
-            self::assertSame(0,$this->xpath($r->body())->query('//script')->length); $this->assertReadSafe($r->body());
+            self::assertSame(0,$this->xpath($r->body())->query('//script[not(@src)]')->length); $this->assertReadSafe($r->body());
         }
     }
-    public function testNoScorePostAndNoSideEffectsFromGradebookOrDashboard(): void
+    public function testOnlyDedicatedCsrfProtectedEndpointCanMutateAndReadsHaveNoSideEffects(): void
     {
         $this->login(); $before=$this->readSnapshot();
         foreach ([$this->readPath(),'/dashboard'] as $path) { self::assertSame(200,$this->request('GET',$path)->status()); }
         self::assertSame(405,$this->request('POST',$this->readPath(),['score'=>'1','_token'=>$this->token()])->status());
-        foreach ([$this->readPath().'/score','/hx'.$this->readPath().'/components/'.$this->f['componentA'].'/enrollments/'.$this->f['enrollment_current'].'/score'] as $path) {
-            self::assertSame(404,$this->request('POST',$path,['score'=>'1'])->status());
-        }
+        self::assertSame(404,$this->request('POST',$this->readPath().'/score',['score'=>'1'])->status());
+        self::assertSame(419,$this->request('POST','/hx'.$this->readPath().'/components/'.$this->f['componentA'].'/enrollments/'.$this->f['enrollment_current'].'/score',['score'=>'1'])->status());
         self::assertSame($before,$this->readSnapshot());
     }
     public function testUnexpectedReadFailureIsGenericAndAuthorizationStoreFailureDenies(): void
@@ -121,7 +121,8 @@ final class GradebookReadHttpTest extends TestCase
     }
     private function cell(DOMXPath $x,string $key,int $cid): string
     {
-        return trim($x->evaluate('string(//tr[@data-enrollment-id="'.$this->f['enrollment_'.$key].'"]/td[@data-component-id="'.$cid.'"])'));
+        $path = '//tr[@data-enrollment-id="'.$this->f['enrollment_'.$key].'"]/td[@data-component-id="'.$cid.'"]';
+        return $x->query($path.'//input')->length > 0 ? $x->evaluate('string('.$path.'//input/@value)') : trim($x->evaluate('string('.$path.')'));
     }
     private function rowText(DOMXPath $x,string $key): string { return $x->evaluate('string(//tr[@data-enrollment-id="'.$this->f['enrollment_'.$key].'"])'); }
     private function gradebookLinks(string $html): array

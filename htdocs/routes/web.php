@@ -260,6 +260,10 @@ return static function (RouteCollector $r): void {
         'action' => 'gradebook.components.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
     ]);
+    // Offering-scoped grants are checked by GradebookScoreService, not the generic permission middleware.
+    $r->addRoute('POST', '/hx/gradebook/{offeringId:\d+}/components/{componentId:\d+}/enrollments/{enrollmentId:\d+}/score', [
+        'action' => 'gradebook.scores.store', 'protected' => true, 'context' => AccessContext::SCHOOL,
+    ]);
     $r->addRoute('GET', '/gradebook/{offeringId:\d+}', [
         'action' => 'gradebook.view', 'protected' => true, 'context' => AccessContext::SCHOOL,
     ]);
