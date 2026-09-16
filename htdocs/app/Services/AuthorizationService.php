@@ -38,4 +38,21 @@ final class AuthorizationService
             return false;
         }
     }
+
+    public function hasSubjectOfferingPermissionForUpdate(
+        int $userId,
+        string $contextType,
+        ?int $schoolId,
+        int $subjectOfferingId,
+        string $permissionCode
+    ): bool {
+        if ($contextType !== 'SCHOOL' || $schoolId === null || $schoolId <= 0 || $userId <= 0 || $subjectOfferingId <= 0) {
+            return false;
+        }
+        try {
+            return $this->authorization->hasSubjectOfferingPermissionForUpdate($userId, $schoolId, $subjectOfferingId, $permissionCode);
+        } catch (Throwable) {
+            return false;
+        }
+    }
 }
