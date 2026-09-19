@@ -92,7 +92,7 @@ final class GradebookScoreHttpTest extends TestCase
         self::assertCount(3, $this->scoreAudits());
     }
 
-    public static function csrfCases(): array { return [[null], ['invalid'], [['bad']], ['other-session']]; }
+    public static function csrfCases(): array { return [[null], ['invalid'], [['bad']], [new stdClass()], ['other-session']]; }
     #[DataProvider('csrfCases')]
     public function testCsrfPrecedesAnyMutation(mixed $token): void
     {
@@ -106,7 +106,7 @@ final class GradebookScoreHttpTest extends TestCase
 
     public static function invalidScores(): array
     {
-        return array_map(fn ($v) => [$v], ['-1', '+1', '1e2', '1,5', '1.234', 'NaN', 'Infinity', '20.01', ' ', [], ['5'], 5, false, null,
+        return array_map(fn ($v) => [$v], ['-1', '+1', '1e2', '1,5', '1.234', 'NaN', 'Infinity', '20.01', ' ', [], ['5'], new stdClass(), 5, false, null,
             '<script>alert(1)</script>', '"><img src=x onerror=alert(1)>']);
     }
     #[DataProvider('invalidScores')]
@@ -183,7 +183,9 @@ final class GradebookScoreHttpTest extends TestCase
         $this->login('SUBJECT_TEACHER');
         $forged = ['school_id' => $this->f['schoolB'], 'user_id' => $this->users['FOREIGN']['user'], 'actor_user_id' => $this->users['FOREIGN']['user'],
             'role' => 'SYSTEM_ADMIN', 'permission' => 'ALL', 'scope' => '*', 'context_type' => 'SYSTEM', 'updated_by' => $this->users['FOREIGN']['user'],
-            'classroom_id' => $this->f['roomB'], 'subject_id' => $this->f['subjectB'], 'academic_year_id' => $this->f['yearB']];
+            'classroom_id' => $this->f['roomB'], 'subject_id' => $this->f['subjectB'], 'academic_year_id' => $this->f['yearB'],
+            'subject_offering_id' => $this->f['offeringB'], 'offering_id' => $this->f['offeringB'],
+            'component_id' => $this->f['componentB'], 'enrollment_id' => $this->f['enrollment_foreign']];
         self::assertSame(200, $this->postScore(extra: $forged)->status());
         $audit = $this->scoreAudits()[0];
         self::assertSame($this->f['schoolA'], $audit['school_id']); self::assertSame($this->users['SUBJECT_TEACHER']['user'], $audit['user_id']);

@@ -1,6 +1,6 @@
 # ระบบ ปพ.5 — School Administration
 
-ฐานที่พัฒนาครบ Milestone 1–4 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
+ฐานที่พัฒนาครบ Milestone 1–5 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
 โดย SQL รองรับ MariaDB ด้วย ไม่ใช้ Laravel, Node.js backend, Redis, queue, cron
 หรือ database triggers
 
@@ -9,10 +9,10 @@
 รันคำสั่งจาก project root ใช้ PHP CLI 8.2 ขึ้นไปจาก MAMP และ Composer
 ตรวจ `php -v` และให้มี extension `pdo_mysql`
 
-1. ใช้ branch ของ Milestone 4 ที่พัฒนาแล้ว:
+1. ใช้ branch ของ Milestone 5 ที่พัฒนาแล้ว:
 
    ```sh
-   git checkout milestone/4-student-core-enrollment
+   git checkout milestone/5-teaching-gradebook-core
    ```
 
    การพัฒนาครบใน milestone branch ยังแยกจากการอนุมัติ review และ merge เข้า main
@@ -52,16 +52,26 @@
    `20260910_001_academic_structure_reference.sql` หลังไฟล์ของ Milestone 1–2
    ตามด้วย `20260912_001_student_core_enrollment.sql` และ
    `20260912_001_student_core_permissions.sql` ของ Milestone 4
+   และ `20260915_001_teaching_gradebook_core.sql` กับ
+   `20260915_001_teaching_gradebook_permissions.sql` ของ Milestone 5
 
-   Seeded baseline Milestone 4 มี **7 roles, 18 permissions และ 27 role-permission mappings**:
+   Seeded baseline Milestone 5 มี **7 roles, 22 permissions และ 38 role-permission mappings**:
    SYSTEM_ADMIN ได้ 3 SYSTEM permissions เดิม ส่วน SCHOOL_ADMIN ได้ 6 SCHOOL
    administration permissions เดิมและ 5 academic permissions ใหม่;
    ACADEMIC_ADMIN ได้ 5 academic permissions เดียวกัน ได้แก่ `ACADEMIC_SETUP_VIEW`,
    `ACADEMIC_YEAR_MANAGE`, `CLASSROOM_MANAGE`, `SUBJECT_MANAGE`, `SUBJECT_OFFERING_MANAGE`
    HOMEROOM_TEACHER, SUBJECT_TEACHER, EXECUTIVE และ VIEWER ไม่ได้รับสิทธิ์ทั้งห้านี้
    Milestone 4 seed เพิ่ม `STUDENT_VIEW`, `STUDENT_MANAGE`, `ENROLLMENT_MANAGE`,
-   `STUDENT_IMPORT` ให้ SCHOOL_ADMIN และ ACADEMIC_ADMIN เท่านั้น โดย roles อื่นไม่ได้รับ
-   สิทธิ์ทั้งสี่เพิ่ม และ global grade levels ยังคง 6 แถวเดิม
+   `STUDENT_IMPORT` ให้ SCHOOL_ADMIN และ ACADEMIC_ADMIN เท่านั้น
+
+   Milestone 5 เพิ่ม `TEACHING_ASSIGNMENT_MANAGE`, `GRADEBOOK_VIEW`,
+   `GRADEBOOK_COMPONENT_MANAGE` และ `GRADEBOOK_SCORE_ENTER`
+   โดย SCHOOL_ADMIN และ ACADEMIC_ADMIN ได้ทั้งสี่แบบ school-wide/unscoped;
+   SUBJECT_TEACHER ได้ `GRADEBOOK_VIEW` และ `GRADEBOOK_SCORE_ENTER`
+   แบบ `SUBJECT_OFFERING` scope; EXECUTIVE ได้ `GRADEBOOK_VIEW`
+   แบบ school-wide read-only ส่วน HOMEROOM_TEACHER และ VIEWER
+   ไม่มี Milestone 5 permission โดย default
+   Global grade levels ยังคง 6 แถวเดิม
 
    Global grade levels มีเฉพาะ P1–P6 (ประถมศึกษาปีที่ 1–6), sort_order 10–60
    เพิ่มครั้งละ 10 และ status ACTIVE ทุกแถว Seed SQL รันซ้ำได้โดยไม่เพิ่มแถวซ้ำ
@@ -301,7 +311,7 @@ Student master ยัง maintain ได้โดยแยกจาก lifecycle
 
 Seed ให้ทั้งสี่ permissions กับ **SCHOOL_ADMIN และ ACADEMIC_ADMIN** เท่านั้น
 SYSTEM_ADMIN คง SYSTEM permissions เดิม; HOMEROOM_TEACHER, SUBJECT_TEACHER, EXECUTIVE
-และ VIEWER ไม่ได้รับทั้งสี่โดย default Baseline คือ **7 roles / 18 permissions / 27 mappings / 6 grade levels**
+และ VIEWER ไม่ได้รับทั้งสี่โดย default Baseline ของ Milestone 4 ณ จุดนั้นคือ **7 roles / 18 permissions / 27 mappings / 6 grade levels**
 
 Dashboard ใช้ `AuthorizationService` ตรวจ permission จริงทุกครั้ง:
 “จัดการนักเรียน” → `/students` และ “การลงทะเบียนนักเรียน” → `/academic/enrollments`
@@ -340,7 +350,10 @@ Student list รับ `q` สำหรับรหัส/ชื่อ ไม่
 `academic_year_id`, `grade_level_id`, `classroom_id`, `status`, `q` โดย resolve filters ในโรงเรียนของ session
 Target/parent IDs ไม่ใช่ authority: `school_id`, `user_id`, `actor_user_id`, role และ context
 ที่ browser ส่งมาเปลี่ยน tenant/actor ไม่ได้ Backend ตรวจ user/membership/school ซ้ำ
-ยังไม่มี non-NULL academic-year assignment authorization หรือ teacher scopes
+Milestone 5 เพิ่ม `permission_scopes` แบบ `SUBJECT_OFFERING`
+สำหรับ SUBJECT_TEACHER โดย permission และ scope ต้องอยู่บน role assignment
+เดียวกัน จึงยืม scope จาก assignment อื่นไม่ได้ และการ revoke มีผลทันที
+ส่วน non-NULL academic-year assignment ยังไม่ใช้เป็น school-wide authorization ทั่วไป
 GET foreign/missing ให้ friendly 404 แบบไม่บอก existence; POST foreign/missing ให้ safe 422
 (หรือ 403 เมื่อ context/permission gate ปฏิเสธก่อน) และ malformed/missing CSRF ให้ 419
 โดยไม่เปลี่ยน business, staging หรือ audit ข้อมูล dynamic escape ก่อน render ทุกครั้ง
@@ -407,7 +420,109 @@ Import summary เก็บ counts กับ source SHA-256 ไม่มี row 
 Exact no-op ไม่สร้าง audit noise; transactions rollback เมื่อ repository/audit ล้มเหลว
 Composite foreign keys บังคับ parent ให้ตรง tenant/year/grade เสริมจาก service validation
 
-## MAMP smoke test และ cleanup
+## การมอบหมายครูประจำวิชาและสมุดคะแนน — Milestone 5
+
+Milestone 5 เพิ่ม subject-offering teaching assignment, offering-scoped authorization
+สำหรับครูประจำวิชา, configurable term gradebook และ audited score entry
+โดยยังใช้ Student Enrollment + current Classroom Placement จาก Milestone 4
+เป็น roster authority และไม่สร้าง roster ซ้ำอีกชุดหนึ่ง
+
+### Teaching assignment และ gradebook permissions
+
+สิทธิ์ Milestone 5 มี `TEACHING_ASSIGNMENT_MANAGE`, `GRADEBOOK_VIEW`,
+`GRADEBOOK_COMPONENT_MANAGE` และ `GRADEBOOK_SCORE_ENTER`
+
+SCHOOL_ADMIN และ ACADEMIC_ADMIN ใช้สิทธิ์ทั้งสี่แบบ school-wide/unscoped
+SUBJECT_TEACHER ได้ `GRADEBOOK_VIEW` และ `GRADEBOOK_SCORE_ENTER`
+แบบ `SUBJECT_OFFERING` scope เท่านั้น ส่วน EXECUTIVE ได้ `GRADEBOOK_VIEW`
+แบบ school-wide read-only
+
+Generic school permission check ยอมรับเฉพาะ unscoped grants
+ส่วน subject-offering authorization ใช้ resource-specific authorization
+และ permission กับ scope ต้องมาจาก role assignment เดียวกัน
+จึงไม่สามารถยืม scope จาก role assignment อื่นได้
+
+Teaching assignment สร้างหรือ reactivate ได้เมื่อ school, membership,
+SUBJECT_TEACHER role assignment, academic year และ offering
+อยู่ในสถานะที่อนุญาตและ tenant ตรงกัน ไม่มี hard delete;
+deactivate เก็บประวัติไว้ และการ revoke permission/scope/assignment
+มีผลกับ authorization request ถัดไปทันที
+
+ปี CLOSED ยังคงอ่าน teaching-assignment history ได้แต่ mutation ไม่ได้
+
+### Gradebook components, roster และ NULL กับ zero
+
+Gradebook component เป็น score column แบบ generic ของ subject offering
+ไม่ hard-code ชื่อ column หรือตำแหน่ง cell จาก legacy Excel
+แต่ละ component มี `code`, `name_th`, `max_score DECIMAL(7,2)`,
+`sort_order` และสถานะ ACTIVE/INACTIVE
+
+`code` ต้อง unique ภายใน offering ตาม database collation
+และ `max_score` ต้องเป็น decimal ตั้งแต่ 0.01 ถึง 99999.99
+โดยไม่ใช้ FLOAT/DOUBLE
+
+เมื่อ component เคยมี score row แล้ว จะเปลี่ยน `max_score` ไม่ได้อีก
+แม้ score row นั้นมีค่า NULL หรือ 0.00 แต่ยังแก้ metadata อื่น
+หรือเปลี่ยน ACTIVE/INACTIVE ได้โดยไม่ลบ score history
+
+Current roster ของ offering มาจาก ACTIVE enrollment ใน school/year เดียวกัน
+ที่มี current ACTIVE classroom placement ตรงกับ classroom ของ offering
+นักเรียนที่ไม่ใช่ current roster แต่เคยมี score row ของ offering
+ยังคงปรากฏเป็น HISTORICAL และอ่านได้อย่างเดียว
+เพื่อไม่ให้ประวัติคะแนนหายเมื่อย้ายห้องหรือสิ้นสุด enrollment
+
+นักเรียนที่ไม่ใช่ current roster และไม่เคยมี score row จะไม่ปรากฏใน gradebook
+ส่วน inactive component ไม่เป็น current score column และไม่รวมใน current totals
+แต่ score history เดิมยังคงอยู่
+
+Score ใช้ `DECIMAL(7,2) NULL` และต้องรักษาความแตกต่างนี้ทุกชั้นของระบบ:
+
+```text
+NULL = ยังไม่กรอก / ล้างคะแนน
+0.00 = คะแนนศูนย์ที่กรอกจริง
+```
+
+ดังนั้น 0.00 นับเป็นคะแนนที่กรอกแล้ว ส่วน NULL ไม่นับ
+configured maximum และ entered total คำนวณจาก active components
+โดย completeness เป็น true ต่อเมื่อมี active component อย่างน้อยหนึ่งรายการ
+และทุก active component มีคะแนน non-NULL
+
+### Score mutation, audit และ HTMX autosave
+
+Score mutation ใช้ school และ actor จาก authenticated Session
+ส่วน offering, component และ enrollment เป็น target IDs จาก route
+ค่าที่ browser ส่ง เช่น `school_id`, `user_id`, actor, role หรือ scope
+ไม่ถูกใช้เป็น authorization authority
+
+POST ตรวจ CSRF ก่อนประมวลผลคะแนน และช่องว่างถูกแปลงเป็น NULL
+ก่อนเขียน service จะ lock/revalidate ACTIVE school, ปี DRAFT/ACTIVE,
+ACTIVE offering, ACTIVE component, ACTIVE enrollment, current ACTIVE placement
+ที่ตรงกับ classroom ของ offering และ live `GRADEBOOK_SCORE_ENTER` authorization
+
+คะแนนรับเฉพาะ decimal ไม่ติดลบที่มีทศนิยมไม่เกิน 2 ตำแหน่ง
+และต้องไม่เกิน `max_score` ของ component
+การ clear score ที่มี row อยู่แล้วจะคง row identity เดิมและเปลี่ยน score เป็น NULL
+เพื่อรักษาหลักฐาน historical roster ส่วนการ clear cell ที่ไม่เคยมี row
+เป็น exact no-op จึงไม่สร้าง score row หรือ audit ใหม่
+
+Score write และ `GRADEBOOK_SCORE_CHANGED` audit อยู่ใน transaction เดียวกัน
+ถ้า write หรือ audit ล้มเหลว transaction ต้อง rollback ทั้งหมด
+exact canonical no-op ไม่เขียน score ซ้ำและไม่สร้าง audit noise
+
+หน้า gradebook โหลด HTMX 2.0.8 จาก local asset `/assets/vendor/htmx-2.0.8.min.js`
+ร่วมกับ `/assets/gradebook.js` เฉพาะเมื่อผู้ใช้มีสิทธิ์บันทึกคะแนน
+การ blur ช่องคะแนนเป็น POST boundary สำหรับ autosave
+
+Enter ป้องกัน default behavior แล้วเลื่อนไปแถวถัดไปของ component เดิม
+หรือ blur ช่องสุดท้ายเพื่อบันทึก ส่วน Tab/Shift+Tab และ caret keys ใช้ behavior ปกติของ browser
+JavaScript ไม่คำนวณ totals เอง แต่ใช้ fragment และ row summary ที่ server render กลับมา
+
+UI ยอมรับการบันทึกสำเร็จเมื่อ response เป็น HTTP 200
+และมี header `X-Gradebook-Saved: 1` เท่านั้น
+ถ้า transaction สำเร็จแล้วแต่ refresh read model ภายหลังล้มเหลว
+server ตอบ 409 เพื่อไม่กล่าวอ้างผิดว่าการเขียนถูก rollback
+
+## Historical MAMP smoke test และ cleanup — Milestone 1–4
 
 ใช้ชื่อ fixtures ชั่วคราวที่ไม่ชนข้อมูลจริง จด user/school IDs และเก็บ baseline ก่อนเริ่ม:
 
@@ -461,7 +576,7 @@ Private paths ต้องตอบ HTTP 403 เช่น `/config/database.php`
 `/views/academic/offerings/index.php`, `/vendor/autoload.php`
 `/tools/bootstrap_system_admin.php` ต้องไม่ web reachable เพราะอยู่นอก Document Root
 
-### Milestone 4 verification และ smoke checklist
+### Historical Milestone 4 verification และ smoke checklist
 
 ตรวจ migration chain บน `pp5_test` ที่เริ่มจาก schema ว่างและไม่มีข้อมูลที่ต้องเก็บ
 ห้ามล้าง development `pp5` เพื่อทำขั้นตอนนี้ รันจาก project root:
@@ -529,16 +644,83 @@ Focused import/domain/HTTP/isolation ผ่าน **144 tests / 5,070 assertions
 Oversized/>1,000 CSV rows และ injected write/audit failure rollback ยืนยันผ่าน automated regression
 ไม่ได้ทำ destructive failure injection ใน development; MariaDB ไม่ได้รัน smoke ในเครื่อง MAMP นี้
 
+## Milestone 5 verification และ MAMP smoke checklist
+
+Task 8 verification ที่ยืนยันแล้วบน MAMP MySQL:
+
+- Clean temporary database เริ่มจาก schema ว่าง: apply 6 migration files และ 4 seed files สำเร็จ
+- Seed baseline หลัง M5 เป็น 7 roles / 22 permissions / 38 role-permission mappings / 6 grade levels
+- Migration/seed runner รันซ้ำแล้วไม่มีไฟล์ถูก apply ซ้ำ และ temporary verification database ถูกลบจนเหลือศูนย์
+- Focused score hardening หลังเพิ่ม regression coverage ผ่าน 90 tests / 2,457 assertions
+- M5-focused regression ผ่าน 657 tests / 14,911 assertions
+- Full PHPUnit baseline ก่อน Task 8 hardening ผ่าน 2,648 tests / 60,644 assertions
+- PHP syntax ของ hardening tests ผ่าน และ `git diff --check` ผ่าน
+
+Final verification หลังการแก้ Task 8 ทั้งหมด:
+
+- Full PHPUnit บน `pp5_test` ผ่าน 2,651 tests / 60,718 assertions
+- Project-wide PHP syntax ผ่าน 166 files
+- First-party JavaScript syntax ผ่าน 2 files (`htdocs/assets/gradebook.js` และ `tests/Browser/gradebook-autosave.js`)
+- `git diff --check` ผ่าน และไม่พบ untracked files
+- Real MAMP smoke ของ Milestone 5 ผ่านครบ และ cleanup fixture เหลือศูนย์
+
+การทดสอบ runtime ที่ยืนยันในเครื่องนี้เป็น MySQL 8; SQL ออกแบบให้ MariaDB-compatible
+
+แต่ยังไม่ได้อ้างว่าได้รัน MariaDB runtime smoke จริง
+
+### Real MAMP smoke — PASS
+
+Milestone 5 real HTTP smoke รันกับ development database `pp5` บน MAMP MySQL 8
+โดยแยกจาก automated tests ที่ใช้ `pp5_test` และใช้ temporary fixture ที่มี unique marker
+ซึ่งไม่แก้ไขข้อมูลจริงเดิมของระบบ
+
+ผลที่ยืนยันแล้ว:
+
+- Login ผ่าน HTTP `POST /login` จริงด้วย temporary SUBJECT_TEACHER ใช้ cookie/session จริง
+  และ CSRF token ที่ render จากระบบ ไม่มีการ inject session หรือข้าม authentication
+- `GET /gradebook/{offeringId}` ตอบ HTTP 200 และ render current roster,
+  gradebook CSRF, local HTMX 2.0.8 และ `gradebook.js`
+- HTMX score POST ค่า `5.00` ตอบ HTTP 200 พร้อม `X-Gradebook-Saved: 1`;
+  ฐานข้อมูลเก็บ `5.00`, server-rendered summary เปลี่ยนเป็น `5.00 / 20.00`,
+  และสร้าง `GRADEBOOK_SCORE_CHANGED` audit ใน transaction
+- เปลี่ยน `5.00 → 0.00` แล้วคง score row ID เดิมและเก็บ `0.00` เป็นคะแนนจริง
+- ล้าง `0.00 → NULL` แล้วคง score row ID เดิม แต่ `score` เป็น NULL;
+  ส่วนการล้าง cell ที่ไม่เคยมี score row เป็น no-op โดยไม่สร้าง score row หรือ audit
+- เมื่อเปลี่ยน SUBJECT_OFFERING scope เป็น INACTIVE ระหว่าง session เดิม
+  gradebook GET ถูกปฏิเสธทันทีและ score POST ตอบ 422 โดยไม่มี score/audit write;
+  เมื่อเปิด scope กลับ session เดิมเข้าถึง gradebook ได้อีกครั้งโดยไม่ login ใหม่
+- CLOSED academic year และ INACTIVE offering ยังอ่าน gradebook แบบ read-only ได้
+  แต่ score POST ถูกปฏิเสธ; INACTIVE component ถูกตัดออกจาก current columns และเขียนไม่ได้
+- เมื่อนักเรียนไม่มี active placement แต่ยังมี retained NULL score row
+  นักเรียนยังปรากฏเป็น historical roster แบบ read-only และ direct score POST ถูกปฏิเสธ
+- Rejected mutation responses ที่ตรวจไม่เผย unique fixture marker, username,
+  SQLSTATE/PDO/constraint details, filesystem path, local config path,
+  password hash หรือ session identifier
+- หลัง smoke คืนสถานะ fixture ที่ทดสอบชั่วคราวแล้ว cleanup แบบ child → parent;
+  ตรวจซ้ำด้วย IDs และ unique marker พบ school, user, membership, role assignment,
+  academic data, student data, permission scope, gradebook components/scores และ audit logs
+  เหลือศูนย์ทั้งหมด
+- ลบ temporary cookie, CSRF, helper scripts, HTTP response artifacts และ smoke state แล้ว;
+  ไม่มีไฟล์ดังกล่าวอยู่ใน repository หรือ `/tmp` หลัง cleanup
+
+ห้าม commit cookie files, credentials, temporary helpers, smoke fixtures, generated logs หรือ local configuration
+
 ## ขอบเขต milestone ถัดไป
 
-Milestone 1–4 ครอบคลุม SYSTEM/SCHOOL authentication, โรงเรียน/ผู้ใช้, โครงสร้างวิชาการ,
-student identity, yearly enrollment, placement history, transfer-out/withdrawal และ canonical CSV import
+Milestone 1–5 ครอบคลุม SYSTEM/SCHOOL authentication, โรงเรียน/ผู้ใช้, โครงสร้างวิชาการ,
+student identity, yearly enrollment, placement history, transfer-out/withdrawal,
+canonical CSV import, subject-teacher assignment, `SUBJECT_OFFERING` permission scope,
+configurable term gradebook, audited score entry และ per-cell HTMX autosave
 พร้อม service, UI, permission และ audit การจบ milestone branch ยังต้องผ่าน review ก่อน PR/merge
 
-ยังไม่ได้ implement: native DMC XLSX/XLSB import, Excel PP5 migration, promotion/repeat-year/graduation,
-automatic cross-school transfer/linking, staff profile subsystem, homeroom/subject teacher assignments,
-fine-grained `permission_scopes`, non-NULL academic-year authorization,
-gradebook/scores, attendance, evaluations, competencies, activities, annual results,
-finalization, PP5/PP6 reports, mPDF report generation, XLSX import/export และ HTMX autosave
-รวมถึง school chooser, user transfer, email invitation/reset, 2FA/SSO,
+Milestone 5 ยังเป็น gradebook core: เก็บคะแนนราย component และคำนวณ term totals/completeness
+แต่ยังไม่ได้ implement grade symbol, term grade calculation, annual result, GPA,
+subject finalization, unlock/approval หรือ promotion/repeat/graduation
+
+ยังไม่ได้ implement: native DMC/XLSX/XLSB import, legacy Excel PP5 migration,
+automatic cross-school transfer/linking, full staff profile subsystem,
+homeroom-teacher assignment และ classroom-wide homeroom scope,
+generic cross-domain scope editor, attendance, evaluations/competencies, activities,
+PP5/PP6 reports, mPDF official report generation, bulk score import/export,
+school chooser, user transfer, email invitation/reset, 2FA/SSO,
 audit browsing UI และ deployment automation

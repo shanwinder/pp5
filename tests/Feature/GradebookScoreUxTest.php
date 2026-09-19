@@ -55,4 +55,47 @@ final class GradebookScoreUxTest extends TestCase
         $this->login('EXECUTIVE'); $r = $this->request('GET', $this->readPath());
         self::assertSame(8, $this->xpath($r->body())->query('//input[@hx-post]')->length);
     }
+
+    public function testAutosaveAssetsAndKeyboardSafetyRemainPinnedAndLocal(): void
+    {
+        $this->login();
+        $r = $this->request('GET', $this->readPath());
+        self::assertSame(200, $r->status());
+
+        $x = $this->xpath($r->body());
+        $sources = [];
+        foreach ($x->query('//script[@src]') as $script) {
+            $sources[] = $script->getAttribute('src');
+        }
+        self::assertSame([
+            '/assets/vendor/htmx-2.0.8.min.js',
+            '/assets/gradebook.js',
+        ], $sources);
+
+        foreach ($sources as $source) {
+            self::assertFalse(str_starts_with($source, 'http://'));
+            self::assertFalse(str_starts_with($source, 'https://'));
+        }
+
+        $path = dirname(__DIR__, 2) . '/htdocs/assets/gradebook.js';
+        self::assertFileExists($path);
+        $js = file_get_contents($path);
+        self::assertIsString($js);
+
+        foreach ([
+            "event.key !== 'Enter'",
+            'event.preventDefault();',
+            'if (next) next.focus();',
+            'else input.blur();',
+            "getResponseHeader('X-Gradebook-Saved') !== '1'",
+            "input.readOnly = true;",
+            "input.readOnly = false;",
+        ] as $contract) {
+            self::assertStringContainsString($contract, $js);
+        }
+
+        self::assertStringNotContainsString("event.key === 'Tab'", $js);
+        self::assertStringNotContainsString("event.key === 'ArrowUp'", $js);
+        self::assertStringNotContainsString("event.key === 'ArrowDown'", $js);
+    }
 }
