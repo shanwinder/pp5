@@ -70,7 +70,10 @@ final class UiLayoutTest extends TestCase
         self::assertSame(1, substr_count($html, $scripts));
 
         $plain = View::page(self::CONTENT, ['message' => 'content'], ['layout' => $layout]);
-        self::assertStringNotContainsString('<script', $plain);
+        self::assertSame($layout === 'app' ? 1 : 0, substr_count($plain, '<script'));
+        if ($layout === 'app') {
+            self::assertStringContainsString('<script src="/assets/app.js" defer></script>', $plain);
+        }
         self::assertStringNotContainsString('htmx', $plain);
         self::assertStringNotContainsString('<h1>', $plain);
     }

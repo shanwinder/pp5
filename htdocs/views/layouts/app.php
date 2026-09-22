@@ -7,6 +7,9 @@ $escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOT
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title><?= $escape($documentTitle) ?></title>
+  <link rel="stylesheet" href="/assets/vendor/bootstrap-5.3.8.min.css">
+  <link rel="stylesheet" href="/assets/app.css">
+  <script src="/assets/app.js" defer></script>
   <?= $headAssets ?>
 </head>
 <body class="<?= $escape($bodyClass) ?>">

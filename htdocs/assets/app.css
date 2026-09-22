@@ -1,0 +1,275 @@
+/* PP5 visual foundation. Load after the pinned Bootstrap stylesheet.
+   Use semantic tokens and opt-in pp5-* hooks as screens are migrated. */
+:root {
+  --pp5-background: #f4f6f8;
+  --pp5-surface: #ffffff;
+  --pp5-surface-muted: #edf1f5;
+  --pp5-text: #243447;
+  --pp5-text-muted: #526173;
+  --pp5-border: #b5c0cc;
+  --pp5-control-border: #7b8b9c;
+  --pp5-primary: #175c80;
+  --pp5-primary-hover: #104563;
+  --pp5-on-primary: #ffffff;
+  --pp5-success: #146c43;
+  --pp5-success-bg: #e8f5ed;
+  --pp5-warning: #785100;
+  --pp5-warning-bg: #fff4d6;
+  --pp5-danger: #a5212f;
+  --pp5-danger-bg: #fff0f1;
+  --pp5-info: #155d75;
+  --pp5-info-bg: #e8f4fa;
+  --pp5-focus: #005fcc;
+  --pp5-space-1: 0.25rem;
+  --pp5-space-2: 0.5rem;
+  --pp5-space-3: 0.75rem;
+  --pp5-space-4: 1rem;
+  --pp5-space-6: 1.5rem;
+  --pp5-space-8: 2rem;
+  --pp5-radius-sm: 0.25rem;
+  --pp5-radius-md: 0.5rem;
+  --pp5-shadow-sm: 0 1px 3px rgb(24 40 56 / 8%);
+  --pp5-sidebar-width: 15rem;
+  --pp5-header-height: 4rem;
+  --pp5-content-width: 90rem;
+  --pp5-form-width: 44rem;
+  --pp5-table-cell-padding: 0.625rem 0.75rem;
+  --pp5-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif;
+
+  --bs-body-font-family: var(--pp5-font-family);
+  --bs-body-color: var(--pp5-text);
+  --bs-body-bg: var(--pp5-background);
+  --bs-border-color: var(--pp5-border);
+  --bs-link-color: var(--pp5-primary);
+  --bs-link-hover-color: var(--pp5-primary-hover);
+  --bs-secondary-color: var(--pp5-text-muted);
+  --bs-border-radius: var(--pp5-radius-sm);
+}
+
+body { margin: 0; font-size: 1rem; line-height: 1.6; }
+h1, h2, h3 { color: var(--pp5-text); line-height: 1.4; font-weight: 650; }
+h1 { font-size: 1.625rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.125rem; }
+a { color: var(--pp5-primary); text-underline-offset: 0.2em; }
+a:hover { color: var(--pp5-primary-hover); }
+.text-muted, .form-text { color: var(--pp5-text-muted) !important; }
+[hidden] { display: none !important; }
+:focus-visible {
+  outline: 3px solid var(--pp5-focus) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--pp5-surface);
+}
+[tabindex="-1"] { scroll-margin-top: calc(var(--pp5-header-height) + var(--pp5-space-4)); }
+.pp5-skip-link {
+  position: fixed;
+  inset-block-start: var(--pp5-space-2);
+  inset-inline-start: var(--pp5-space-2);
+  z-index: 1100;
+  padding: var(--pp5-space-3) var(--pp5-space-4);
+  color: var(--pp5-on-primary);
+  background: var(--pp5-primary);
+  transform: translateY(-200%);
+}
+.pp5-skip-link:focus { transform: none; color: var(--pp5-on-primary); }
+
+/* Shell hooks only. Controllers supply authorized navigation in later tasks. */
+.pp5-shell {
+  display: grid;
+  grid-template-columns: var(--pp5-sidebar-width) minmax(0, 1fr);
+  grid-template-areas: "topbar topbar" "sidebar content";
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+.pp5-topbar {
+  grid-area: topbar;
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--pp5-space-3);
+  min-height: var(--pp5-header-height);
+  padding: var(--pp5-space-3) var(--pp5-space-6);
+  background: var(--pp5-surface);
+  border-block-end: 1px solid var(--pp5-border);
+}
+.pp5-topbar > * { min-width: 0; overflow-wrap: anywhere; }
+.pp5-sidebar {
+  grid-area: sidebar;
+  position: sticky;
+  inset-block-start: var(--pp5-header-height);
+  align-self: start;
+  max-height: calc(100dvh - var(--pp5-header-height));
+  overflow-y: auto;
+  padding: var(--pp5-space-4);
+  background: var(--pp5-surface);
+  border-inline-end: 1px solid var(--pp5-border);
+}
+.pp5-sidebar nav { display: grid; gap: var(--pp5-space-1); }
+.pp5-sidebar nav a {
+  display: block;
+  padding: var(--pp5-space-3);
+  border-radius: var(--pp5-radius-sm);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+.pp5-sidebar nav a:hover { background: var(--pp5-surface-muted); }
+.pp5-sidebar nav a[aria-current="page"] {
+  color: var(--pp5-on-primary);
+  background: var(--pp5-primary);
+  font-weight: 650;
+}
+.pp5-nav-toggle, .pp5-nav-close { display: none; }
+.pp5-content {
+  grid-area: content;
+  min-width: 0;
+  width: 100%;
+  max-width: var(--pp5-content-width);
+  margin-inline: auto;
+  padding: var(--pp5-space-6);
+}
+.pp5-page-header, .pp5-actions, .pp5-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pp5-space-3);
+}
+.pp5-page-header { justify-content: space-between; margin-block-end: var(--pp5-space-6); }
+.pp5-page-header > * { min-width: 0; overflow-wrap: anywhere; }
+.pp5-page-header h1 { margin-block-end: var(--pp5-space-2); }
+.pp5-page-header p { margin: 0; }
+.breadcrumb { font-size: 0.875rem; margin-block-end: var(--pp5-space-2); }
+.breadcrumb-item.active { color: var(--pp5-text-muted); }
+.pp5-surface, .pp5-empty-state {
+  background: var(--pp5-surface);
+  border: 1px solid var(--pp5-border);
+  border-radius: var(--pp5-radius-md);
+  padding: var(--pp5-space-6);
+  margin-block-end: var(--pp5-space-4);
+}
+.pp5-surface { box-shadow: var(--pp5-shadow-sm); }
+.pp5-empty-state { text-align: center; color: var(--pp5-text-muted); }
+.pp5-empty-state p:last-child { margin-bottom: 0; }
+
+/* Form fields and controls stay large enough for Thai text and touch input. */
+.pp5-form { max-width: var(--pp5-form-width); }
+.pp5-field { margin-block-end: var(--pp5-space-4); min-width: 0; }
+.form-label { font-weight: 600; margin-block-end: var(--pp5-space-1); }
+.form-control, .form-select {
+  font-size: 1rem;
+  line-height: 1.6;
+  min-height: 2.75rem;
+  color: var(--pp5-text);
+  background-color: var(--pp5-surface);
+  border-color: var(--pp5-control-border);
+}
+.form-control:focus, .form-select:focus {
+  color: var(--pp5-text);
+  background-color: var(--pp5-surface);
+  border-color: var(--pp5-focus);
+  box-shadow: none;
+}
+.form-control[readonly] { background: var(--pp5-surface-muted); }
+[aria-invalid="true"], .form-control.is-invalid, .form-select.is-invalid { border-color: var(--pp5-danger); }
+.pp5-field-error, .invalid-feedback { color: var(--pp5-danger); }
+.pp5-filter-bar { align-items: end; margin-block-end: var(--pp5-space-4); }
+.pp5-filter-bar .pp5-field { flex: 1 1 12rem; margin: 0; }
+.btn {
+  min-height: 2.75rem;
+  padding: var(--pp5-space-2) var(--pp5-space-4);
+  font-weight: 600;
+  border-radius: var(--pp5-radius-sm);
+}
+.btn-primary {
+  --bs-btn-color: var(--pp5-on-primary);
+  --bs-btn-bg: var(--pp5-primary);
+  --bs-btn-border-color: var(--pp5-primary);
+  --bs-btn-hover-color: var(--pp5-on-primary);
+  --bs-btn-hover-bg: var(--pp5-primary-hover);
+  --bs-btn-hover-border-color: var(--pp5-primary-hover);
+  --bs-btn-active-color: var(--pp5-on-primary);
+  --bs-btn-active-bg: var(--pp5-primary-hover);
+  --bs-btn-active-border-color: var(--pp5-primary-hover);
+  --bs-btn-disabled-bg: var(--pp5-primary);
+  --bs-btn-disabled-border-color: var(--pp5-primary);
+}
+.btn-secondary, .btn-outline-secondary {
+  --bs-btn-color: var(--pp5-text);
+  --bs-btn-bg: var(--pp5-surface);
+  --bs-btn-border-color: var(--pp5-control-border);
+  --bs-btn-hover-color: var(--pp5-text);
+  --bs-btn-hover-bg: var(--pp5-surface-muted);
+  --bs-btn-hover-border-color: var(--pp5-text-muted);
+  --bs-btn-active-color: var(--pp5-text);
+  --bs-btn-active-bg: var(--pp5-surface-muted);
+  --bs-btn-active-border-color: var(--pp5-text-muted);
+  --bs-btn-disabled-color: var(--pp5-text-muted);
+  --bs-btn-disabled-bg: var(--pp5-surface-muted);
+  --bs-btn-disabled-border-color: var(--pp5-border);
+}
+.btn-danger {
+  --bs-btn-color: var(--pp5-on-primary);
+  --bs-btn-bg: var(--pp5-danger);
+  --bs-btn-border-color: var(--pp5-danger);
+  --bs-btn-hover-color: var(--pp5-danger);
+  --bs-btn-hover-bg: var(--pp5-danger-bg);
+  --bs-btn-hover-border-color: var(--pp5-danger);
+  --bs-btn-active-color: var(--pp5-danger);
+  --bs-btn-active-bg: var(--pp5-danger-bg);
+  --bs-btn-active-border-color: var(--pp5-danger);
+  --bs-btn-disabled-bg: var(--pp5-danger);
+  --bs-btn-disabled-border-color: var(--pp5-danger);
+}
+.btn-link { --bs-btn-color: var(--pp5-primary); --bs-btn-hover-color: var(--pp5-primary-hover); }
+
+/* Status text is required in markup: color is a supporting signal only. */
+.pp5-alert, .pp5-badge {
+  color: var(--pp5-status-text, var(--pp5-text));
+  background: var(--pp5-status-bg, var(--pp5-surface-muted));
+  border: 1px solid currentColor;
+  border-radius: var(--pp5-radius-sm);
+}
+.pp5-alert { padding: var(--pp5-space-3) var(--pp5-space-4); margin-block: var(--pp5-space-4); }
+.pp5-badge { display: inline-block; padding: var(--pp5-space-1) var(--pp5-space-2); font-size: 0.875rem; font-weight: 600; }
+.pp5-alert--success, .pp5-badge--success { --pp5-status-text: var(--pp5-success); --pp5-status-bg: var(--pp5-success-bg); }
+.pp5-alert--warning, .pp5-badge--warning { --pp5-status-text: var(--pp5-warning); --pp5-status-bg: var(--pp5-warning-bg); }
+.pp5-alert--danger, .pp5-badge--danger { --pp5-status-text: var(--pp5-danger); --pp5-status-bg: var(--pp5-danger-bg); }
+.pp5-alert--info, .pp5-badge--info { --pp5-status-text: var(--pp5-info); --pp5-status-bg: var(--pp5-info-bg); }
+
+.pp5-table-scroll { max-width: 100%; overflow-x: auto; margin-block-end: var(--pp5-space-4); }
+.pp5-table { --bs-table-color: var(--pp5-text); --bs-table-bg: var(--pp5-surface); font-size: 0.9375rem; margin: 0; }
+.pp5-table > :not(caption) > * > * { padding: var(--pp5-table-cell-padding); vertical-align: middle; }
+.pp5-table thead { --bs-table-bg: var(--pp5-surface-muted); }
+.pp5-table caption { caption-side: top; color: var(--pp5-text-muted); }
+.pp5-table .pp5-actions { flex-wrap: nowrap; }
+.pp5-gradebook table { min-width: 60rem; font-variant-numeric: tabular-nums; }
+.pp5-gradebook th { white-space: nowrap; }
+.pp5-gradebook thead th { position: sticky; inset-block-start: 0; z-index: 2; }
+.pp5-gradebook .pp5-gradebook-identity { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--pp5-surface); }
+.pp5-gradebook input { width: 6rem; min-height: 2.75rem; font-size: 1rem; text-align: end; }
+.pp5-gradebook [data-save-state] [role="status"] { display: block; min-height: 1.5em; }
+.pp5-gradebook [data-save-state="error"] [role="status"] { color: var(--pp5-danger); }
+.pp5-gradebook [data-save-state="saved"] [role="status"] { color: var(--pp5-success); }
+.pp5-gradebook [data-save-state="saving"] [role="status"] { color: var(--pp5-info); }
+.pp5-gradebook .pp5-historical { --bs-table-bg: var(--pp5-surface-muted); }
+
+/* Keep this breakpoint aligned with app.js. Without enhancement, nav stays visible. */
+@media (max-width: 63.999rem) {
+  .pp5-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topbar" "sidebar" "content"; grid-template-rows: auto auto 1fr; }
+  .pp5-sidebar { position: static; max-height: none; border-inline-end: 0; border-block-end: 1px solid var(--pp5-border); }
+  .pp5-nav-toggle[data-nav-ready], [data-nav-ready] .pp5-nav-close { display: inline-block; }
+  .pp5-content { padding: var(--pp5-space-4); }
+}
+@media (max-width: 35.999rem) {
+  .pp5-topbar, .pp5-surface, .pp5-empty-state { padding: var(--pp5-space-4); }
+  .pp5-page-header { align-items: start; flex-direction: column; }
+  .pp5-filter-bar { align-items: stretch; flex-direction: column; }
+  .pp5-filter-bar .pp5-field { flex-basis: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
