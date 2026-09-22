@@ -9,13 +9,14 @@
 รันคำสั่งจาก project root ใช้ PHP CLI 8.2 ขึ้นไปจาก MAMP และ Composer
 ตรวจ `php -v` และให้มี extension `pdo_mysql`
 
-1. ใช้ branch ของ Milestone 5 ที่พัฒนาแล้ว:
+1. ใช้ `main` เป็น baseline ล่าสุดที่ merge Milestone 1–5 แล้ว:
 
    ```sh
-   git checkout milestone/5-teaching-gradebook-core
+   git checkout main
+   git pull --ff-only origin main
    ```
 
-   การพัฒนาครบใน milestone branch ยังแยกจากการอนุมัติ review และ merge เข้า main
+   `main` คือ baseline ที่ผ่านการ review และ merge ของ Milestone 1–5 แล้ว
 
 2. Start MAMP Apache/MySQL ตั้ง Apache Document Root เป็น `htdocs` ภายใน repository
    เปิด `mod_rewrite` และอนุญาต `.htaccess` เพื่อให้ routes และ private paths ทำงาน
