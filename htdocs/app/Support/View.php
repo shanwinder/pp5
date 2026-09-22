@@ -14,7 +14,8 @@ final class View
      * must omit document tags and the main landmark, and escape their own data.
      * Layouts escape display values; headAssets and scripts are trusted HTML (for
      * example, rendered asset partials), never raw request or database values.
-     * Template data is deliberately separate from layout context.
+     * Template data is deliberately separate from layout context. Optional ui data
+     * comes from AppUiContextService after middleware; display values are plain text.
      *
      * @param array{
      *     layout?: string,
@@ -22,6 +23,7 @@ final class View
      *     pageTitle?: string,
      *     bodyClass?: string,
      *     headAssets?: string,
+     *     ui?: array,
      *     scripts?: string
      * } $pageContext
      */
@@ -31,6 +33,7 @@ final class View
 
         return self::render('layouts/' . ($pageContext['layout'] ?? 'app'), [
             'content' => $content,
+            'ui' => $pageContext['ui'] ?? null,
             'documentTitle' => $pageContext['documentTitle'] ?? 'ปพ.5',
             'pageTitle' => $pageContext['pageTitle'] ?? '',
             'bodyClass' => $pageContext['bodyClass'] ?? '',

@@ -73,7 +73,7 @@ a:hover { color: var(--pp5-primary-hover); }
 }
 .pp5-skip-link:focus { transform: none; color: var(--pp5-on-primary); }
 
-/* Shell hooks only. Controllers supply authorized navigation in later tasks. */
+/* Shell: controllers supply authorized navigation as plain presentation data. */
 .pp5-shell {
   display: grid;
   grid-template-columns: var(--pp5-sidebar-width) minmax(0, 1fr);
@@ -97,6 +97,9 @@ a:hover { color: var(--pp5-primary-hover); }
   background: var(--pp5-surface);
   border-block-end: 1px solid var(--pp5-border);
 }
+.pp5-identity { flex: 1 1 18rem; }
+.pp5-school-name { display: block; }
+.pp5-user-name { flex: 0 1 18rem; }
 .pp5-topbar > * { min-width: 0; overflow-wrap: anywhere; }
 .pp5-sidebar {
   grid-area: sidebar;
@@ -109,6 +112,9 @@ a:hover { color: var(--pp5-primary-hover); }
   background: var(--pp5-surface);
   border-inline-end: 1px solid var(--pp5-border);
 }
+.pp5-sidebar nav ul { list-style: none; padding: 0; margin: 0; }
+.pp5-sidebar nav h2 { font-size: 1rem; margin: var(--pp5-space-4) var(--pp5-space-3) var(--pp5-space-1); }
+.pp5-sidebar nav small { display: block; }
 .pp5-sidebar nav { display: grid; gap: var(--pp5-space-1); }
 .pp5-sidebar nav a {
   display: block;

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -18,14 +19,17 @@ final class AcademicYearController
         private AcademicYearAdministrationService $administration,
         private AcademicYearRepository $years,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(): Response
     {
-        return new Response(View::render('academic/years/index', [
+        $ui = $this->ui->build('academic.years');
+        return new Response(View::page('academic/years/index', [
             'years' => $this->years->listForSchool($this->session->get('school_id')),
-        ]));
+            'canManageYears' => $ui['permissions']['ACADEMIC_YEAR_MANAGE'],
+        ], ['ui'=>$ui, 'documentTitle'=>'ปีการศึกษา — PP5', 'pageTitle'=>'ปีการศึกษา']));
     }
 
     public function create(): Response

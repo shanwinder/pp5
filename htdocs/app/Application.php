@@ -48,6 +48,7 @@ use App\Services\TeachingAssignmentService;
 use App\Services\GradebookComponentService;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
+use App\Services\AppUiContextService;
 use App\Services\AuthorizationService;
 use App\Services\ClassroomAdministrationService;
 use App\Services\SchoolUserAdministrationService;
@@ -118,13 +119,15 @@ final class Application
         $gradebookRead = new GradebookReadService(new AuthorizationService($authorization), $offerings,
             $gradebookComponents, new GradebookRepository($pdo));
         $gradebookController = new GradebookController($gradebookRead, $session, new AuthorizationService($authorization), $csrf);
-        $dashboard = new DashboardController($session, $schools, $csrf, new AuthorizationService($authorization), $gradebookRead);
+        $ui = new AppUiContextService($session, $schools, new AuthorizationService($authorization), $gradebookRead, $csrf);
+        $dashboard = new DashboardController($session, $schools, $ui);
         $systemSchools = new SystemSchoolController(
             new SystemSchoolAdministrationService($pdo, $schools, $users, $memberships,
                 new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo)),
             $schools,
             $session,
-            $csrf
+            $csrf,
+            $ui
         );
         $schoolUsers = new SchoolUserController(
             new SchoolUserAdministrationService($pdo, $users, $memberships,
@@ -140,7 +143,8 @@ final class Application
             new AcademicYearAdministrationService($pdo, $schools, $years, new AuditLogRepository($pdo)),
             $years,
             $session,
-            $csrf
+            $csrf,
+            $ui
         );
         $grades = new GradeLevelRepository($pdo);
         $classrooms = new ClassroomRepository($pdo);
