@@ -14,7 +14,11 @@
             <td><?= htmlspecialchars($offering['subject_code'] . ' — ' . $offering['subject_name'], ENT_QUOTES, 'UTF-8') ?></td>
             <td><?= htmlspecialchars((string) $offering['term_no'], ENT_QUOTES, 'UTF-8') ?></td>
             <td><?= htmlspecialchars($offering['status'], ENT_QUOTES, 'UTF-8') ?></td>
-            <td><a href="/academic/offerings/<?= htmlspecialchars((string) $offering['id'], ENT_QUOTES, 'UTF-8') ?>/edit">ดูรายละเอียด</a></td>
+            <td><a href="/academic/offerings/<?= htmlspecialchars((string) $offering['id'], ENT_QUOTES, 'UTF-8') ?>/edit">ดูรายละเอียด</a>
+                <?php if ($canManageGradebookComponents): ?>
+                    <a href="/gradebook/<?= htmlspecialchars((string) $offering['id'], ENT_QUOTES, 'UTF-8') ?>/setup">ตั้งค่าโครงสร้างคะแนน</a>
+                <?php endif; ?>
+            </td>
         </tr>
     <?php endforeach; ?>
     </tbody>

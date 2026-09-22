@@ -12,6 +12,8 @@ use App\Repositories\SubjectRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Services\SubjectOfferingAdministrationService;
 use App\Support\Csrf;
+use App\Services\AuthorizationService;
+use App\Support\AccessContext;
 use App\Support\View;
 use DomainException;
 
@@ -24,7 +26,8 @@ final class SubjectOfferingController
         private ClassroomRepository $classrooms,
         private SubjectRepository $subjects,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AuthorizationService $authorization
     ) {}
 
     public function index(Request $request): Response
@@ -37,6 +40,10 @@ final class SubjectOfferingController
 
         return new Response(View::render('academic/offerings/index', [
             'offerings' => $this->offerings->listForSchool($this->session->get('school_id'), $year['id'] ?? null),
+            'canManageGradebookComponents' => $this->authorization->hasPermission(
+                $this->session->get('user_id'), AccessContext::SCHOOL,
+                $this->session->get('school_id'), 'GRADEBOOK_COMPONENT_MANAGE'
+            ),
         ]));
     }
 

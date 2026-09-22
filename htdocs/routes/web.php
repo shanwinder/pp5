@@ -226,4 +226,45 @@ return static function (RouteCollector $r): void {
         'action' => 'academic.offerings.changeStatus', 'protected' => true,
         'context' => AccessContext::SCHOOL, 'permission' => 'SUBJECT_OFFERING_MANAGE',
     ]);
+    $r->addRoute('GET', '/academic/teaching-assignments', [
+        'action' => 'academic.teachingAssignments.index',
+        'protected' => true,
+        'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/teaching-assignments', [
+        'action' => 'academic.teachingAssignments.store',
+        'protected' => true,
+        'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/academic/teaching-assignments/{id:\d+}/status', [
+        'action' => 'academic.teachingAssignments.changeStatus',
+        'protected' => true,
+        'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('GET', '/gradebook/{offeringId:\d+}/setup', [
+        'action' => 'gradebook.components.setup', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/gradebook/{offeringId:\d+}/components', [
+        'action' => 'gradebook.components.store', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/gradebook/{offeringId:\d+}/components/{componentId:\d+}', [
+        'action' => 'gradebook.components.update', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/gradebook/{offeringId:\d+}/components/{componentId:\d+}/status', [
+        'action' => 'gradebook.components.changeStatus', 'protected' => true,
+        'context' => AccessContext::SCHOOL, 'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    // Offering-scoped grants are checked by GradebookScoreService, not the generic permission middleware.
+    $r->addRoute('POST', '/hx/gradebook/{offeringId:\d+}/components/{componentId:\d+}/enrollments/{enrollmentId:\d+}/score', [
+        'action' => 'gradebook.scores.store', 'protected' => true, 'context' => AccessContext::SCHOOL,
+    ]);
+    $r->addRoute('GET', '/gradebook/{offeringId:\d+}', [
+        'action' => 'gradebook.view', 'protected' => true, 'context' => AccessContext::SCHOOL,
+    ]);
 };

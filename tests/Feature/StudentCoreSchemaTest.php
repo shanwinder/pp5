@@ -105,7 +105,7 @@ final class StudentCoreSchemaTest extends TestCase
     {
         return [
             ['students', [['id'], ['school_id', 'student_code'], ['school_id', 'national_id'], ['id', 'school_id']], []],
-            ['student_enrollments', [['id'], ['school_id', 'academic_year_id', 'student_id'], ['id', 'school_id', 'academic_year_id', 'grade_level_id']],
+            ['student_enrollments', [['id'], ['school_id', 'academic_year_id', 'student_id'], ['id', 'school_id', 'academic_year_id', 'grade_level_id'], ['id', 'school_id', 'academic_year_id']],
                 ['idx_student_enrollment_year_grade_status' => ['school_id', 'academic_year_id', 'grade_level_id', 'status']]],
             ['classrooms', [['id'], ['school_id', 'academic_year_id', 'code'], ['id', 'school_id', 'academic_year_id'], ['id', 'school_id', 'academic_year_id', 'grade_level_id']], []],
             ['student_classroom_placements', [['id']], ['idx_student_placement_enrollment_status' => ['school_id', 'enrollment_id', 'status']]],
