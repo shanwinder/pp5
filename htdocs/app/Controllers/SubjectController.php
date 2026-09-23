@@ -56,7 +56,7 @@ final class SubjectController
     {
         $target = $this->subjects->findForSchool($this->session->get('school_id'), $subjectId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('academic/subjects/edit', [

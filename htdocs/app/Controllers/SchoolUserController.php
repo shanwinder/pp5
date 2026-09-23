@@ -87,7 +87,7 @@ final class SchoolUserController
         $schoolId = $this->session->get('school_id');
         $target = $this->memberships->findForSchoolUser($schoolId, $userId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('admin/users/edit', [

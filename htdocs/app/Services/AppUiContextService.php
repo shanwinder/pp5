@@ -25,9 +25,9 @@ final class AppUiContextService
      * No request parameters, role names, permission cache, SQL, or domain writes belong here.
      *
      * @return array{contextType: string, schoolName: ?string, displayName: string, csrfToken: string,
-     *     currentKey: string, sections: array, permissions: array<string, bool>}
+     *     currentKey: string, sections: array, permissions: array<string, bool>, gradebooks: array}
      */
-    public function build(string $currentKey): array
+    public function build(string $currentKey, bool $includeGradebooks = false): array
     {
         $userId = $this->session->get('user_id');
         $context = $this->session->get('context_type');
@@ -44,6 +44,7 @@ final class AppUiContextService
         }
         $permissions = $this->permissions($userId, $context, $schoolId);
         $sections = [];
+        $gradebooks = [];
         if ($context === AccessContext::SYSTEM) {
             $items = [];
             if ($permissions['SYSTEM_SCHOOL_VIEW']) { $items[] = $this->item('system.schools', 'รายการโรงเรียน', '/system/schools'); }
@@ -69,13 +70,14 @@ final class AppUiContextService
             }
             $this->section($sections, 'academic', 'วิชาการ', $items);
             $items = [];
-            // Task 4 owns the landing page. Until then, use only existing authorized resource URLs.
-            foreach ($this->gradebooks->listAccessibleOfferings($userId, $context, $schoolId) as $offering) {
-                $items[] = $this->item('gradebook.'.$offering['id'],
-                    'สมุดคะแนน '.$offering['year_be'].' / '.$offering['classroom_code'].' '.$offering['classroom_name'].' / '
-                    .$offering['subject_code'].' '.$offering['subject_name'].' / ภาคเรียน '.$offering['term_no'],
-                    '/gradebook/'.$offering['id'], $offering['academic_year_status'].' / '.$offering['status']);
+            // Page and shell reuse one live result within this build, never across requests.
+            if ($includeGradebooks) {
+                $gradebooks = $this->gradebooks->listAccessibleOfferings($userId, $context, $schoolId);
+                $hasGradebooks = $gradebooks !== [];
+            } else {
+                $hasGradebooks = $this->gradebooks->hasAccessibleOffering($userId, $context, $schoolId);
             }
+            if ($hasGradebooks) { $items[] = $this->item('gradebooks', 'สมุดคะแนน', '/gradebooks'); }
             $this->section($sections, 'teaching', 'การเรียนการสอน', $items);
             $this->section($sections, 'management', 'การจัดการ', $permissions['SCHOOL_USER_VIEW']
                 ? [$this->item('users', 'ผู้ใช้งาน', '/admin/users')] : []);
@@ -83,7 +85,7 @@ final class AppUiContextService
 
         return ['contextType'=>$context, 'schoolName'=>$school['name_th'] ?? null,
             'displayName'=>(string) $this->session->get('display_name', ''), 'csrfToken'=>$this->csrf->token($this->session),
-            'currentKey'=>$currentKey, 'sections'=>$sections, 'permissions'=>$permissions];
+            'currentKey'=>$currentKey, 'sections'=>$sections, 'permissions'=>$permissions, 'gradebooks'=>$gradebooks];
     }
 
     /** @return array<string, bool> */

@@ -30,7 +30,7 @@ final class ClassroomController
         try {
             $year = $this->queryYear($request);
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('academic/classrooms/index', [
@@ -43,10 +43,10 @@ final class ClassroomController
         try {
             $year = $this->queryYear($request);
             if ($year !== null && !in_array($year['status'], ['DRAFT', 'ACTIVE'], true)) {
-                return new Response(View::render('errors/404'), 404);
+                return new Response(View::error(404), 404);
             }
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return $this->createForm(['academic_year_id' => $year['id'] ?? null]);
@@ -76,7 +76,7 @@ final class ClassroomController
     {
         $target = $this->classrooms->findForSchool($this->session->get('school_id'), $classroomId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('academic/classrooms/edit', [

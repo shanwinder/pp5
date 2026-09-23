@@ -42,6 +42,20 @@ final class View
         ]);
     }
 
+    /** Context-free safe full-page errors. Never accepts request paths or exception messages. */
+    public static function error(int $status): string
+    {
+        $title = match ($status) {
+            403 => 'ไม่มีสิทธิ์เข้าใช้งาน',
+            404 => 'ไม่พบหน้า',
+            default => throw new RuntimeException('Unsupported error page'),
+        };
+        return self::page('errors/' . $status, [], [
+            'layout' => 'error', 'documentTitle' => $title . ' — ปพ.5',
+            'pageTitle' => $title, 'bodyClass' => 'pp5-error',
+        ]);
+    }
+
     public static function render(string $template, array $data = []): string
     {
         $path = dirname(__DIR__, 2) . '/views/' . $template . '.php';

@@ -61,7 +61,7 @@ final class AcademicYearController
     {
         $target = $this->years->findForSchool($this->session->get('school_id'), $academicYearId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('academic/years/edit', [

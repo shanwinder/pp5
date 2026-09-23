@@ -86,7 +86,7 @@ final class Application
         $routeInfo = $dispatcher->dispatch($request->method(), $request->path());
 
         if ($routeInfo[0] === Dispatcher::NOT_FOUND) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         if ($routeInfo[0] === Dispatcher::METHOD_NOT_ALLOWED) {
@@ -118,8 +118,8 @@ final class Application
         $gradebookComponents = new GradebookComponentRepository($pdo);
         $gradebookRead = new GradebookReadService(new AuthorizationService($authorization), $offerings,
             $gradebookComponents, new GradebookRepository($pdo));
-        $gradebookController = new GradebookController($gradebookRead, $session, new AuthorizationService($authorization), $csrf);
         $ui = new AppUiContextService($session, $schools, new AuthorizationService($authorization), $gradebookRead, $csrf);
+        $gradebookController = new GradebookController($gradebookRead, $session, new AuthorizationService($authorization), $csrf, $ui);
         $dashboard = new DashboardController($session, $schools, $ui);
         $systemSchools = new SystemSchoolController(
             new SystemSchoolAdministrationService($pdo, $schools, $users, $memberships,
@@ -220,6 +220,7 @@ final class Application
         $enrollmentId = $enrollmentId === false ? 0 : $enrollmentId;
         $next = match ($handler['action']) {
             'gradebook.scores.store' => static fn (Request $request): Response => $scoreController->store($request, $offeringId, $componentId, $enrollmentId),
+            'gradebook.index' => static fn (Request $request): Response => $gradebookController->index(),
             'gradebook.view' => static fn (Request $request): Response => $gradebookController->show($offeringId),
             'gradebook.components.setup' => static fn (Request $request): Response => $componentController->setup($offeringId),
             'gradebook.components.store' => static fn (Request $request): Response => $componentController->store($request, $offeringId),
@@ -297,7 +298,7 @@ final class Application
                 $handlerNext = $next;
                 $next = static fn (Request $request): Response => $session->get('context_type') === AccessContext::SYSTEM
                     ? $handlerNext($request)
-                    : new Response(View::render('errors/403'), 403);
+                    : new Response(View::error(403), 403);
             }
             if (isset($handler['permission'])) {
                 $permission = new PermissionMiddleware($session, new AuthorizationService($authorization), $handler['permission']);
@@ -313,7 +314,7 @@ final class Application
             $response = $auth->handle($request, $next);
             // A gradebook target must not reveal existence through context/auth denial either.
             if ($handler['action'] === 'gradebook.view' && $response->status() === 403) {
-                return new Response(View::render('errors/404'), 404);
+                return new Response(View::error(404), 404);
             }
 
             return $response;

@@ -26,7 +26,7 @@ final class GradebookComponentController
     public function setup(int $offeringId): Response
     {
         $offering = $this->offerings->findForSchool($this->session->get('school_id'), $offeringId);
-        if ($offering === null) { return new Response(View::render('errors/404'), 404); }
+        if ($offering === null) { return new Response(View::error(404), 404); }
 
         return $this->page($offering);
     }

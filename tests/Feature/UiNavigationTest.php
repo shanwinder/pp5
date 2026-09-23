@@ -38,15 +38,14 @@ final class UiNavigationTest extends TestCase
             array_push($expected, '/students', '/academic/enrollments', '/academic/student-import', '/academic/years',
                 '/academic/classrooms', '/academic/subjects', '/academic/offerings', '/academic/teaching-assignments');
         }
-        foreach ($this->accessible($role) as $offering) { $expected[] = '/gradebook/' . $offering['id']; }
+        if ($books > 0) { $expected[] = '/gradebooks'; }
         if ($users) { $expected[] = '/admin/users'; }
         self::assertSame($expected, $links);
-        self::assertCount($books, array_filter($links, fn ($link) => str_starts_with($link, '/gradebook/')));
+        self::assertCount(0, array_filter($links, fn ($link) => str_starts_with($link, '/gradebook/')));
         foreach ($links as $link) { self::assertSame(200, $this->request('GET', $link)->status(), $link); }
         self::assertNotContains($this->readPath('B'), $links);
-        self::assertNotContains('/gradebooks', $links);
         $this->assertReadSafe($response->body());
-        self::assertSame(404, $this->request('GET', '/gradebooks')->status());
+        self::assertSame(200, $this->request('GET', '/gradebooks')->status());
     }
 
     public static function grants(): iterable
@@ -81,7 +80,7 @@ final class UiNavigationTest extends TestCase
         $foreignAssignment = $this->insert('user_role_assignments', ['school_id'=>$this->f['schoolB'],
             'user_id'=>$this->users['SUBJECT_TEACHER']['user'], 'role_id'=>$assignment['role_id']]);
         $this->scope($foreignAssignment, 'B');
-        self::assertSame(['/dashboard', $this->readPath()], $this->navLinks($this->request('GET', '/dashboard')->body()));
+        self::assertSame(['/dashboard', '/gradebooks'], $this->navLinks($this->request('GET', '/dashboard')->body()));
         self::assertSame(200, $this->request('GET', $this->readPath())->status());
         self::assertSame(404, $this->request('GET', $this->readPath('B'))->status());
         $this->revoke('scope');

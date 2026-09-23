@@ -72,7 +72,7 @@ final class StudentController
     {
         $target = $this->students->findForSchool($this->session->get('school_id'), $studentId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
         $maskedNationalId = $target['national_id'] === null ? null : '*********' . substr($target['national_id'], -4);
         unset($target['national_id']);
@@ -92,7 +92,7 @@ final class StudentController
     {
         $target = $this->students->findForSchool($this->session->get('school_id'), $studentId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('students/edit', [

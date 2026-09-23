@@ -460,7 +460,7 @@ final class DashboardAccessTest extends TestCase
         self::assertSame(200, $response->status());
         foreach (['/students' => 'รายชื่อนักเรียน', '/academic/enrollments' => 'การลงทะเบียน'] as $path => $label) {
             self::assertSame($visible ? 1 : 0, substr_count($response->body(), '<a href="' . $path . '">' . $label . '</a>'), $path);
-            self::assertSame($visible ? 1 : 0, substr_count($response->body(), 'href="' . $path . '"'), $path);
+            self::assertSame($visible ? ($path === '/students' ? 2 : 1) : 0, substr_count($response->body(), 'href="' . $path . '"'), $path);
         }
         self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
     }
@@ -496,7 +496,7 @@ final class DashboardAccessTest extends TestCase
     {
         self::assertSame(200, $response->status());
         self::assertSame($visible ? 1 : 0, substr_count($response->body(), '<a href="/academic/years">ปีการศึกษา</a>'));
-        self::assertSame($visible ? 1 : 0, substr_count($response->body(), 'href="/academic/years"'));
+        self::assertSame($visible ? 2 : 0, substr_count($response->body(), 'href="/academic/years"'));
         self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
     }
 

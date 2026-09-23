@@ -264,7 +264,7 @@ final class EnrollmentController
         $address = $request->server('REMOTE_ADDR');
         return is_string($address) && filter_var($address, FILTER_VALIDATE_IP) !== false ? $address : null;
     }
-    private function notFound(): Response { return new Response(View::render('errors/404'), 404); }
+    private function notFound(): Response { return new Response(View::error(404), 404); }
     private function mutationError(string $error): Response
     {
         return new Response(View::render('academic/enrollments/edit', ['target' => null, 'error' => $error, 'canView' => $this->can('STUDENT_VIEW')]), 422);

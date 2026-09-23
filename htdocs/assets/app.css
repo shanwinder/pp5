@@ -279,3 +279,24 @@ a:hover { color: var(--pp5-primary-hover); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* Entry surfaces: focused forms, safe errors, and concise school work areas. */
+.pp5-guest, .pp5-error { padding: var(--pp5-space-4); }
+.pp5-guest > main, .pp5-error > main {
+  max-width: 30rem;
+  margin: var(--pp5-space-8) auto;
+  padding: var(--pp5-space-6);
+  background: var(--pp5-surface);
+  border: 1px solid var(--pp5-border);
+  border-radius: var(--pp5-radius-md);
+  box-shadow: var(--pp5-shadow-sm);
+  overflow-wrap: anywhere;
+}
+.pp5-welcome { overflow-wrap: anywhere; margin-block-end: var(--pp5-space-6); }
+.pp5-work-areas { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--pp5-space-6); }
+.pp5-work-areas li { flex: 1 1 14rem; min-width: 0; padding-block: var(--pp5-space-3); border-block-start: 1px solid var(--pp5-border); }
+.pp5-work-areas p { margin-block-end: var(--pp5-space-2); }
+.pp5-offering-table { min-width: 48rem; }
+.pp5-offering-table th, .pp5-offering-table td { overflow-wrap: anywhere; max-width: 18rem; }
+/* Contain absolutely positioned accessible link labels inside the scroll region. */
+.pp5-offering-table .btn { position: relative; }

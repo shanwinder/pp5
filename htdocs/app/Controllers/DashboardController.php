@@ -22,13 +22,14 @@ final class DashboardController
         $school = $this->schools->findActiveById((int) $this->session->get('school_id'));
 
         if ($school === null) {
-            return new Response(View::render('errors/403'), 403);
+            return new Response(View::error(403), 403);
         }
 
-        return new Response(View::page('dashboard/index', [], [
+        $ui = $this->ui->build('dashboard', true);
+        return new Response(View::page('dashboard/index', ['ui' => $ui], [
             'documentTitle' => 'แดชบอร์ด — ระบบ ปพ.5',
             'pageTitle' => 'แดชบอร์ด',
-            'ui' => $this->ui->build('dashboard'),
+            'ui' => $ui,
         ]));
     }
 }

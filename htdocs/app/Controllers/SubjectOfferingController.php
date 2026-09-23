@@ -35,7 +35,7 @@ final class SubjectOfferingController
         try {
             $year = $this->queryYear($request);
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('academic/offerings/index', [
@@ -52,10 +52,10 @@ final class SubjectOfferingController
         try {
             $year = $this->queryYear($request);
             if ($year !== null && !in_array($year['status'], ['DRAFT', 'ACTIVE'], true)) {
-                return new Response(View::render('errors/404'), 404);
+                return new Response(View::error(404), 404);
             }
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return $this->createForm(['academic_year_id' => $year['id'] ?? null]);
@@ -85,7 +85,7 @@ final class SubjectOfferingController
     {
         $target = $this->offerings->findForSchool($this->session->get('school_id'), $offeringId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return new Response(View::render('academic/offerings/edit', [

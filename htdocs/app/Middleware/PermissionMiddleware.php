@@ -30,7 +30,7 @@ final class PermissionMiddleware
         }
 
         if (!$this->authorization->hasPermission($userId, $contextType, $schoolId, $this->permissionCode)) {
-            return new Response(View::render('errors/403'), 403);
+            return new Response(View::error(403), 403);
         }
 
         return $next($request);

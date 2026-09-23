@@ -56,7 +56,7 @@ final class StudentImportController
         try {
             $this->service->expirePreviews($this->school());
             $batch = $this->batches->findForSchool($this->school(), $batchId);
-            if ($batch === null) { return new Response(View::render('errors/404'), 404); }
+            if ($batch === null) { return new Response(View::error(404), 404); }
             return new Response(View::render('academic/student-import/preview', [
                 'batch' => $batch, 'rows' => $this->rows->listForBatch($this->school(), $batchId),
                 'csrfToken' => $this->csrf->token($this->session), 'error' => null,

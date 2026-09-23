@@ -77,6 +77,18 @@ final class GradebookReadService
         return $accessible;
     }
 
+    /** Existence only for shell navigation; keep live scoped checks and stop at the first match. */
+    public function hasAccessibleOffering(int $userId, string $contextType, int $schoolId): bool
+    {
+        if ($contextType !== AccessContext::SCHOOL || $schoolId <= 0) { return false; }
+        foreach ($this->offerings->listForSchool($schoolId) as $offering) {
+            if ($this->authorization->hasSubjectOfferingPermission($userId, $contextType, $schoolId, (int) $offering['id'], 'GRADEBOOK_VIEW')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /** Add canonical, nonnegative DECIMAL strings without integer-total overflow or rounding. */
     private function add(string $left, string $right): string
     {

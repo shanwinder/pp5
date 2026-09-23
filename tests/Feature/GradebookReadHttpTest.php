@@ -62,7 +62,7 @@ final class GradebookReadHttpTest extends TestCase
         self::assertSame(404,$this->request('GET',$this->readPath('Other'))->status());
         foreach (['SCHOOL_ADMIN','ACADEMIC_ADMIN','EXECUTIVE'] as $role) {
             $this->login($role); $r=$this->request('GET','/dashboard'); self::assertSame(200,$r->status());
-            self::assertCount(5,$this->gradebookLinks($r->body())); self::assertNotContains($this->readPath('B'),$this->gradebookLinks($r->body()));
+            self::assertCount(3,$this->gradebookLinks($r->body())); self::assertNotContains($this->readPath('B'),$this->gradebookLinks($r->body()));
         }
         $this->login('VIEWER'); self::assertSame([],$this->gradebookLinks($this->request('GET','/dashboard')->body()));
         self::assertSame(404,$this->request('GET',$this->readPath())->status());
@@ -72,7 +72,7 @@ final class GradebookReadHttpTest extends TestCase
     {
         $this->login('VIEWER'); self::assertSame(404,$this->request('GET',$this->readPath())->status());
         $this->pdo->exec("INSERT INTO role_permissions (role_id,permission_id) SELECT r.id,p.id FROM roles r CROSS JOIN permissions p WHERE r.code='VIEWER' AND p.code='GRADEBOOK_VIEW'");
-        self::assertSame(200,$this->request('GET',$this->readPath())->status()); self::assertCount(5,$this->gradebookLinks($this->request('GET','/dashboard')->body()));
+        self::assertSame(200,$this->request('GET',$this->readPath())->status()); self::assertCount(3,$this->gradebookLinks($this->request('GET','/dashboard')->body()));
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='SCHOOL_ADMIN' AND p.code='GRADEBOOK_VIEW'");
         $this->login(); self::assertSame(404,$this->request('GET',$this->readPath())->status()); self::assertSame([],$this->gradebookLinks($this->request('GET','/dashboard')->body()));
     }

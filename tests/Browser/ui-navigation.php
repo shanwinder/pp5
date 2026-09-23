@@ -23,7 +23,7 @@ if (isset($assets[$path])) {
 }
 if (in_array($path, ['/frame', '/no-js'], true)) {
     $hostile = str_repeat('โรงเรียนภาษาไทยชื่อยาว', 8).'<script>alert("shell")</script>';
-    $html = View::page('dashboard/index', [], [
+    $html = View::page('../../tests/Fixtures/views/page-content', ['message'=>'ทดสอบเมนู'], [
         'documentTitle'=>'ทดสอบเมนู ปพ.5', 'pageTitle'=>'แดชบอร์ด',
         'ui'=>['contextType'=>'SCHOOL', 'schoolName'=>$hostile, 'displayName'=>$hostile, 'csrfToken'=>'fixture-only',
             'currentKey'=>'dashboard', 'sections'=>[
@@ -31,7 +31,7 @@ if (in_array($path, ['/frame', '/no-js'], true)) {
                     ['key'=>'dashboard', 'label'=>'แดชบอร์ด', 'url'=>'#main-content', 'detail'=>null],
                 ]],
                 ['key'=>'teaching', 'label'=>'การเรียนการสอน', 'items'=>[
-                    ['key'=>'gradebook.1', 'label'=>'สมุดคะแนน '.$hostile, 'url'=>'#main-content', 'detail'=>'CLOSED / INACTIVE'],
+                    ['key'=>'gradebooks', 'label'=>'สมุดคะแนน', 'url'=>'#main-content', 'detail'=>null],
                 ]],
             ]],
         'scripts'=>'<script src="/checks.js" defer></script>',

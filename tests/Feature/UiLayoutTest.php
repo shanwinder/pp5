@@ -185,14 +185,16 @@ final class UiLayoutTest extends TestCase
     {
         $hostile = '<script>PRIVATE RESOURCE /config/local.php SQLSTATE</script>';
         foreach (['403', '404'] as $status) {
-            $html = View::render('errors/' . $status, ['message' => $hostile, 'path' => $hostile]);
+            $fragment = View::render('errors/' . $status, ['message' => $hostile, 'path' => $hostile]);
+            $this->assertFragment($fragment);
+            $html = View::error((int) $status);
             self::assertStringNotContainsString($hostile, $html);
             self::assertStringNotContainsString('PRIVATE RESOURCE', $html);
             $this->assertDocument($html);
         }
         $response = (new Application())->handle(new Request('GET', '/' . $hostile, [], [], []));
         self::assertSame(404, $response->status());
-        self::assertSame(View::render('errors/404'), $response->body());
+        self::assertSame(View::error(404), $response->body());
     }
 
     private function assertDocument(string $html): void
