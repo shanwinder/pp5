@@ -1,5 +1,12 @@
 (() => {
   'use strict';
+  // Optional presentation only: unmarked forms and no-JS submissions stay native.
+  document.querySelectorAll('form[data-confirm]').forEach(form => {
+    form.addEventListener('submit', event => {
+      if (!window.confirm(form.getAttribute('data-confirm'))) event.preventDefault();
+    });
+  });
+
   // In-page disclosure, not a modal: native Tab remains available throughout.
   // Match the shell breakpoint in app.css. No enhancement means visible navigation.
   const narrow = window.matchMedia('(max-width: 63.999rem)');

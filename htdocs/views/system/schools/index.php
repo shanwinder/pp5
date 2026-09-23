@@ -20,7 +20,7 @@
           <td><?= htmlspecialchars($school['name_th'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
           <td><?= App\Support\View::render('ui/status', ['status'=>$school['status'], 'kind'=>'school']) ?></td>
           <td>
-            <?php if ($canChangeStatus): ?><form class="pp5-form pp5-surface pp5-sensitive" method="post" action="/system/schools/<?= htmlspecialchars((string) $school['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/status">
+            <?php if ($canChangeStatus): ?><form class="pp5-form pp5-surface pp5-sensitive" method="post" action="/system/schools/<?= htmlspecialchars((string) $school['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/status" data-confirm="ยืนยันการเปลี่ยนสถานะโรงเรียนหรือไม่? การระงับหรือปิดใช้งานโรงเรียนจะหยุดการเข้าถึงข้อมูลในบริบทโรงเรียนนั้น">
               <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
               <label class="form-label" for="system-schools-index-status-<?= (int) $school['id'] ?>">สถานะใหม่
                 <select class="form-select" id="system-schools-index-status-<?= (int) $school['id'] ?>" name="status">

@@ -40,6 +40,7 @@ final class UiAdministrationTest extends TestCase
         $r = $this->request('GET', $path, [], $year ? ['academic_year_id'=>(string)$this->f[$year]] : []);
         self::assertSame(200, $r->status(), $path);
         $x = $this->assertPage($r->body());
+        if ($path !== '/system/schools') { self::assertSame(0, $x->query('//form[@data-confirm]')->length, $path); }
         self::assertStringContainsString(htmlspecialchars($hostile,ENT_QUOTES,'UTF-8'),$r->body());
         self::assertStringNotContainsString($hostile,$r->body());
         if ($role === 'SYSTEM_ADMIN') { self::assertSame(0,$x->query('//nav[@aria-label="เมนูหลัก"]//a[starts-with(@href,"/academic") or @href="/dashboard" or @href="/gradebooks"]')->length); }
