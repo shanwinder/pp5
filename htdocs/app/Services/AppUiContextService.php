@@ -93,7 +93,9 @@ final class AppUiContextService
     {
         $codes = $context === AccessContext::SYSTEM
             ? ['SYSTEM_SCHOOL_VIEW', 'SYSTEM_SCHOOL_CREATE', 'SYSTEM_SCHOOL_STATUS_MANAGE']
-            : ['STUDENT_VIEW', 'STUDENT_IMPORT', 'ACADEMIC_SETUP_VIEW', 'TEACHING_ASSIGNMENT_MANAGE', 'SCHOOL_USER_VIEW', 'ACADEMIC_YEAR_MANAGE'];
+            : ['STUDENT_VIEW', 'STUDENT_IMPORT', 'ACADEMIC_SETUP_VIEW', 'TEACHING_ASSIGNMENT_MANAGE', 'SCHOOL_USER_VIEW', 'ACADEMIC_YEAR_MANAGE',
+                'SCHOOL_USER_CREATE', 'SCHOOL_USER_UPDATE', 'SCHOOL_MEMBERSHIP_STATUS_MANAGE', 'SCHOOL_ROLE_MANAGE',
+                'SCHOOL_PASSWORD_RESET', 'CLASSROOM_MANAGE', 'SUBJECT_MANAGE', 'SUBJECT_OFFERING_MANAGE'];
         $permissions = [];
         foreach ($codes as $code) {
             $permissions[$code] = $this->authorization->hasPermission($userId, $context, $schoolId, $code);

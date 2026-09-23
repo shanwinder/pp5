@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -27,7 +28,8 @@ final class SubjectOfferingController
         private SubjectRepository $subjects,
         private Session $session,
         private Csrf $csrf,
-        private AuthorizationService $authorization
+        private AuthorizationService $authorization,
+        private AppUiContextService $ui
     ) {}
 
     public function index(Request $request): Response
@@ -38,13 +40,17 @@ final class SubjectOfferingController
             return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('academic/offerings/index', [
+        $ui = $this->ui->build('academic.offerings');
+        return new Response(View::page('academic/offerings/index', [
+            'permissions' => $ui['permissions'],
+            'selectedYear' => $year,
+            'years' => $this->years->listForSchool($this->session->get('school_id')),
             'offerings' => $this->offerings->listForSchool($this->session->get('school_id'), $year['id'] ?? null),
             'canManageGradebookComponents' => $this->authorization->hasPermission(
                 $this->session->get('user_id'), AccessContext::SCHOOL,
                 $this->session->get('school_id'), 'GRADEBOOK_COMPONENT_MANAGE'
             ),
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'การเปิดรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'การเปิดรายวิชา']));
     }
 
     public function create(Request $request): Response
@@ -88,13 +94,15 @@ final class SubjectOfferingController
             return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('academic/offerings/edit', [
+        $ui = $this->ui->build('academic.offerings');
+        return new Response(View::page('academic/offerings/edit', [
+            'permissions' => $ui['permissions'],
             'target' => $target,
             'classrooms' => $this->activeClassrooms($target['academic_year_id']),
             'subjects' => $this->activeSubjects(),
             'csrfToken' => $this->csrf->token($this->session),
             'error' => null,
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'รายละเอียดการเปิดรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดการเปิดรายวิชา']));
     }
 
     public function update(Request $request, int $offeringId): Response
@@ -210,7 +218,9 @@ final class SubjectOfferingController
             }
         }
 
-        return new Response(View::render('academic/offerings/create', [
+        $ui = $this->ui->build('academic.offerings');
+        return new Response(View::page('academic/offerings/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'years' => $years,
             'selectedYear' => $selectedYear,
@@ -218,11 +228,12 @@ final class SubjectOfferingController
             'subjects' => $this->activeSubjects(),
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'เพิ่มการเปิดรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'เพิ่มการเปิดรายวิชา']), $status);
     }
 
     private function mutationError(string $error): Response
     {
-        return new Response(View::render('academic/offerings/edit', ['target' => null, 'error' => $error]), 422);
+        $ui = $this->ui->build('academic.offerings');
+        return new Response(View::page('academic/offerings/edit', ['permissions' => $ui['permissions'], 'target' => null, 'error' => $error], ['ui' => $ui, 'documentTitle' => 'รายละเอียดการเปิดรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดการเปิดรายวิชา']), 422);
     }
 }

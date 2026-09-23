@@ -136,7 +136,7 @@ final class Application
             new RoleRepository($pdo),
             new RoleAssignmentRepository($pdo),
             $session,
-            $csrf
+            $csrf, $ui
         );
         $years = new AcademicYearRepository($pdo);
         $academicYears = new AcademicYearController(
@@ -154,14 +154,14 @@ final class Application
             $years,
             $grades,
             $session,
-            $csrf
+            $csrf, $ui
         );
         $subjects = new SubjectRepository($pdo);
         $subjectController = new SubjectController(
             new SubjectAdministrationService($pdo, $schools, $subjects, new AuditLogRepository($pdo)),
             $subjects,
             $session,
-            $csrf
+            $csrf, $ui
         );
         $offeringController = new SubjectOfferingController(
             new SubjectOfferingAdministrationService($pdo, $schools, $years, $classrooms, $subjects, $offerings, new AuditLogRepository($pdo)),
@@ -171,7 +171,8 @@ final class Application
             $subjects,
             $session,
             $csrf,
-            new AuthorizationService($authorization)
+            new AuthorizationService($authorization),
+            $ui
         );
         $componentController = new GradebookComponentController(
             new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
@@ -180,7 +181,7 @@ final class Application
         $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $teachingController = new TeachingAssignmentController(
             new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo)),
-            $teachingAssignments, $years, $offerings, $session, $csrf
+            $teachingAssignments, $years, $offerings, $session, $csrf, $ui
         );
         $students = new StudentRepository($pdo);
         $enrollments = new StudentEnrollmentRepository($pdo);

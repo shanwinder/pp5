@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -22,7 +23,8 @@ final class SchoolUserController
         private RoleRepository $roles,
         private RoleAssignmentRepository $assignments,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(): Response
@@ -34,11 +36,13 @@ final class SchoolUserController
         }
         unset($member);
 
-        return new Response(View::render('admin/users/index', [
+        $ui = $this->ui->build('users');
+        return new Response(View::page('admin/users/index', [
+            'permissions' => $ui['permissions'],
             'members' => $members,
             'displayName' => (string) $this->session->get('display_name', ''),
             'csrfToken' => $this->csrf->token($this->session),
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'ผู้ใช้งานโรงเรียน — ระบบ ปพ.5', 'pageTitle' => 'ผู้ใช้งานโรงเรียน']));
     }
 
     public function create(): Response
@@ -90,13 +94,15 @@ final class SchoolUserController
             return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('admin/users/edit', [
+        $ui = $this->ui->build('users');
+        return new Response(View::page('admin/users/edit', [
+            'permissions' => $ui['permissions'],
             'target' => $target,
             'roles' => $this->roles->listActiveSchoolRoles(),
             'roleCodes' => $this->assignments->activeSchoolRoleCodes($userId, $schoolId),
             'csrfToken' => $this->csrf->token($this->session),
             'error' => null,
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'จัดการผู้ใช้โรงเรียน — ระบบ ปพ.5', 'pageTitle' => 'จัดการผู้ใช้โรงเรียน']));
     }
 
     public function updateProfile(Request $request, int $userId): Response
@@ -192,17 +198,20 @@ final class SchoolUserController
 
     private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('admin/users/create', [
+        $ui = $this->ui->build('users');
+        return new Response(View::page('admin/users/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'roles' => $this->roles->listActiveSchoolRoles(),
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'สร้างผู้ใช้โรงเรียน — ระบบ ปพ.5', 'pageTitle' => 'สร้างผู้ใช้โรงเรียน']), $status);
     }
 
     private function mutationError(string $error): Response
     {
         // Mutation permissions do not grant permission to reload and view the target.
-        return new Response(View::render('admin/users/edit', ['target' => null, 'error' => $error]), 422);
+        $ui = $this->ui->build('users');
+        return new Response(View::page('admin/users/edit', ['permissions' => $ui['permissions'], 'target' => null, 'error' => $error], ['ui' => $ui, 'documentTitle' => 'จัดการผู้ใช้โรงเรียน — ระบบ ปพ.5', 'pageTitle' => 'จัดการผู้ใช้โรงเรียน']), 422);
     }
 }

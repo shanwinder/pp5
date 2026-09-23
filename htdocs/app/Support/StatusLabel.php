@@ -11,6 +11,7 @@ final class StatusLabel
         $labels = $kind === 'academic-year'
             ? ['DRAFT'=>'ร่าง', 'ACTIVE'=>'กำลังใช้งาน', 'CLOSED'=>'ปิดปีแล้ว']
             : ['ACTIVE'=>'ใช้งาน', 'INACTIVE'=>'ปิดใช้งาน'];
+        if (in_array($kind, ['school', 'membership', 'user'], true)) { $labels['SUSPENDED'] = 'ระงับ'; }
         return $labels[$code] ?? $code;
     }
 }

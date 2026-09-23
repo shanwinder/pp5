@@ -300,3 +300,26 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-offering-table th, .pp5-offering-table td { overflow-wrap: anywhere; max-width: 18rem; }
 /* Contain absolutely positioned accessible link labels inside the scroll region. */
 .pp5-offering-table .btn { position: relative; }
+
+/* Administration forms and tables share the shell without changing legacy grids. */
+.pp5-admin-page { min-width: 0; overflow-wrap: anywhere; }
+.pp5-admin-page .pp5-form { margin-block-end: var(--pp5-space-6); }
+.pp5-admin-page .form-label { display: block; width: 100%; }
+.pp5-admin-page .form-check-input { margin-inline-end: var(--pp5-space-2); }
+.pp5-admin-page fieldset { min-width: 0; }
+.pp5-admin-page legend { font-size: 1.25rem; font-weight: 600; }
+.pp5-admin-page .pp5-sensitive { border-inline-start: 4px solid var(--pp5-danger); }
+.pp5-admin-page .pp5-table { min-width: 44rem; }
+.pp5-admin-page .pp5-table th, .pp5-admin-page .pp5-table td { max-width: 22rem; overflow-wrap: anywhere; }
+.pp5-admin-page .pp5-table td:last-child { min-width: 12rem; }
+.pp5-admin-page .pp5-table td:last-child > a { display: block; margin-block: var(--pp5-space-2); }
+.pp5-admin-page td .pp5-form { padding: 0; border: 0; box-shadow: none; margin: 0; }
+.pp5-admin-page td .btn { margin-block-start: var(--pp5-space-2); }
+.pp5-admin-page .pp5-filter-bar select { max-width: 100%; }
+.pp5-admin-page .pp5-badge:is([data-status="ACTIVE"], [data-status="INACTIVE"], [data-status="DRAFT"], [data-status="CLOSED"], [data-status="SUSPENDED"]) { white-space: nowrap; }
+.pp5-admin-page .pp5-table thead th { white-space: nowrap; }
+
+.pp5-admin-page .pp5-assignment-table { min-width: 64rem; }
+.pp5-admin-page .pp5-assignment-table td:nth-child(2),
+.pp5-admin-page .pp5-assignment-table td:nth-child(3),
+.pp5-admin-page .pp5-assignment-table td:nth-child(4) { min-width: 12rem; }

@@ -99,7 +99,10 @@ final class AcademicIsolationTest extends TestCase
                     array_replace($payload, ['school_id' => $forgedSchool]), ['school_id' => $forgedSchool]);
                 self::assertSame($method === 'GET' ? 404 : 422, $response->status());
                 $this->assertSafe($response);
-                self::assertStringNotContainsString('<form', $response->body());
+                // Shared shell logout is allowed; target mutation forms must remain absent.
+                $document = new DOMDocument();
+                @$document->loadHTML($response->body());
+                self::assertSame(0, (new DOMXPath($document))->query('//main//form')->length);
                 self::assertSame($before, $this->snapshot());
                 $responses[] = $response;
             }

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -18,14 +19,17 @@ final class SubjectController
         private SubjectAdministrationService $administration,
         private SubjectRepository $subjects,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(): Response
     {
-        return new Response(View::render('academic/subjects/index', [
+        $ui = $this->ui->build('academic.subjects');
+        return new Response(View::page('academic/subjects/index', [
+            'permissions' => $ui['permissions'],
             'subjects' => $this->subjects->listForSchool($this->session->get('school_id')),
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'รายวิชา — ระบบ ปพ.5', 'pageTitle' => 'รายวิชา']));
     }
 
     public function create(): Response
@@ -59,11 +63,13 @@ final class SubjectController
             return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('academic/subjects/edit', [
+        $ui = $this->ui->build('academic.subjects');
+        return new Response(View::page('academic/subjects/edit', [
+            'permissions' => $ui['permissions'],
             'target' => $target,
             'csrfToken' => $this->csrf->token($this->session),
             'error' => null,
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'รายละเอียดรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดรายวิชา']));
     }
 
     public function update(Request $request, int $subjectId): Response
@@ -132,15 +138,18 @@ final class SubjectController
 
     private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('academic/subjects/create', [
+        $ui = $this->ui->build('academic.subjects');
+        return new Response(View::page('academic/subjects/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'เพิ่มรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'เพิ่มรายวิชา']), $status);
     }
 
     private function mutationError(string $error): Response
     {
-        return new Response(View::render('academic/subjects/edit', ['target' => null, 'error' => $error]), 422);
+        $ui = $this->ui->build('academic.subjects');
+        return new Response(View::page('academic/subjects/edit', ['permissions' => $ui['permissions'], 'target' => null, 'error' => $error], ['ui' => $ui, 'documentTitle' => 'รายละเอียดรายวิชา — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดรายวิชา']), 422);
     }
 }

@@ -101,19 +101,22 @@ final class SystemSchoolController
     {
         $ui = $this->ui->build('system.schools');
         return new Response(View::page('system/schools/index', [
+            'permissions' => $ui['permissions'],
             'schools' => $error === null ? $this->schools->all() : null,
             'canChangeStatus' => $ui['permissions']['SYSTEM_SCHOOL_STATUS_MANAGE'],
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ], ['ui'=>$ui, 'documentTitle'=>'จัดการโรงเรียน — ระบบ ปพ.5', 'pageTitle'=>'จัดการโรงเรียน']), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'จัดการโรงเรียน — ระบบ ปพ.5', 'pageTitle' => 'จัดการโรงเรียน']), $status);
     }
 
     private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('system/schools/create', [
+        $ui = $this->ui->build('system.schools.create');
+        return new Response(View::page('system/schools/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'สร้างโรงเรียนและผู้ดูแลคนแรก — ระบบ ปพ.5', 'pageTitle' => 'สร้างโรงเรียนและผู้ดูแลคนแรก']), $status);
     }
 }

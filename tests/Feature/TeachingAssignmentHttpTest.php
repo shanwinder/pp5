@@ -52,7 +52,7 @@ final class TeachingAssignmentHttpTest extends TestCase
             $all = $this->request('GET'); self::assertSame(200, $all->status()); $this->assertSafe($all);
             $x = $this->xpath($all->body());
             self::assertSame(3, $x->query('//tbody/tr[@data-assignment-id]')->length);
-            self::assertSame(0, $x->query('//form[@method="post"][@action="' . self::PATH . '"]')->length);
+            self::assertSame(0, $x->query('//main//form[@method="post"][@action="' . self::PATH . '"]')->length);
             self::assertEqualsCanonicalizing(array_map('strval', [$this->f['yearA'], $this->f['yearNext'], $this->f['yearClosed']]), $this->optionIds($x, 'academic_year_id'));
             $selected = $this->request('GET', self::PATH, [], ['academic_year_id' => (string) $this->f['yearA']]);
             self::assertSame(200, $selected->status()); $this->assertSafe($selected); $this->assertForms($selected);
@@ -143,7 +143,7 @@ final class TeachingAssignmentHttpTest extends TestCase
         self::assertSame(1, $x->query('//tbody/tr[@data-assignment-id]')->length);
         self::assertStringContainsString('SUBJECT_TEACHER', $r->body());
         self::assertStringContainsString('CLOSED', $r->body());
-        self::assertSame(0, $x->query('//form[@method="post"]')->length);
+        self::assertSame(0, $x->query('//main//form[@method="post"]')->length);
         $before = $this->snapshot();
         self::assertSame(422, $this->request('POST', self::PATH, $this->payload(['subject_offering_id' => $this->f['offeringClosed']]))->status());
         foreach (['ACTIVE', 'INACTIVE'] as $status) {
@@ -193,14 +193,15 @@ final class TeachingAssignmentHttpTest extends TestCase
         $r = $this->request('GET', self::PATH, [], ['academic_year_id' => $this->f['yearA']]);
         self::assertSame(200, $r->status()); self::assertStringContainsString(htmlspecialchars(self::HOSTILE, ENT_QUOTES, 'UTF-8'), $r->body());
         self::assertStringContainsString('&lt;b&gt;&quot;x&quot;&lt;/b&gt;', $r->body());
-        self::assertStringNotContainsString(self::HOSTILE, $r->body()); self::assertSame(0, $this->xpath($r->body())->query('//script')->length);
+        self::assertStringNotContainsString(self::HOSTILE, $r->body()); self::assertSame(0, $this->xpath($r->body())->query('//script[not(@src)]')->length);
         $this->assertForms($r);
     }
 
     public function testReadFailureIsGenericAndAuditFailureRollsBack(): void
     {
         $this->login(); $before = $this->snapshot();
-        $this->pdo->failPrepare = 'FROM permission_scopes ps';
+        // Target the history read, not the shell's earlier fail-closed authorization query.
+        $this->pdo->failPrepare = 'SELECT ps.id, ps.school_id, ps.academic_year_id, ps.user_role_assignment_id';
         $r = $this->request('GET'); self::assertSame(500, $r->status()); self::assertSame('Internal Server Error', $r->body());
         self::assertTrue($this->pdo->failureTriggered);
         $this->pdo->failureTriggered = false; $this->pdo->failPrepare = 'INSERT INTO audit_logs';
