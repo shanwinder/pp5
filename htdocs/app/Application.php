@@ -176,7 +176,7 @@ final class Application
         );
         $componentController = new GradebookComponentController(
             new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
-            $gradebookComponents, $offerings, $session, $csrf
+            $gradebookComponents, $offerings, $session, $csrf, $ui
         );
         $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $teachingController = new TeachingAssignmentController(

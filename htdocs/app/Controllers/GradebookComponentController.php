@@ -9,6 +9,7 @@ use App\Http\Session;
 use App\Repositories\GradebookComponentRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Services\GradebookComponentService;
+use App\Services\AppUiContextService;
 use App\Support\Csrf;
 use App\Support\View;
 use DomainException;
@@ -20,7 +21,8 @@ final class GradebookComponentController
         private GradebookComponentRepository $components,
         private SubjectOfferingRepository $offerings,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function setup(int $offeringId): Response
@@ -72,12 +74,15 @@ final class GradebookComponentController
 
     private function page(?array $offering, ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('gradebook/setup', [
+        return new Response(View::page('gradebook/setup', [
             'offering' => $offering,
             'components' => $offering === null ? [] : $this->components->listForOffering($this->session->get('school_id'), (int) $offering['id']),
             'canMutate' => $offering !== null && in_array($offering['academic_year_status'], ['DRAFT', 'ACTIVE'], true) && $offering['status'] === 'ACTIVE',
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
+        ], [
+            'ui' => $this->ui->build('gradebooks'), 'documentTitle' => 'ตั้งค่าโครงสร้างคะแนน — ระบบ ปพ.5',
+            'pageTitle' => 'ตั้งค่าโครงสร้างคะแนน',
         ]), $status);
     }
 

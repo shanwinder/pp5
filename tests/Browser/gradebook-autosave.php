@@ -13,10 +13,14 @@ $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $assets = [
     '/assets/vendor/htmx-2.0.8.min.js' => '/htdocs/assets/vendor/htmx-2.0.8.min.js',
     '/assets/gradebook.js' => '/htdocs/assets/gradebook.js',
+    '/assets/app.js' => '/htdocs/assets/app.js',
+    '/assets/app.css' => '/htdocs/assets/app.css',
+    '/assets/vendor/bootstrap-5.3.8.min.css' => '/htdocs/assets/vendor/bootstrap-5.3.8.min.css',
+    '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
     '/browser-tests.js' => '/tests/Browser/gradebook-autosave.js',
 ];
 if (isset($assets[$path])) {
-    header('Content-Type: text/javascript; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
+    header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
 }
 if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~', $path, $ids)) {
     usleep(150000); // Make focus changes and queued requests observable.
@@ -37,18 +41,39 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~
     ]]);
     exit;
 }
-if ($path !== '/') { http_response_code(404); exit; }
+if (!in_array($path, ['/', '/frame', '/matrix'], true)) { http_response_code(404); exit; }
+if ($path === '/matrix') {
+    echo '<!doctype html><html lang="th"><head><meta charset="utf-8"><title>Gradebook layout checks</title></head><body><h1>Gradebook layout checks</h1><pre id="browser-results">Running…</pre>';
+    foreach (['editable','readonly','setup','closed-setup','empty','nojs'] as $mode) {
+        foreach ([390,768,1024,1440] as $width) {
+            echo '<iframe title="'.$mode.' '.$width.'" src="/frame?mode='.$mode.'" width="'.$width.'" height="900"'.($mode === 'nojs' ? ' sandbox="allow-same-origin"' : '').'></iframe>';
+        }
+    }
+    echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
+}
+$mode = $_GET['mode'] ?? 'editable';
+$canScore = in_array($mode, ['editable','empty','nojs'], true);
+$long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $rows = [];
 foreach ([1, 2, 3, 4] as $id) {
-    $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => 'นักเรียนทดสอบ ' . $id,
-        'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 ? 'HISTORICAL' : 'CURRENT', 'scores' => [10 => null, 11 => null],
-        'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 0, 'active_component_count' => 2, 'complete' => false];
+    $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => $long.' '.$id,
+        'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 ? 'HISTORICAL' : 'CURRENT', 'scores' => [10 => null, 11 => '0.00'],
+        'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 1, 'active_component_count' => 2, 'complete' => false];
 }
-$html = View::render('gradebook/view', ['canScore' => true, 'csrfToken' => 'browser-fixture-token', 'gradebook' => [
-    'offering' => ['id' => 1, 'year_be' => 2569, 'academic_year_status' => 'ACTIVE', 'classroom_code' => 'ROOM', 'classroom_name' => 'ห้องทดสอบ',
-        'subject_code' => 'SUBJECT', 'subject_name' => 'วิชาทดสอบ', 'term_no' => 1, 'status' => 'ACTIVE'],
-    'teachers' => [], 'components' => [['id' => 10, 'code' => 'WORK', 'name_th' => 'งาน', 'max_score' => '15.50'],
-        ['id' => 11, 'code' => 'EXAM', 'name_th' => 'สอบ', 'max_score' => '20.00']],
-    'configured_max_total' => '35.50', 'active_component_count' => 2, 'rows' => $rows,
-]]);
-echo str_replace('</body>', '<pre id="browser-results" role="status">Running browser checks…</pre><script src="/browser-tests.js" defer></script></body>', $html);
+$offering = ['id' => 1, 'year_be' => 2569, 'academic_year_status' => $mode === 'closed-setup' ? 'CLOSED' : 'ACTIVE',
+    'classroom_code' => 'ROOM', 'classroom_name' => 'ห้องทดสอบ', 'subject_code' => 'SUBJECT', 'subject_name' => 'วิชาทดสอบ', 'term_no' => 1, 'status' => 'ACTIVE'];
+$components = [['id' => 10, 'code' => 'WORK', 'name_th' => $path === '/frame' ? str_repeat('หัวข้อคะแนนภาษาไทย',4) : 'งาน', 'max_score' => '15.50', 'sort_order'=>0, 'status'=>'ACTIVE'],
+    ['id' => 11, 'code' => 'EXAM', 'name_th' => 'สอบ', 'max_score' => '20.00', 'sort_order'=>1, 'status'=>'ACTIVE']];
+$gradebook = ['offering'=>$offering,'teachers'=>[], 'components'=>$components, 'configured_max_total'=>'35.50','active_component_count'=>2,'rows'=>$mode === 'empty' ? [] : $rows];
+$ui = ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนข้อมูลสังเคราะห์','displayName'=>'ผู้ใช้ทดสอบ','csrfToken'=>'browser-fixture-token',
+    'currentKey'=>'gradebooks','permissions'=>[], 'sections'=>[['key'=>'teaching','label'=>'การเรียนการสอน','items'=>[
+        ['key'=>'gradebooks','label'=>'สมุดคะแนน','url'=>'/gradebooks','detail'=>null]]]]];
+$isSetup = in_array($mode, ['setup','closed-setup'], true);
+$html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
+    'canScore'=>$canScore,'canManageComponents'=>true,'csrfToken'=>'browser-fixture-token','gradebook'=>$gradebook,
+    'offering'=>$offering, 'components'=>$components, 'canMutate'=>$mode === 'setup', 'error'=>null,
+], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'ตั้งค่าโครงสร้างคะแนน' : 'สมุดคะแนน',
+    'headAssets'=>$canScore ? View::render('gradebook/scoring-assets') : '',
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="/browser-tests.js" defer></script>' : '',
+]);
+echo $html;

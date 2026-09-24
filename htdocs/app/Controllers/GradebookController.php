@@ -40,9 +40,14 @@ final class GradebookController
             && $this->authorization->hasSubjectOfferingPermission($this->session->get('user_id'), $this->session->get('context_type'),
                 $this->session->get('school_id'), $offeringId, 'GRADEBOOK_SCORE_ENTER');
 
-        return new Response(View::render('gradebook/view', [
+        return new Response(View::page('gradebook/view', [
             'gradebook' => $gradebook, 'canScore' => $canScore,
+            'canManageComponents' => $this->authorization->hasPermission($this->session->get('user_id'),
+                $this->session->get('context_type'), $this->session->get('school_id'), 'GRADEBOOK_COMPONENT_MANAGE'),
             'csrfToken' => $canScore ? $this->csrf->token($this->session) : null,
+        ], [
+            'ui' => $this->ui->build('gradebooks'), 'documentTitle' => 'สมุดคะแนน — ระบบ ปพ.5', 'pageTitle' => 'สมุดคะแนน',
+            'headAssets' => $canScore ? View::render('gradebook/scoring-assets') : '',
         ]));
     }
 }

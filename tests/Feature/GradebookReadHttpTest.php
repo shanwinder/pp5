@@ -40,7 +40,7 @@ final class GradebookReadHttpTest extends TestCase
         self::assertStringContainsString('ครบ',$this->rowText($x,'complete')); self::assertStringContainsString('ยังไม่ครบ',$this->rowText($x,'null'));
         self::assertStringContainsString('2 / 2',$this->rowText($x,'complete'));
         self::assertSame($role === 'EXECUTIVE' ? 0 : 8,$x->query('//input[@hx-post]')->length);
-        self::assertSame(0,$x->query('//form|//textarea|//select|//script[not(@src)]|//*[@contenteditable]')->length);
+        self::assertSame(0,$x->query('//form[not(@action="/logout")]|//textarea|//select|//script[not(@src)]|//*[@contenteditable]')->length);
         self::assertSame($before,$this->readSnapshot());
     }
     public static function revocations(): iterable { foreach (['scope','assignment','role','membership','permission','school'] as $kind) { yield [$kind]; } }

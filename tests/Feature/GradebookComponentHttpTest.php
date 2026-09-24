@@ -39,7 +39,7 @@ final class GradebookComponentHttpTest extends TestCase
             $this->login($role); $r = $this->request('GET', $this->path()); self::assertSame(200, $r->status()); $this->assertSafe($r->body());
             foreach (['2569','ROOM_A','SCI','วิทยาศาสตร์','DRAFT','ACTIVE','INACTIVE','EXAM','OLD','20.00'] as $text) { self::assertStringContainsString($text, $r->body()); }
             $x = $this->xpath($r->body()); self::assertSame(2, $x->query('//*[@data-component-id]')->length);
-            self::assertSame(5, $x->query('//form[@method="post"]')->length);
+            self::assertSame(5, $x->query('//main//form[@method="post"]')->length);
             foreach ($x->query('//form[@method="post"]') as $form) { self::assertSame($this->token(), $x->evaluate('string(.//input[@name="_token"]/@value)', $form)); }
             foreach (['school_id','academic_year_id','actor_user_id','user_id','permission','role'] as $name) { self::assertSame(0, $x->query('//*[@name="' . $name . '"]')->length); }
             $list = $this->request('GET', '/academic/offerings'); self::assertSame(200, $list->status());
@@ -101,7 +101,7 @@ final class GradebookComponentHttpTest extends TestCase
         $this->login(); $this->pdo->prepare("UPDATE gradebook_components SET status='INACTIVE' WHERE id=?")->execute([$this->f['component' . $key]]);
         $r = $this->request('GET', $this->path('setup', $key)); self::assertSame(200, $r->status());
         self::assertStringContainsString('EXAM', $r->body()); self::assertStringContainsString('INACTIVE', $r->body());
-        self::assertSame(0, $this->xpath($r->body())->query('//form[@method="post"]')->length);
+        self::assertSame(0, $this->xpath($r->body())->query('//main//form[@method="post"]')->length);
         $before = $this->snapshot();
         foreach (['create','update','status'] as $action) {
             foreach (['ACTIVE','INACTIVE'] as $status) { self::assertSame(422, $this->request('POST', $this->path($action, $key), $this->payload(['status' => $status]))->status()); }
@@ -139,7 +139,7 @@ final class GradebookComponentHttpTest extends TestCase
         }
         $r = $this->request('GET', $this->path()); self::assertSame(200, $r->status());
         self::assertStringNotContainsString($hostile, $r->body()); self::assertStringContainsString(htmlspecialchars($hostile, ENT_QUOTES, 'UTF-8'), $r->body());
-        self::assertSame(0, $this->xpath($r->body())->query('//script')->length);
+        self::assertSame(0, $this->xpath($r->body())->query('//script[not(@src="/assets/app.js")]')->length);
         self::assertSame($hostile, $this->xpath($r->body())->evaluate('string(//form[@action="' . $this->path('update') . '"]//input[@name="code"]/@value)'));
     }
     public function testUnexpectedReadIsGeneric500AndAuditFailureIsSafe422(): void
