@@ -128,7 +128,10 @@ final class StudentIsolationTest extends TestCase
                 self::assertSame($method === 'GET' ? 404 : 422, $response->status());
                 self::assertSame($before, $this->snapshot());
                 $this->assertSafe($response);
-                self::assertStringNotContainsString('<form', $response->body());
+                $document = new DOMDocument();
+                @$document->loadHTML($response->body());
+                // The shell may contain logout; no resource mutation form may appear.
+                self::assertSame(0, (new DOMXPath($document))->query('//form[not(@action="/logout")]')->length);
                 $responses[] = $response;
             }
             self::assertEquals($responses[0], $responses[1]);

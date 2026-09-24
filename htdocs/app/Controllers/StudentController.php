@@ -9,6 +9,7 @@ use App\Http\Session;
 use App\Repositories\StudentRepository;
 use App\Repositories\StudentEnrollmentRepository;
 use App\Repositories\StudentClassroomPlacementRepository;
+use App\Services\AppUiContextService;
 use App\Services\AuthorizationService;
 use App\Services\StudentAdministrationService;
 use App\Support\AccessContext;
@@ -25,7 +26,8 @@ final class StudentController
         private Csrf $csrf,
         private AuthorizationService $authorization,
         private StudentEnrollmentRepository $enrollments,
-        private StudentClassroomPlacementRepository $placements
+        private StudentClassroomPlacementRepository $placements,
+        private AppUiContextService $ui
     ) {}
 
     public function index(Request $request): Response
@@ -33,15 +35,17 @@ final class StudentController
         try {
             $search = $this->search($request);
         } catch (DomainException $exception) {
-            return new Response(View::render('students/index', [
-                'students' => [], 'canManage' => $this->can('STUDENT_MANAGE'), 'error' => $exception->getMessage(),
-            ]), 422);
+            return new Response($this->page('students/index', [
+                'students' => [], 'search' => '', 'canManage' => $this->can('STUDENT_MANAGE'), 'error' => $exception->getMessage(),
+            ], 'รายชื่อนักเรียน'), 422);
         }
 
-        return new Response(View::render('students/index', [
+        return new Response($this->page('students/index', [
             'students' => $this->students->listForSchool($this->session->get('school_id'), $search),
+            // Keep ID-shaped input out of HTML; the validated repository search is unchanged.
+            'search' => $search !== null && !preg_match('/[0-9]{13}/', $search) ? $search : '',
             'canManage' => $this->can('STUDENT_MANAGE'), 'error' => null,
-        ]));
+        ], 'รายชื่อนักเรียน'));
     }
 
     public function create(): Response
@@ -82,10 +86,10 @@ final class StudentController
         }
         unset($enrollment);
 
-        return new Response(View::render('students/show', [
+        return new Response($this->page('students/show', [
             'target' => $target, 'maskedNationalId' => $maskedNationalId, 'canManage' => $this->can('STUDENT_MANAGE'),
             'history' => $history, 'canManageEnrollment' => $this->can('ENROLLMENT_MANAGE'),
-        ]));
+        ], 'รายละเอียดนักเรียน'));
     }
 
     public function edit(int $studentId): Response
@@ -95,10 +99,10 @@ final class StudentController
             return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('students/edit', [
+        return new Response($this->page('students/edit', [
             'target' => $target, 'csrfToken' => $this->csrf->token($this->session),
             'canView' => $this->can('STUDENT_VIEW'), 'error' => null,
-        ]));
+        ], 'แก้ไขข้อมูลนักเรียน'));
     }
 
     public function update(Request $request, int $studentId): Response
@@ -195,15 +199,22 @@ final class StudentController
 
     private function createForm(?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('students/create', [
+        return new Response($this->page('students/create', [
             'csrfToken' => $this->csrf->token($this->session), 'canView' => $this->can('STUDENT_VIEW'), 'error' => $error,
-        ]), $status);
+        ], 'เพิ่มนักเรียน'), $status);
     }
 
     private function mutationError(string $error): Response
     {
-        return new Response(View::render('students/edit', [
+        return new Response($this->page('students/edit', [
             'target' => null, 'canView' => $this->can('STUDENT_VIEW'), 'error' => $error,
-        ]), 422);
+        ], 'แก้ไขข้อมูลนักเรียน'), 422);
+    }
+
+    private function page(string $template, array $data, string $title): string
+    {
+        return View::page($template, $data, [
+            'ui' => $this->ui->build('students'), 'documentTitle' => $title.' — ปพ.5', 'pageTitle' => $title,
+        ]);
     }
 }

@@ -316,6 +316,10 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-admin-page td .pp5-form { padding: 0; border: 0; box-shadow: none; margin: 0; }
 .pp5-admin-page td .btn { margin-block-start: var(--pp5-space-2); }
 .pp5-admin-page .pp5-filter-bar select { max-width: 100%; }
+.pp5-import-steps { display: flex; flex-wrap: wrap; gap: var(--pp5-space-6); padding-inline-start: var(--pp5-space-6); }
+.pp5-import-steps li { padding-inline-end: var(--pp5-space-6); }
+.pp5-import-steps [aria-current="step"] { font-weight: 700; color: var(--pp5-primary); }
+.pp5-csv-header { white-space: pre-wrap; overflow-wrap: anywhere; }
 .pp5-admin-page .pp5-badge:is([data-status="ACTIVE"], [data-status="INACTIVE"], [data-status="DRAFT"], [data-status="CLOSED"], [data-status="SUSPENDED"]) { white-space: nowrap; }
 .pp5-admin-page .pp5-table thead th { white-space: nowrap; }
 

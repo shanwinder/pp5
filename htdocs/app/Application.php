@@ -198,18 +198,18 @@ final class Application
             $csrf,
             new AuthorizationService($authorization),
             $enrollments,
-            $placements
+            $placements, $ui
         );
         $enrollmentController = new EnrollmentController(
             new EnrollmentAdministrationService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements, new AuditLogRepository($pdo)),
-            $enrollments, $placements, $students, $years, $grades, $classrooms, $session, $csrf, new AuthorizationService($authorization)
+            $enrollments, $placements, $students, $years, $grades, $classrooms, $session, $csrf, new AuthorizationService($authorization), $ui
         );
         $importBatches = new \App\Repositories\StudentImportBatchRepository($pdo);
         $importRows = new \App\Repositories\StudentImportRowRepository($pdo);
         $studentImport = new \App\Controllers\StudentImportController(
             new \App\Services\StudentImportService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements,
                 $importBatches, $importRows, new AuditLogRepository($pdo)),
-            $importBatches, $importRows, $years, new \App\Support\CanonicalStudentCsvReader(), $session, $csrf
+            $importBatches, $importRows, $years, new \App\Support\CanonicalStudentCsvReader(), $session, $csrf, $ui
         );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
