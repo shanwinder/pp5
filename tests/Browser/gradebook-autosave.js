@@ -28,8 +28,13 @@
     // Let HTMX process the server-rendered document first.
     await wait(50);
     const first = get(); first.focus();
+    const live = first.closest('[data-score-cell]').querySelector('[role="status"]');
+    const observer = new MutationObserver(() => {});
+    observer.observe(live, {childList:true, characterData:true, subtree:true});
     for (const value of ['1','12','12.','12.5']) { edit(first, value); key(first, value.slice(-1)); }
     assert(requests.length === 0, 'Typing does not POST');
+    const announcements = observer.takeRecords(); observer.disconnect();
+    assert(announcements.length === 1, 'Repeated keystrokes do not repeat identical live announcements');
     key(first, 'Enter');
     assert(document.activeElement === get(2), 'Enter moves down in the same component');
     assert(state(first) === 'saving' && first.readOnly, 'Saving is visible and the in-flight value is frozen');

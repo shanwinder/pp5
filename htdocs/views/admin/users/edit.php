@@ -31,7 +31,7 @@
         <legend>สถานะสมาชิกโรงเรียน</legend>
         <p>การระงับสมาชิกจะหยุดการเข้าถึงโรงเรียนนี้ของผู้ใช้</p>
         <div class="pp5-field"><label class="form-label" for="admin-users-edit-status">สถานะใหม่
-          <select class="form-select" id="admin-users-edit-status" name="status">
+          <select class="form-select" id="admin-users-edit-status" name="status" required>
             <?php foreach (['ACTIVE', 'SUSPENDED'] as $value): ?>
               <option value="<?= htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"<?= $target['status'] === $value ? ' selected' : '' ?>><?= htmlspecialchars(App\Support\StatusLabel::text($value, 'membership'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></option>
             <?php endforeach; ?>

@@ -252,6 +252,8 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-table thead { --bs-table-bg: var(--pp5-surface-muted); }
 .pp5-table caption { caption-side: top; color: var(--pp5-text-muted); }
 .pp5-table .pp5-actions { flex-wrap: nowrap; }
+/* Reserve readable text columns in dense tables; their wrapper owns overflow. */
+.pp5-table .pp5-text-column { min-width: 12rem; }
 .pp5-gradebook table { width: max-content; min-width: 60rem; font-variant-numeric: tabular-nums; }
 .pp5-gradebook th { white-space: normal; overflow-wrap: anywhere; min-width: 9rem; max-width: 14rem; }
 .pp5-gradebook thead th { position: sticky; inset-block-start: 0; z-index: 2; }
@@ -266,6 +268,8 @@ a:hover { color: var(--pp5-primary-hover); }
 /* Keep this breakpoint aligned with app.js. Without enhancement, nav stays visible. */
 @media (max-width: 63.999rem) {
   .pp5-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topbar" "sidebar" "content"; grid-template-rows: auto auto 1fr; }
+  /* Wrapped school/user identity must not cover focused content on small screens. */
+  .pp5-topbar { position: static; }
   .pp5-sidebar { position: static; max-height: none; border-inline-end: 0; border-block-end: 1px solid var(--pp5-border); }
   .pp5-nav-toggle[data-nav-ready], [data-nav-ready] .pp5-nav-close { display: inline-block; }
   .pp5-content { padding: var(--pp5-space-4); }
@@ -334,7 +338,8 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-gradebook-metadata { display: flex; flex-wrap: wrap; gap: var(--pp5-space-3) var(--pp5-space-6); margin-block: var(--pp5-space-4); }
 .pp5-gradebook-metadata > div { flex: 1 1 10rem; min-width: 0; }
 .pp5-gradebook-metadata dd { margin: 0; }
-.pp5-gradebook { max-height: 70vh; overflow: auto; scroll-padding-inline-start: 12rem; scroll-padding-block-start: 10rem; }
+.pp5-gradebook { max-height: 70vh; overflow: auto; scroll-padding-inline-start: 12rem; scroll-padding-inline-end: var(--pp5-space-2); scroll-padding-block-start: 10rem; scroll-padding-block-end: var(--pp5-space-2); }
+.pp5-gradebook input { scroll-margin: var(--pp5-space-2); }
 .pp5-gradebook .pp5-gradebook-identity { min-width: 10rem; width: 10rem; max-width: 10rem; }
 .pp5-gradebook-identity span { display: block; white-space: normal; overflow-wrap: anywhere; }
 .pp5-gradebook thead .pp5-gradebook-identity { z-index: 3; background: var(--pp5-surface-muted); }

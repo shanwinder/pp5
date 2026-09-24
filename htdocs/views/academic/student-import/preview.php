@@ -20,7 +20,7 @@
 <?php if ($batch['status'] === 'PREVIEW' && $batch['error_count'] === 0 && $batch['create_student_count'] === 0 && $batch['create_enrollment_count'] === 0): ?><p class="pp5-alert pp5-alert--info">ข้อมูลตรงกันทั้งหมด ไม่มีรายการใหม่ให้ยืนยันนำเข้า</p><?php endif; ?>
 <?php if ($rows !== []): ?>
 <h2>ผลตรวจสอบรายแถว</h2>
-<div class="pp5-table-scroll" role="region" aria-label="ผลตรวจสอบการนำเข้า" tabindex="0"><table class="table pp5-table"><thead><tr><th scope="col">แถว</th><th scope="col">รหัสนักเรียน</th><th scope="col">ชื่อ–นามสกุล</th><th scope="col">ระดับชั้น</th><th scope="col">ห้อง</th><th scope="col">นักเรียน</th><th scope="col">การลงทะเบียน</th><th scope="col">ข้อผิดพลาด</th></tr></thead><tbody>
+<div class="pp5-table-scroll" role="region" aria-label="ผลตรวจสอบการนำเข้า" tabindex="0"><table class="table pp5-table"><thead><tr><th scope="col">แถว</th><th scope="col">รหัสนักเรียน</th><th class="pp5-text-column" scope="col">ชื่อ–นามสกุล</th><th scope="col">ระดับชั้น</th><th scope="col">ห้อง</th><th scope="col">นักเรียน</th><th scope="col">การลงทะเบียน</th><th scope="col">ข้อผิดพลาด</th></tr></thead><tbody>
 <?php foreach ($rows as $row): ?>
 <tr><th scope="row"><?= $escape($row['row_no']) ?></th><td><?= $escape($row['student_code']) ?></td>
 <td><?= $escape(implode(' ', [$row['prefix_th'], $row['first_name_th'], $row['last_name_th']])) ?></td>

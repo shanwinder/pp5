@@ -18,7 +18,7 @@
 <?php if ($mutable): ?>
 <form class="pp5-form" method="post" action="/academic/enrollments/<?= $escape($target['id']) ?>/status" data-confirm="ยืนยันการสิ้นสุดการลงทะเบียนหรือไม่? การย้ายออกหรือลาออกจะสิ้นสุดการจัดห้องเรียนปัจจุบัน และไม่สามารถเปิดการลงทะเบียนนี้กลับมาได้">
     <input type="hidden" name="_token" value="<?= $escape($csrfToken) ?>">
-    <div class="pp5-field"><label class="form-label" for="academic-enrollments-edit-2">สถานะใหม่ <select class="form-select" id="academic-enrollments-edit-2" name="status"><option value="TRANSFERRED_OUT">ย้ายออก</option><option value="WITHDRAWN">ลาออก</option></select></label></div>
+    <div class="pp5-field"><label class="form-label" for="academic-enrollments-edit-2">สถานะใหม่ <select class="form-select" id="academic-enrollments-edit-2" name="status" required><option value="TRANSFERRED_OUT">ย้ายออก</option><option value="WITHDRAWN">ลาออก</option></select></label></div>
     <div class="pp5-field"><label class="form-label" for="academic-enrollments-edit-3">วันที่สิ้นสุด <input class="form-control" id="academic-enrollments-edit-3" type="date" name="exit_date" required></label></div>
     <button class="btn btn-danger" type="submit">สิ้นสุดการลงทะเบียน</button>
 </form>

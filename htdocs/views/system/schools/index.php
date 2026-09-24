@@ -23,7 +23,7 @@
             <?php if ($canChangeStatus): ?><form class="pp5-form pp5-surface pp5-sensitive" method="post" action="/system/schools/<?= htmlspecialchars((string) $school['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/status" data-confirm="ยืนยันการเปลี่ยนสถานะโรงเรียนหรือไม่? การระงับหรือปิดใช้งานโรงเรียนจะหยุดการเข้าถึงข้อมูลในบริบทโรงเรียนนั้น">
               <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
               <label class="form-label" for="system-schools-index-status-<?= (int) $school['id'] ?>">สถานะใหม่
-                <select class="form-select" id="system-schools-index-status-<?= (int) $school['id'] ?>" name="status">
+                <select class="form-select" id="system-schools-index-status-<?= (int) $school['id'] ?>" name="status" required>
                   <?php foreach (['ACTIVE', 'SUSPENDED', 'INACTIVE'] as $value): ?>
                     <option value="<?= htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"<?= $school['status'] === $value ? ' selected' : '' ?>><?= htmlspecialchars(App\Support\StatusLabel::text($value, 'school'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></option>
                   <?php endforeach; ?>

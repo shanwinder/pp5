@@ -20,7 +20,7 @@ $offering = $gradebook['offering'];
   <?php if ($gradebook['teachers'] === []): ?><p>ไม่มีการมอบหมายครูที่ใช้งานอยู่</p><?php endif; ?>
   <ul>
     <?php foreach ($gradebook['teachers'] as $teacher): ?>
-      <li><?= $escape($teacher['display_name'] . ' — ' . $teacher['status']) ?></li>
+      <li><?= $escape($teacher['display_name']) ?> — <?= App\Support\View::render('ui/status', ['status'=>$teacher['status'], 'kind'=>'assignment']) ?></li>
     <?php endforeach; ?>
   </ul>
   <h2>คะแนนรายองค์ประกอบ</h2>
@@ -39,7 +39,7 @@ $offering = $gradebook['offering'];
         <?php foreach ($gradebook['rows'] as $row): ?>
           <tr class="<?= $row['row_type'] === 'HISTORICAL' ? 'pp5-historical' : 'pp5-current' ?>" data-enrollment-id="<?= $escape($row['enrollment_id']) ?>">
             <th id="<?= $escape('student-' . $row['enrollment_id']) ?>" class="pp5-gradebook-identity" scope="row"><span><?= $escape($row['student_code']) ?></span><span><?= $escape($row['display_name']) ?></span></th>
-            <td><?= $row['row_type'] === 'CURRENT' ? 'รายชื่อปัจจุบัน' : 'ประวัติ — อ่านอย่างเดียว' ?> (<?= $escape($row['enrollment_status']) ?>)</td>
+            <td><?= $row['row_type'] === 'CURRENT' ? 'รายชื่อปัจจุบัน' : 'ประวัติ — อ่านอย่างเดียว' ?> (<?= App\Support\View::render('ui/status', ['status'=>$row['enrollment_status'], 'kind'=>'enrollment']) ?>)</td>
             <?php foreach ($gradebook['components'] as $component): ?>
               <td data-component-id="<?= $escape($component['id']) ?>"><?php if ($canScore && $row['row_type'] === 'CURRENT'): ?>
                 <?= \App\Support\View::render('gradebook/score-cell', [
