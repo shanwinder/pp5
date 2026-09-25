@@ -1,37 +1,25 @@
 # ระบบ ปพ.5 — School Administration
 
-ฐานที่พัฒนาครบ Milestone 1–5 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
+ฐานที่พัฒนาครบ Milestone 1–6 ใช้ PHP 8.2-compatible, FastRoute, PDO และ PHP Session บน MAMP MySQL 8
 โดย SQL รองรับ MariaDB ด้วย ไม่ใช้ Laravel, Node.js backend, Redis, queue, cron
 หรือ database triggers
 
-Milestone 6 — UI/UX Foundation + Application Shell ผ่าน Task 9 verification แล้ว
-บน branch `milestone/6-ui-ux-foundation` และรอ final pre-PR review;
-ยังไม่ได้ merge เข้า `main` และยังไม่เริ่ม Milestone 7
+Milestone 6 — UI/UX Foundation + Application Shell ผ่าน Task 9 verification และ merge เข้า `main` ผ่าน PR #6 แล้ว
+`main` จึงเป็น baseline ล่าสุดสำหรับงานถัดไป และยังไม่เริ่ม Milestone 7
 
 ## Local setup
 
 รันคำสั่งจาก project root ใช้ PHP CLI 8.2 ขึ้นไปจาก MAMP และ Composer
 ตรวจ `php -v` และให้มี extension `pdo_mysql`
 
-1. ใช้ `main` เป็น baseline ล่าสุดที่ merge Milestone 1–5 แล้ว:
+1. ใช้ `main` เป็น baseline ล่าสุดที่ merge Milestone 1–6 แล้ว:
 
    ```sh
    git checkout main
    git pull --ff-only origin main
    ```
 
-   `main` คือ baseline ที่ผ่านการ review และ merge ของ Milestone 1–5 แล้ว
-
-   ระหว่าง review Milestone 6 ให้ใช้ branch ที่ยัง active แทนขั้นตอนข้างต้น:
-
-   ```sh
-   git fetch origin
-   git checkout milestone/6-ui-ux-foundation
-   git pull --ff-only origin milestone/6-ui-ux-foundation
-   ```
-
-   หลัง merge ต้องปรับ README ให้ใช้ `main` ที่รวม M6 และลบคำแนะนำ branch
-   ชั่วคราวนี้ตามสถานะจริง; Task 9 ไม่สร้าง PR หรือ merge ให้โดยอัตโนมัติ
+   `main` คือ baseline ที่ผ่านการ review และ merge ของ Milestone 1–6 แล้ว
 
 2. Start MAMP Apache/MySQL ตั้ง Apache Document Root เป็น `htdocs` ภายใน repository
    เปิด `mod_rewrite` และอนุญาต `.htaccess` เพื่อให้ routes และ private paths ทำงาน
@@ -433,7 +421,7 @@ Future DMC adapter ต้องใช้ real approved DMC sample เพื่�
 ทุก mutation สำคัญบันทึก actor จาก session, school, entity type/ID และ timestamp
 Student audit เก็บ safe metadata/changed field names; enrollment/placement เก็บ IDs, status และวันที่
 Import summary เก็บ counts กับ source SHA-256 ไม่มี row PII หรือ password/hash ของรหัสผ่าน
-Exact no-op ไม่สร้าง audit noise; transactions rollback เมื่อ repository/audit ล้มเหลว
+Exact no-op ไม่สร้าง audit noise; transactions rollback เมื่อ repository/auditล้มเหลว
 Composite foreign keys บังคับ parent ให้ตรง tenant/year/grade เสริมจาก service validation
 
 ## การมอบหมายครูประจำวิชาและสมุดคะแนน — Milestone 5
@@ -615,7 +603,7 @@ php tools/seed.php --database=pp5_test
    ทดลอง direct STUDENT_VIEW mapping ให้ role เดิมแล้วอ่าน list/history ได้แต่ mutation/import ไม่ได้
    ถอด mapping แล้วสิทธิ์ต้องหายทันที SYSTEM context เข้า SCHOOL student routes ไม่ได้
 2. สร้าง Thai/Unicode student ทั้งมี national ID และเว้นว่าง; ตรวจ NULL, same-school duplicates,
-   same identity ต่างโรงเรียน, แก้ code/profile โดย history คงเดิม, masked detail และ escaped HTML
+   same identity ต่างโรงเรียน, แก้ code/profile โดย historyคงเดิม, masked detail และ escaped HTML
    ตรวจ open active enrollment block inactivation, CLOSED history-only ไม่ block และ reactivate ได้
 3. สร้าง DRAFT/ACTIVE enrollments รวม unplaced; place/move/unassign และ no-op
    ตรวจ wrong school/year/grade, inactive target, move-away จาก inactive old classroom,
@@ -762,7 +750,7 @@ native form confirmation ไม่มี runtime CDN, remote font หรือ N
 
 Synthetic runs ครอบคลุม foundation, navigation, entry, confirmation, administration,
 student workflow, Gradebook autosave/layout และ cross-screen รวม no-JS fallback
-ใช้ผลรอบเดิมที่ผ่านแล้วเพราะ Task 9 ไม่มี production changes; ปิด fixture servers ครบ
+ใช้ผลรอบเดิมที่ผ่านแล้วเพราะ Task 9 ไม่มี production changes; ปิด fixture serversครบ
 
 Real smoke ใช้ MAMP **7.2**, Apache **2.4.62**, serving/CLI PHP **8.3.14**,
 MySQL **8.0.40** ที่ `127.0.0.1:8889` และ PHPUnit **11.5.56**
@@ -809,10 +797,10 @@ Milestone 1–5 ครอบคลุม SYSTEM/SCHOOL authentication, โรง
 student identity, yearly enrollment, placement history, transfer-out/withdrawal,
 canonical CSV import, subject-teacher assignment, `SUBJECT_OFFERING` permission scope,
 configurable term gradebook, audited score entry และ per-cell HTMX autosave
-พร้อม service, UI, permission และ audit การจบ milestone branch ยังต้องผ่าน review ก่อน PR/merge
+พร้อม service, UI, permission และ audit
 
 Milestone 6 เพิ่ม shared UI/UX foundation และ application shell บน business contracts
-เดิม โดย Task 9 จบที่ verification/documentation และรอ final review ก่อน PR/merge
+เดิม และ merge เข้า `main` ผ่าน PR #6 แล้ว; `main` เป็น baseline สำหรับ milestone ถัดไป
 
 Milestone 5 ยังเป็น gradebook core: เก็บคะแนนราย component และคำนวณ term totals/completeness
 แต่ยังไม่ได้ implement grade symbol, term grade calculation, annual result, GPA,
