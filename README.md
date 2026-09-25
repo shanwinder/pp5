@@ -4,6 +4,10 @@
 โดย SQL รองรับ MariaDB ด้วย ไม่ใช้ Laravel, Node.js backend, Redis, queue, cron
 หรือ database triggers
 
+Milestone 6 — UI/UX Foundation + Application Shell ผ่าน Task 9 verification แล้ว
+บน branch `milestone/6-ui-ux-foundation` และรอ final pre-PR review;
+ยังไม่ได้ merge เข้า `main` และยังไม่เริ่ม Milestone 7
+
 ## Local setup
 
 รันคำสั่งจาก project root ใช้ PHP CLI 8.2 ขึ้นไปจาก MAMP และ Composer
@@ -17,6 +21,17 @@
    ```
 
    `main` คือ baseline ที่ผ่านการ review และ merge ของ Milestone 1–5 แล้ว
+
+   ระหว่าง review Milestone 6 ให้ใช้ branch ที่ยัง active แทนขั้นตอนข้างต้น:
+
+   ```sh
+   git fetch origin
+   git checkout milestone/6-ui-ux-foundation
+   git pull --ff-only origin milestone/6-ui-ux-foundation
+   ```
+
+   หลัง merge ต้องปรับ README ให้ใช้ `main` ที่รวม M6 และลบคำแนะนำ branch
+   ชั่วคราวนี้ตามสถานะจริง; Task 9 ไม่สร้าง PR หรือ merge ให้โดยอัตโนมัติ
 
 2. Start MAMP Apache/MySQL ตั้ง Apache Document Root เป็น `htdocs` ภายใน repository
    เปิด `mod_rewrite` และอนุญาต `.htaccess` เพื่อให้ routes และ private paths ทำงาน
@@ -706,6 +721,88 @@ Milestone 5 real HTTP smoke รันกับ development database `pp5` บน
 
 ห้าม commit cookie files, credentials, temporary helpers, smoke fixtures, generated logs หรือ local configuration
 
+## Milestone 6 — UI/UX และผล verification
+
+Full pages ใช้ shared application, guest/login และ safe-error layouts ผ่าน
+`View::page()` / `View::error()` ส่วน `View::render()` ยังคงใช้กับ templates/fragments;
+HTMX score responses ไม่ครอบ application shell
+`AppUiContextService` สร้าง navigation จาก live permissions/resource authorization
+แยก SYSTEM และ SCHOOL context โดย backend ยังคงเป็นผู้ตัดสินสิทธิ์ทุก request
+
+UI ใช้ local Bootstrap **5.3.8**, design tokens/forms/tables/status/focus styles ใน
+`app.css` และ progressive enhancement ใน `app.js` สำหรับ mobile navigation กับ
+native form confirmation ไม่มี runtime CDN, remote font หรือ Node/npm build pipeline
+มี skip link, labelled controls, visible focus และ Thai-capable system fonts;
+ตารางและ Gradebook เลื่อนแนวนอนภายใน container ตามความจำเป็น
+
+`/gradebooks` แสดงเฉพาะรายวิชาที่เข้าถึงได้จริง รวม empty state เมื่อไม่มีสิทธิ์
+หน้า Student/Enrollment และ canonical CSV Import ใช้ shell เดียวกันพร้อม import
+สามขั้นตอน Gradebook setup/grid แยก current/historical rows และ editable/read-only
+ตามสิทธิ์ โดย scoring mode ใช้ local HTMX **2.0.8** และ `gradebook.js`
+คง NULL ต่างจาก 0.00, server-rendered totals, transactional audit และเงื่อนไข saved
+ที่ต้องได้ HTTP 200 พร้อม `X-Gradebook-Saved: 1`; Enter/Tab/Shift+Tab คงพฤติกรรมเดิม
+
+### Task 9 verification — 2026-09-25
+
+เริ่มจาก approved commit `65641feef4d8582a3a5973858d68db4d94805a52`
+ผลด้านล่างรวมการตรวจรอบเดิมกับ human checkpoint ที่ปิดรายการ Reject ที่ค้างไว้
+ไม่พบ production defect และไม่มีการแก้ production code/schema/seed/permissions ใน Task 9
+
+| การตรวจ | ผลที่ยืนยัน |
+| --- | --- |
+| Initial full PHPUnit | 2,838 tests / 65,687 assertions |
+| Final full PHPUnit หลัง cleanup ทั้งหมด | **2,838 tests / 65,687 assertions**, 83.617 วินาที, ไม่มี failure/error/skip |
+| Focused security/business | 1,927 tests / 46,600 assertions; supplemental 887 tests / 20,928 assertions (filter อาจซ้อนกัน ไม่รวมเป็นจำนวน unique) |
+| M6 UI regression | 176 tests / 4,682 assertions |
+| Final PHP syntax | **196 first-party files**, ไม่รวม vendor |
+| Final JavaScriptCore syntax | **11 production/browser JS files** |
+| Synthetic browser fixtures | **9 runs / 264 cases / 4,983 numeric checks** และ cross-screen resize check ผ่าน |
+| Real MAMP responsive | **32 cases**: 8 หน้า × 4 viewports |
+| Repository checks | `git diff --check` ผ่าน; Task 9 เปลี่ยนเฉพาะ README |
+
+Synthetic runs ครอบคลุม foundation, navigation, entry, confirmation, administration,
+student workflow, Gradebook autosave/layout และ cross-screen รวม no-JS fallback
+ใช้ผลรอบเดิมที่ผ่านแล้วเพราะ Task 9 ไม่มี production changes; ปิด fixture servers ครบ
+
+Real smoke ใช้ MAMP **7.2**, Apache **2.4.62**, serving/CLI PHP **8.3.14**,
+MySQL **8.0.40** ที่ `127.0.0.1:8889` และ PHPUnit **11.5.56**
+URL จริงคือ `http://localhost:8888`, Document Root คือ `htdocs` ใน repository
+ใช้ development `pp5` แยกจาก automated `pp5_test`; ไม่เปลี่ยน configuration
+
+- ทั้ง 6 personas ผ่าน real login/navigation/logout: SYSTEM_ADMIN, SCHOOL_ADMIN,
+  ACADEMIC_ADMIN, SUBJECT_TEACHER, EXECUTIVE และ VIEWER ตาม live permissions
+- Gradebook autosave ยืนยัน 5.00 → 0.00 → NULL ด้วย reload และ DB/audit;
+  controlled lock timeout แสดง error ตามจริงแล้ว retry สำเร็จ
+- Live offering-scope revoke ระหว่าง session เดิมทำให้ dashboard/landing/direct grid
+  และ stale-page score write หมดสิทธิ์ทันที โดยคะแนนและ audit ไม่เปลี่ยน
+- Confirmation: รอบเดิมยืนยัน status POST ที่สำเร็จ ACTIVE → SUSPENDED → ACTIVE
+  พร้อม audit; Reject ที่ tooling ควบคุมไม่ได้ใช้ human checkpoint กับ fixture ใหม่
+  ผู้ใช้ยืนยันเห็น native dialog และกด Cancel/Reject แล้ว refresh;
+  DB ยืนยัน ACTIVE, timestamp ไม่เปลี่ยน และ audit ก่อน/หลังเป็นศูนย์
+- Real keyboard smoke ครอบคลุม login, skip link, mobile menu/Escape, sidebar,
+  filter/form, logout และ Gradebook Enter/Tab/Shift+Tab/arrows
+- Import ใช้ tiny synthetic canonical CSV ผ่าน upload/preview/cancel และไม่แสดง
+  raw national ID; ไม่ทำ apply ใน real smoke รอบนี้
+- Real 403/404 แสดง safe error; generic 500 ยืนยันด้วย automated contract
+  ไม่มี destructive failure injection ใน development
+
+Responsive matrix ตรวจ dashboard, user list, offering list, student list/detail,
+enrollment edit, Gradebook grid และ setup ที่ **1440×900, 1024×768, 768×1024,
+390×844** ไม่พบ whole-page horizontal overflow และตรวจ Gradebook focus/sticky
+พร้อมการเลื่อนใน container; ไม่อ้างว่าทุกหน้าได้รับ full visual matrix
+
+Cleanup รอบเดิมและ human checkpoint ตรวจ unique marker เหลือ **0** และ counts
+พร้อม row-content hashes ของ **23 ตาราง** ตรงกับ baseline ก่อนสร้าง fixture
+บัญชี SYSTEM_ADMIN ชั่วคราวหนึ่งบัญชี, role assignment และโรงเรียนของ checkpoint
+ถูกลบหลัง normal logout; checkpoint ไม่สร้างหรือลบ audit แถวใด
+temporary credentials/helpers/artifacts ถูกลบและไม่มี fixture server ค้าง
+
+ข้อจำกัด: actual screen reader และ OS/browser reduced-motion testing เป็น
+**NOT VERIFIED IN TASK 9 ENVIRONMENT**; ไม่มีการอ้าง WCAG หรือ screen-reader
+certification ตรวจ local assets จาก DOM/CSSOM และ source contracts แต่ไม่ได้เก็บ
+full network trace ไม่ได้รัน MariaDB runtime smoke หรือ real import apply
+ผลนี้เป็น local verification สำหรับ final review ไม่ใช่การรับรอง production deployment
+
 ## ขอบเขต milestone ถัดไป
 
 Milestone 1–5 ครอบคลุม SYSTEM/SCHOOL authentication, โรงเรียน/ผู้ใช้, โครงสร้างวิชาการ,
@@ -713,6 +810,9 @@ student identity, yearly enrollment, placement history, transfer-out/withdrawal,
 canonical CSV import, subject-teacher assignment, `SUBJECT_OFFERING` permission scope,
 configurable term gradebook, audited score entry และ per-cell HTMX autosave
 พร้อม service, UI, permission และ audit การจบ milestone branch ยังต้องผ่าน review ก่อน PR/merge
+
+Milestone 6 เพิ่ม shared UI/UX foundation และ application shell บน business contracts
+เดิม โดย Task 9 จบที่ verification/documentation และรอ final review ก่อน PR/merge
 
 Milestone 5 ยังเป็น gradebook core: เก็บคะแนนราย component และคำนวณ term totals/completeness
 แต่ยังไม่ได้ implement grade symbol, term grade calculation, annual result, GPA,
