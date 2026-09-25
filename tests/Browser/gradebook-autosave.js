@@ -28,8 +28,13 @@
     // Let HTMX process the server-rendered document first.
     await wait(50);
     const first = get(); first.focus();
+    const live = first.closest('[data-score-cell]').querySelector('[role="status"]');
+    const observer = new MutationObserver(() => {});
+    observer.observe(live, {childList:true, characterData:true, subtree:true});
     for (const value of ['1','12','12.','12.5']) { edit(first, value); key(first, value.slice(-1)); }
     assert(requests.length === 0, 'Typing does not POST');
+    const announcements = observer.takeRecords(); observer.disconnect();
+    assert(announcements.length === 1, 'Repeated keystrokes do not repeat identical live announcements');
     key(first, 'Enter');
     assert(document.activeElement === get(2), 'Enter moves down in the same component');
     assert(state(first) === 'saving' && first.readOnly, 'Saving is visible and the in-flight value is frozen');
@@ -42,7 +47,7 @@
 
     assert(!key(get(2), 'Tab').defaultPrevented, 'Tab is not intercepted');
     assert(!key(get(2), 'Tab', { shiftKey: true }).defaultPrevented, 'Shift+Tab is not intercepted');
-    assert(!key(get(2), 'ArrowLeft').defaultPrevented && !key(get(2), 'ArrowRight').defaultPrevented, 'Caret arrows are not intercepted');
+    for (const arrow of ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown']) assert(!key(get(2), arrow).defaultPrevented, `${arrow} is not intercepted`);
     assert(!key(get(2), 'Enter', { isComposing: true }).defaultPrevented, 'IME composition does not submit');
 
     // Repeated blur on a queued or in-flight field must not stall later cells.
@@ -57,11 +62,13 @@
     assert(maxActive === 1, 'Table requests are serialized');
     assert(get(1).value === '5.00' && get(2).value === '6.00' && get(3).value === '1.50', 'Queued cells keep their intended values');
 
-    for (const value of ['<img src=x onerror=alert(1)>','csrf','failure','login']) {
+    for (const value of ['20.01','1.234','<img src=x onerror=alert(1)>','csrf','failure','login']) {
       const input = get(); edit(input, value); input.blur();
       await until(() => state(input) === 'error');
       assert(input.value === value && !input.readOnly, `${value}: error retains the exact editable input`);
       assert(!input.closest('[data-score-cell]').textContent.includes('บันทึกแล้ว'), `${value}: no false saved state`);
+      assert(input.getAttribute('aria-invalid') === 'true' && document.getElementById(input.getAttribute('aria-describedby')).textContent.includes('ผิดพลาด'), `${value}: error is associated with the input`);
+      assert(document.getElementById('row-1-1-total').textContent === '19.25', `${value}: failed save does not change server total`);
       assert(!document.querySelector('img'), `${value}: no injected HTML`);
     }
     // Retry without changing the invalid value must still produce a request.

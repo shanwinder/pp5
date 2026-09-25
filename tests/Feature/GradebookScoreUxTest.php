@@ -32,7 +32,7 @@ final class GradebookScoreUxTest extends TestCase
         }
         if ($count > 0) {
             self::assertSame($this->token(), $x->evaluate('string(//input[@id="gradebook-csrf"]/@value)'));
-            self::assertSame(2, $x->query('//script[@src and @defer]')->length);
+            self::assertSame(3, $x->query('//script[@src and @defer]')->length);
         }
     }
 
@@ -68,6 +68,7 @@ final class GradebookScoreUxTest extends TestCase
             $sources[] = $script->getAttribute('src');
         }
         self::assertSame([
+            '/assets/app.js',
             '/assets/vendor/htmx-2.0.8.min.js',
             '/assets/gradebook.js',
         ], $sources);

@@ -83,9 +83,10 @@ final class AuthController
 
     private function loginForm(?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('auth/login', [
+        return new Response(View::page('auth/login', [
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['layout' => 'guest', 'documentTitle' => 'เข้าสู่ระบบ ปพ.5',
+            'pageTitle' => 'เข้าสู่ระบบ ปพ.5', 'bodyClass' => 'pp5-guest']), $status);
     }
 }

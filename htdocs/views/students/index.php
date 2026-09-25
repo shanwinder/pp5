@@ -1,30 +1,26 @@
-<!doctype html>
-<html lang="th">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>นักเรียน — PP5</title></head>
-<body>
-<h1>นักเรียน</h1>
-<?php if ($canManage): ?><p><a href="/students/create">เพิ่มนักเรียน</a></p><?php endif; ?>
-<form method="get" action="/students">
-    <label>ค้นหารหัสหรือชื่อนักเรียน <input name="q" maxlength="100"></label>
-    <button type="submit">ค้นหา</button>
+<div class="pp5-admin-page">
+<?php if ($canManage): ?><p><a class="btn btn-primary" href="/students/create">เพิ่มนักเรียน</a></p><?php endif; ?>
+<form class="pp5-filter-bar" method="get" action="/students">
+    <div class="pp5-field"><label class="form-label" for="students-index-1">ค้นหารหัสหรือชื่อนักเรียน <input class="form-control" id="students-index-1" type="search" name="q" maxlength="100" value="<?= htmlspecialchars($search, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"></label></div>
+    <button class="btn btn-primary" type="submit">ค้นหา</button>
+<a class="btn btn-outline-secondary" href="/students">ล้างคำค้น</a>
 </form>
-<?php if ($error !== null): ?><p role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></p><?php endif; ?>
-<table>
-    <thead><tr><th>รหัสนักเรียน</th><th>ชื่อ–นามสกุล</th><th>สถานะ</th><th>จัดการ</th></tr></thead>
+<?php if ($error !== null): ?><p class="pp5-alert pp5-alert--danger" role="alert"><?= htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p><?php endif; ?>
+<div class="pp5-table-scroll" role="region" aria-label="รายการนักเรียน" tabindex="0"><table class="table pp5-table">
+    <thead><tr><th scope="col">รหัสนักเรียน</th><th scope="col">ชื่อ–นามสกุล</th><th scope="col">สถานะ</th><th scope="col">จัดการ</th></tr></thead>
     <tbody>
     <?php foreach ($students as $student): ?>
         <tr>
-            <td><?= htmlspecialchars($student['student_code'], ENT_QUOTES, 'UTF-8') ?></td>
-            <td><?= htmlspecialchars(implode(' ', [$student['prefix_th'], $student['first_name_th'], $student['last_name_th']]), ENT_QUOTES, 'UTF-8') ?></td>
-            <td><?= htmlspecialchars($student['status'], ENT_QUOTES, 'UTF-8') ?></td>
+            <th scope="row"><?= htmlspecialchars($student['student_code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></th>
+            <td><?= htmlspecialchars(implode(' ', [$student['prefix_th'], $student['first_name_th'], $student['last_name_th']]), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
+            <td><?= App\Support\View::render('ui/status', ['status'=>$student['status'], 'kind'=>'student']) ?></td>
             <td>
-                <a href="/students/<?= htmlspecialchars((string) $student['id'], ENT_QUOTES, 'UTF-8') ?>">ดูรายละเอียด</a>
-                <?php if ($canManage): ?><a href="/students/<?= htmlspecialchars((string) $student['id'], ENT_QUOTES, 'UTF-8') ?>/edit">แก้ไข</a><?php endif; ?>
+                <a class="btn btn-outline-secondary" href="/students/<?= htmlspecialchars((string) $student['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">ดูรายละเอียด</a>
+                <?php if ($canManage): ?><a class="btn btn-outline-secondary" href="/students/<?= htmlspecialchars((string) $student['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/edit">แก้ไข</a><?php endif; ?>
             </td>
         </tr>
     <?php endforeach; ?>
     </tbody>
-</table>
-<?php if ($students === [] && $error === null): ?><p>ไม่พบนักเรียน</p><?php endif; ?>
-</body>
-</html>
+</table></div>
+<?php if ($students === [] && $error === null): ?><p class="pp5-empty-state">ไม่พบนักเรียน ลองเปลี่ยนคำค้นหรือเพิ่มนักเรียนใหม่เมื่อมีสิทธิ์</p><?php endif; ?>
+</div>

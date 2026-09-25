@@ -48,6 +48,7 @@ use App\Services\TeachingAssignmentService;
 use App\Services\GradebookComponentService;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
+use App\Services\AppUiContextService;
 use App\Services\AuthorizationService;
 use App\Services\ClassroomAdministrationService;
 use App\Services\SchoolUserAdministrationService;
@@ -85,7 +86,7 @@ final class Application
         $routeInfo = $dispatcher->dispatch($request->method(), $request->path());
 
         if ($routeInfo[0] === Dispatcher::NOT_FOUND) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         if ($routeInfo[0] === Dispatcher::METHOD_NOT_ALLOWED) {
@@ -117,14 +118,16 @@ final class Application
         $gradebookComponents = new GradebookComponentRepository($pdo);
         $gradebookRead = new GradebookReadService(new AuthorizationService($authorization), $offerings,
             $gradebookComponents, new GradebookRepository($pdo));
-        $gradebookController = new GradebookController($gradebookRead, $session, new AuthorizationService($authorization), $csrf);
-        $dashboard = new DashboardController($session, $schools, $csrf, new AuthorizationService($authorization), $gradebookRead);
+        $ui = new AppUiContextService($session, $schools, new AuthorizationService($authorization), $gradebookRead, $csrf);
+        $gradebookController = new GradebookController($gradebookRead, $session, new AuthorizationService($authorization), $csrf, $ui);
+        $dashboard = new DashboardController($session, $schools, $ui);
         $systemSchools = new SystemSchoolController(
             new SystemSchoolAdministrationService($pdo, $schools, $users, $memberships,
                 new RoleRepository($pdo), new RoleAssignmentRepository($pdo), new AuditLogRepository($pdo)),
             $schools,
             $session,
-            $csrf
+            $csrf,
+            $ui
         );
         $schoolUsers = new SchoolUserController(
             new SchoolUserAdministrationService($pdo, $users, $memberships,
@@ -133,14 +136,15 @@ final class Application
             new RoleRepository($pdo),
             new RoleAssignmentRepository($pdo),
             $session,
-            $csrf
+            $csrf, $ui
         );
         $years = new AcademicYearRepository($pdo);
         $academicYears = new AcademicYearController(
             new AcademicYearAdministrationService($pdo, $schools, $years, new AuditLogRepository($pdo)),
             $years,
             $session,
-            $csrf
+            $csrf,
+            $ui
         );
         $grades = new GradeLevelRepository($pdo);
         $classrooms = new ClassroomRepository($pdo);
@@ -150,14 +154,14 @@ final class Application
             $years,
             $grades,
             $session,
-            $csrf
+            $csrf, $ui
         );
         $subjects = new SubjectRepository($pdo);
         $subjectController = new SubjectController(
             new SubjectAdministrationService($pdo, $schools, $subjects, new AuditLogRepository($pdo)),
             $subjects,
             $session,
-            $csrf
+            $csrf, $ui
         );
         $offeringController = new SubjectOfferingController(
             new SubjectOfferingAdministrationService($pdo, $schools, $years, $classrooms, $subjects, $offerings, new AuditLogRepository($pdo)),
@@ -167,16 +171,17 @@ final class Application
             $subjects,
             $session,
             $csrf,
-            new AuthorizationService($authorization)
+            new AuthorizationService($authorization),
+            $ui
         );
         $componentController = new GradebookComponentController(
             new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
-            $gradebookComponents, $offerings, $session, $csrf
+            $gradebookComponents, $offerings, $session, $csrf, $ui
         );
         $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $teachingController = new TeachingAssignmentController(
             new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo)),
-            $teachingAssignments, $years, $offerings, $session, $csrf
+            $teachingAssignments, $years, $offerings, $session, $csrf, $ui
         );
         $students = new StudentRepository($pdo);
         $enrollments = new StudentEnrollmentRepository($pdo);
@@ -193,18 +198,18 @@ final class Application
             $csrf,
             new AuthorizationService($authorization),
             $enrollments,
-            $placements
+            $placements, $ui
         );
         $enrollmentController = new EnrollmentController(
             new EnrollmentAdministrationService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements, new AuditLogRepository($pdo)),
-            $enrollments, $placements, $students, $years, $grades, $classrooms, $session, $csrf, new AuthorizationService($authorization)
+            $enrollments, $placements, $students, $years, $grades, $classrooms, $session, $csrf, new AuthorizationService($authorization), $ui
         );
         $importBatches = new \App\Repositories\StudentImportBatchRepository($pdo);
         $importRows = new \App\Repositories\StudentImportRowRepository($pdo);
         $studentImport = new \App\Controllers\StudentImportController(
             new \App\Services\StudentImportService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements,
                 $importBatches, $importRows, new AuditLogRepository($pdo)),
-            $importBatches, $importRows, $years, new \App\Support\CanonicalStudentCsvReader(), $session, $csrf
+            $importBatches, $importRows, $years, new \App\Support\CanonicalStudentCsvReader(), $session, $csrf, $ui
         );
         $routeId = filter_var($routeInfo[2]['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $routeId = $routeId === false ? 0 : $routeId;
@@ -216,6 +221,7 @@ final class Application
         $enrollmentId = $enrollmentId === false ? 0 : $enrollmentId;
         $next = match ($handler['action']) {
             'gradebook.scores.store' => static fn (Request $request): Response => $scoreController->store($request, $offeringId, $componentId, $enrollmentId),
+            'gradebook.index' => static fn (Request $request): Response => $gradebookController->index(),
             'gradebook.view' => static fn (Request $request): Response => $gradebookController->show($offeringId),
             'gradebook.components.setup' => static fn (Request $request): Response => $componentController->setup($offeringId),
             'gradebook.components.store' => static fn (Request $request): Response => $componentController->store($request, $offeringId),
@@ -293,7 +299,7 @@ final class Application
                 $handlerNext = $next;
                 $next = static fn (Request $request): Response => $session->get('context_type') === AccessContext::SYSTEM
                     ? $handlerNext($request)
-                    : new Response(View::render('errors/403'), 403);
+                    : new Response(View::error(403), 403);
             }
             if (isset($handler['permission'])) {
                 $permission = new PermissionMiddleware($session, new AuthorizationService($authorization), $handler['permission']);
@@ -309,7 +315,7 @@ final class Application
             $response = $auth->handle($request, $next);
             // A gradebook target must not reveal existence through context/auth denial either.
             if ($handler['action'] === 'gradebook.view' && $response->status() === 403) {
-                return new Response(View::render('errors/404'), 404);
+                return new Response(View::error(404), 404);
             }
 
             return $response;

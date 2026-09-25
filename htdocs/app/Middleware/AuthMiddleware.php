@@ -21,7 +21,7 @@ final class AuthMiddleware
         }
 
         if (!$this->users->isActiveById($userId)) {
-            return new Response(View::render('errors/403'), 403);
+            return new Response(View::error(403), 403);
         }
 
         return $next($request);

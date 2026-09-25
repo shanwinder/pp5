@@ -1,29 +1,21 @@
-<!doctype html>
-<html lang="th">
-<head><meta charset="utf-8"><title>ปีการศึกษา — PP5</title></head>
-<body>
-<h1>ปีการศึกษา</h1>
-<nav>
-    <a href="/academic/classrooms">ห้องเรียน</a>
-    <a href="/academic/subjects">รายวิชา</a>
-    <a href="/academic/offerings">การเปิดรายวิชา</a>
-</nav>
-<p><a href="/academic/years/create">เพิ่มปีการศึกษา</a></p>
+<div class="pp5-admin-page">
+<?php if ($canManageYears): ?><p><a class="btn btn-primary" href="/academic/years/create">เพิ่มปีการศึกษา</a></p><?php endif; ?>
 <p>ปีการศึกษาระบุเป็น พ.ศ. ส่วนวันที่ระบุเป็น ค.ศ.</p>
-<table>
-    <thead><tr><th>ปีการศึกษา (พ.ศ.)</th><th>วันเริ่มต้น (ค.ศ.)</th><th>วันสิ้นสุด (ค.ศ.)</th><th>สถานะ</th><th>รายละเอียด</th></tr></thead>
+<div class="pp5-table-scroll" role="region" aria-label="ปีการศึกษา" tabindex="0">
+<table class="table pp5-table">
+    <thead><tr><th scope="col">ปีการศึกษา (พ.ศ.)</th><th scope="col">วันเริ่มต้น (ค.ศ.)</th><th scope="col">วันสิ้นสุด (ค.ศ.)</th><th scope="col">สถานะ</th><th scope="col">รายละเอียด</th></tr></thead>
     <tbody>
     <?php foreach ($years as $year): ?>
         <tr>
-            <td><?= htmlspecialchars((string) $year['year_be'], ENT_QUOTES, 'UTF-8') ?></td>
-            <td><?= htmlspecialchars($year['start_date'] ?? 'ยังไม่ระบุ', ENT_QUOTES, 'UTF-8') ?></td>
-            <td><?= htmlspecialchars($year['end_date'] ?? 'ยังไม่ระบุ', ENT_QUOTES, 'UTF-8') ?></td>
-            <td><?= htmlspecialchars($year['status'], ENT_QUOTES, 'UTF-8') ?></td>
-            <td><a href="/academic/years/<?= htmlspecialchars((string) $year['id'], ENT_QUOTES, 'UTF-8') ?>/edit">ดูรายละเอียด</a></td>
+            <th scope="row"><?= htmlspecialchars((string) $year['year_be'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></th>
+            <td><?= htmlspecialchars($year['start_date'] ?? 'ยังไม่ระบุ', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
+            <td><?= htmlspecialchars($year['end_date'] ?? 'ยังไม่ระบุ', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
+            <td><?= App\Support\View::render('ui/status', ['status'=>$year['status'], 'kind'=>'academic-year']) ?></td>
+            <td><?php if ($canManageYears): ?><a href="/academic/years/<?= htmlspecialchars((string) $year['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/edit">ดูรายละเอียด</a><?php endif; ?></td>
         </tr>
     <?php endforeach; ?>
     </tbody>
 </table>
-<?php if ($years === []): ?><p>ยังไม่มีปีการศึกษา</p><?php endif; ?>
-</body>
-</html>
+</div>
+<?php if ($years === []): ?><p class="pp5-empty-state">ยังไม่มีปีการศึกษา</p><?php endif; ?>
+</div>

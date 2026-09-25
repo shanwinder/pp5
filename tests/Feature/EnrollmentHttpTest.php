@@ -147,7 +147,7 @@ final class EnrollmentHttpTest extends TestCase
         self::assertSame($before, $this->snapshot());
         self::assertStringNotContainsString('/academic/enrollments/create', $response->body());
         self::assertStringNotContainsString('/edit', $response->body());
-        self::assertSame(0, $this->xpath($response->body())->query('//form[@method="post"]')->length);
+        self::assertSame(0, $this->xpath($response->body())->query('//form[@method="post" and not(@action="/logout")]')->length);
     }
 
 
@@ -209,7 +209,7 @@ final class EnrollmentHttpTest extends TestCase
         self::assertEqualsCanonicalizing([(string)$this->student,(string)$this->candidate],array_values(array_filter($this->values($xpath->query('//select[@name="student_id"]/option/@value')),static fn($v)=>$v!=='')));
         self::assertSame(['',(string)$this->rooms['a']],$this->values($xpath->query('//select[@name="classroom_id"]/option/@value')));
         self::assertStringNotContainsString('INACTIVE_SECRET',$response->body());
-        self::assertEqualsCanonicalizing(['_token','academic_year_id','student_id','grade_level_id','classroom_id','entry_date'],$this->values($xpath->query('//form[@method="post"]//*[@name]/@name')));
+        self::assertEqualsCanonicalizing(['_token','academic_year_id','student_id','grade_level_id','classroom_id','entry_date'],$this->values($xpath->query('//form[@method="post" and not(@action="/logout")]//*[@name]/@name')));
         self::assertSame(404,$this->request('GET','/academic/enrollments/create',[],['academic_year_id'=>(string)$this->closedYear])->status());
     }
 
@@ -288,20 +288,20 @@ final class EnrollmentHttpTest extends TestCase
     {
         $this->login();
         $response=$this->request('GET',$this->path('/academic/enrollments/{id}/edit')); self::assertSame(200,$response->status());
-        self::assertSame(2,$this->xpath($response->body())->query('//form[@method="post"]')->length); $this->assertForms($response);
+        self::assertSame(2,$this->xpath($response->body())->query('//form[@method="post" and not(@action="/logout")]')->length); $this->assertForms($response);
         foreach ([(string)$this->rooms['b'],''] as $room) { self::assertSame(302,$this->request('POST',$this->path('/academic/enrollments/{id}/placement'),$this->payload(['classroom_id'=>$room]))->status()); }
         self::assertSame(['ENDED','ENDED'],array_column($this->rows('SELECT * FROM student_classroom_placements WHERE enrollment_id=? ORDER BY id',[$this->enrollment]),'status'));
         self::assertSame(302,$this->request('POST',$this->path('/academic/enrollments/{id}/status'),$this->payload(['status'=>'TRANSFERRED_OUT']))->status());
         self::assertSame('TRANSFERRED_OUT',$this->row('SELECT status FROM student_enrollments WHERE id=?',[$this->enrollment])['status']);
         $response=$this->request('GET',$this->path('/academic/enrollments/{id}/edit')); self::assertSame(200,$response->status());
-        self::assertSame(0,$this->xpath($response->body())->query('//form[@method="post"]')->length); self::assertStringContainsString('2026-06-01',$response->body());
+        self::assertSame(0,$this->xpath($response->body())->query('//form[@method="post" and not(@action="/logout")]')->length); self::assertStringContainsString('2026-06-01',$response->body());
     }
 
     public function test_closed_year_edit_is_historical_read_only_and_posts_still_reject(): void
     {
         $this->login(); $this->pdo->prepare("UPDATE academic_years SET status='CLOSED' WHERE id=?")->execute([$this->year]); $before=$this->snapshot();
         $response=$this->request('GET',$this->path('/academic/enrollments/{id}/edit')); self::assertSame(200,$response->status());
-        self::assertSame(0,$this->xpath($response->body())->query('//form[@method="post"]')->length);
+        self::assertSame(0,$this->xpath($response->body())->query('//form[@method="post" and not(@action="/logout")]')->length);
         foreach (['OWN','2569','Class a','2026-05-01'] as $text) { self::assertStringContainsString($text,$response->body()); }
         foreach (['/academic/enrollments/{id}/placement','/academic/enrollments/{id}/status'] as $path) {
             self::assertSame(422,$this->request('POST',$this->path($path),$this->payload(['classroom_id'=>(string)$this->rooms['a'],'status'=>'ACTIVE']))->status()); self::assertSame($before,$this->snapshot());
@@ -317,7 +317,7 @@ final class EnrollmentHttpTest extends TestCase
         foreach (['/academic/enrollments','/academic/enrollments/create',$this->path('/academic/enrollments/{id}/edit')] as $path) {
             $response=$this->request('GET',$path,[],['academic_year_id'=>(string)$this->year,'grade_level_id'=>(string)$this->grade]);
             self::assertSame(200,$response->status()); self::assertStringContainsString(htmlspecialchars(self::HOSTILE,ENT_QUOTES,'UTF-8'),$response->body());
-            self::assertStringNotContainsString(self::HOSTILE,$response->body()); self::assertSame(0,$this->xpath($response->body())->query('//script')->length); $this->assertSafe($response);
+            self::assertStringNotContainsString(self::HOSTILE,$response->body()); self::assertSame(0,$this->xpath($response->body())->query('//script[not(@src="/assets/app.js")]')->length); $this->assertSafe($response);
         }
     }
 

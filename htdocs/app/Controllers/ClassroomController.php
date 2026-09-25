@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -22,7 +23,8 @@ final class ClassroomController
         private AcademicYearRepository $years,
         private GradeLevelRepository $grades,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(Request $request): Response
@@ -30,12 +32,16 @@ final class ClassroomController
         try {
             $year = $this->queryYear($request);
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('academic/classrooms/index', [
+        $ui = $this->ui->build('academic.classrooms');
+        return new Response(View::page('academic/classrooms/index', [
+            'permissions' => $ui['permissions'],
+            'selectedYear' => $year,
+            'years' => $this->years->listForSchool($this->session->get('school_id')),
             'classrooms' => $this->classrooms->listForSchool($this->session->get('school_id'), $year['id'] ?? null),
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'ห้องเรียน — ระบบ ปพ.5', 'pageTitle' => 'ห้องเรียน']));
     }
 
     public function create(Request $request): Response
@@ -43,10 +49,10 @@ final class ClassroomController
         try {
             $year = $this->queryYear($request);
             if ($year !== null && !in_array($year['status'], ['DRAFT', 'ACTIVE'], true)) {
-                return new Response(View::render('errors/404'), 404);
+                return new Response(View::error(404), 404);
             }
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return $this->createForm(['academic_year_id' => $year['id'] ?? null]);
@@ -76,15 +82,17 @@ final class ClassroomController
     {
         $target = $this->classrooms->findForSchool($this->session->get('school_id'), $classroomId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('academic/classrooms/edit', [
+        $ui = $this->ui->build('academic.classrooms');
+        return new Response(View::page('academic/classrooms/edit', [
+            'permissions' => $ui['permissions'],
             'target' => $target,
             'grades' => $this->grades->listActive(),
             'csrfToken' => $this->csrf->token($this->session),
             'error' => null,
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'รายละเอียดห้องเรียน — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดห้องเรียน']));
     }
 
     public function update(Request $request, int $classroomId): Response
@@ -180,18 +188,21 @@ final class ClassroomController
 
     private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('academic/classrooms/create', [
+        $ui = $this->ui->build('academic.classrooms');
+        return new Response(View::page('academic/classrooms/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'years' => array_values(array_filter($this->years->listForSchool($this->session->get('school_id')),
                 static fn (array $year): bool => in_array($year['status'], ['DRAFT', 'ACTIVE'], true))),
             'grades' => $this->grades->listActive(),
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'เพิ่มห้องเรียน — ระบบ ปพ.5', 'pageTitle' => 'เพิ่มห้องเรียน']), $status);
     }
 
     private function mutationError(string $error): Response
     {
-        return new Response(View::render('academic/classrooms/edit', ['target' => null, 'error' => $error]), 422);
+        $ui = $this->ui->build('academic.classrooms');
+        return new Response(View::page('academic/classrooms/edit', ['permissions' => $ui['permissions'], 'target' => null, 'error' => $error], ['ui' => $ui, 'documentTitle' => 'รายละเอียดห้องเรียน — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดห้องเรียน']), 422);
     }
 }

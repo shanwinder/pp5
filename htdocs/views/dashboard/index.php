@@ -1,54 +1,26 @@
-<!doctype html>
-<html lang="th">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>แดชบอร์ด — ระบบ ปพ.5</title>
-</head>
-<body>
-<header>
-  <strong><?= htmlspecialchars($school['name_th'], ENT_QUOTES, 'UTF-8') ?></strong>
-  <span><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></span>
-
-  <form method="post" action="/logout">
-    <input type="hidden" name="_token"
-      value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-    <button type="submit">ออกจากระบบ</button>
-  </form>
-</header>
-
-<main>
-  <h1>แดชบอร์ด</h1>
-  <p>ยินดีต้อนรับเข้าสู่ระบบ ปพ.5</p>
-  <?php if ($canManageUsers): ?>
-    <p><a href="/admin/users">จัดการผู้ใช้</a></p>
+<?php
+$escape = static fn (string $value): string => htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$workAreas = array_values(array_filter($ui['sections'], static fn (array $section): bool => in_array($section['key'], ['students', 'academic', 'management'], true)));
+$descriptions = ['students' => 'ตรวจสอบข้อมูลนักเรียนและการลงทะเบียน', 'academic' => 'จัดเตรียมปีการศึกษา ห้องเรียน และรายวิชา', 'management' => 'ดูแลบัญชีผู้ใช้งานของโรงเรียน'];
+?>
+<p class="pp5-welcome">ยินดีต้อนรับ <?= $escape($ui['displayName']) ?> <span class="text-muted">— <?= $escape($ui['schoolName']) ?></span></p>
+<section aria-labelledby="my-gradebooks">
+  <div class="pp5-page-header">
+    <div><h2 id="my-gradebooks">สมุดคะแนนของฉัน</h2><p class="text-muted">เลือกรายวิชาเพื่อเริ่มงาน หรือดูสมุดคะแนนย้อนหลัง</p></div>
+    <?php if ($ui['gradebooks'] !== []): ?><a class="btn btn-primary" href="/gradebooks">ดูสมุดคะแนนทั้งหมด</a><?php endif; ?>
+  </div>
+  <?= App\Support\View::render('gradebook/offering-list', ['offerings' => array_slice($ui['gradebooks'], 0, 3)]) ?>
+</section>
+<section aria-labelledby="work-areas">
+  <h2 id="work-areas">งานจัดการของโรงเรียน</h2>
+  <?php if ($workAreas === []): ?>
+    <p class="text-muted">ยังไม่มีงานจัดการที่เข้าถึงได้ หากต้องการความช่วยเหลือ กรุณาติดต่อผู้ดูแลระบบ</p>
+  <?php else: ?>
+    <ul class="pp5-work-areas">
+    <?php foreach ($workAreas as $area): $entry = $area['items'][0]; ?>
+      <li><h3><?= $escape($area['label']) ?></h3><p class="text-muted"><?= $escape($descriptions[$area['key']]) ?></p>
+        <a href="<?= $escape($entry['url']) ?>">เปิด<?= $escape($entry['label']) ?></a></li>
+    <?php endforeach; ?>
+    </ul>
   <?php endif; ?>
-  <?php if ($canViewAcademicSetup): ?>
-    <p><a href="/academic/years">จัดการโครงสร้างวิชาการ</a></p>
-  <?php endif; ?>
-  <?php if ($canManageTeachingAssignments): ?>
-    <p><a href="/academic/teaching-assignments">การมอบหมายครูประจำวิชา</a></p>
-  <?php endif; ?>
-  <?php if ($canViewStudents): ?>
-    <p><a href="/students">จัดการนักเรียน</a></p>
-    <p><a href="/academic/enrollments">การลงทะเบียนนักเรียน</a></p>
-  <?php endif; ?>
-  <?php if ($canImportStudents): ?>
-    <p><a href="/academic/student-import">นำเข้านักเรียน</a></p>
-  <?php endif; ?>
-  <?php if ($gradebookOfferings !== []): ?>
-    <section aria-labelledby="gradebooks-heading">
-      <h2 id="gradebooks-heading">สมุดคะแนน</h2>
-      <ul>
-        <?php foreach ($gradebookOfferings as $offering): ?>
-          <li><a href="/gradebook/<?= htmlspecialchars((string) $offering['id'], ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(
-              $offering['year_be'] . ' / ' . $offering['classroom_code'] . ' ' . $offering['classroom_name'] . ' / '
-              . $offering['subject_code'] . ' ' . $offering['subject_name'] . ' / ภาคเรียน ' . $offering['term_no'], ENT_QUOTES, 'UTF-8') ?></a>
-            — <?= htmlspecialchars($offering['academic_year_status'] . ' / ' . $offering['status'], ENT_QUOTES, 'UTF-8') ?></li>
-        <?php endforeach; ?>
-      </ul>
-    </section>
-  <?php endif; ?>
-</main>
-</body>
-</html>
+</section>

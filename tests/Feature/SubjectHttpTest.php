@@ -134,7 +134,7 @@ final class SubjectHttpTest extends TestCase
         $a = $this->fixture($this->school, 'AAA', 'INACTIVE');
         $response = $this->request('GET', '/academic/subjects', [], ['school_id' => $this->foreignSchool]);
         self::assertSame(200, $response->status());
-        self::assertSame(['AAA', 'OWN'], array_map(static fn (DOMNode $n): string => trim($n->textContent), iterator_to_array($this->xpath($response->body())->query('//tbody/tr/td[1]'))));
+        self::assertSame(['AAA', 'OWN'], array_map(static fn (DOMNode $n): string => trim($n->textContent), iterator_to_array($this->xpath($response->body())->query('//tbody/tr/th[@scope="row"]'))));
         foreach (['ชื่อรายวิชา', 'INACTIVE', '/academic/subjects/' . $a . '/edit'] as $value) { self::assertStringContainsString($value, $response->body()); }
         $this->assertSafe($response);
     }
@@ -144,7 +144,7 @@ final class SubjectHttpTest extends TestCase
         $this->login();
         $response = $this->request('GET', '/academic/subjects/create');
         self::assertSame(200, $response->status());
-        $names = $this->values($this->xpath($response->body())->query('//form//*[@name]/@name'));
+        $names = $this->values($this->xpath($response->body())->query('//main//form//*[@name]/@name'));
         self::assertEqualsCanonicalizing(['code', 'name_th', '_token'], $names);
         $this->assertForms($response);
     }
@@ -160,7 +160,7 @@ final class SubjectHttpTest extends TestCase
         foreach (['code', 'name_th'] as $field) { self::assertSame(1, $xpath->query('//input[@name="' . $field . '" and not(@readonly) and not(@disabled)]')->length); }
         self::assertSame($state === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE', $xpath->evaluate('string(//input[@name="status"]/@value)'));
         self::assertSame(0, $xpath->query('//select')->length);
-        self::assertSame(2, $xpath->query('//form')->length);
+        self::assertSame(2, $xpath->query('//main//form')->length);
         foreach (['OWN', 'ชื่อรายวิชา', $state] as $value) { self::assertStringContainsString($value, $response->body()); }
         $this->assertForms($response);
     }
@@ -259,7 +259,7 @@ final class SubjectHttpTest extends TestCase
                 $response = $this->request('POST', str_replace('{id}', $id, $path), $this->payload(['school_id' => $this->foreignSchool]), ['school_id' => $this->foreignSchool]);
                 self::assertSame(422, $response->status());
                 $this->assertSafe($response);
-                self::assertSame(0, $this->xpath($response->body())->query('//form')->length);
+                self::assertSame(0, $this->xpath($response->body())->query('//main//form')->length);
                 self::assertSame($before, $this->snapshot());
                 $responses[] = $response;
             }
@@ -420,8 +420,8 @@ final class SubjectHttpTest extends TestCase
     {
         $xpath = $this->xpath($response->body());
         foreach (['school_id', 'academic_year_id', 'classroom_id', 'term_no', 'teacher_id', 'user_id', 'actor', 'actor_user_id'] as $field) { self::assertSame(0, $xpath->query('//*[@name="' . $field . '"]')->length); }
-        self::assertSame(0, $xpath->query('//form[contains(@action,"delete")]')->length);
-        foreach ($xpath->query('//form[@method="post"]') as $form) { self::assertSame($this->token(), $xpath->evaluate('string(.//input[@name="_token"]/@value)', $form)); }
+        self::assertSame(0, $xpath->query('//main//form[contains(@action,"delete")]')->length);
+        foreach ($xpath->query('//main//form[@method="post"]') as $form) { self::assertSame($this->token(), $xpath->evaluate('string(.//input[@name="_token"]/@value)', $form)); }
     }
     private function assertSafe(Response $response): void
     {

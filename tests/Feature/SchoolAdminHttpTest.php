@@ -272,11 +272,11 @@ final class SchoolAdminHttpTest extends TestCase
         $response = $this->request('GET', '/admin/users/create');
         self::assertSame(200, $response->status());
         $xpath = $this->xpath($response->body());
-        self::assertSame(1, $xpath->query('//form[@method="post" and @action="/admin/users"]')->length);
+        self::assertSame(1, $xpath->query('//main//form[@method="post" and @action="/admin/users"]')->length);
         foreach (['username', 'display_name', 'email', 'password'] as $field) {
-            self::assertSame(1, $xpath->query('//form//input[@name="' . $field . '"]')->length);
+            self::assertSame(1, $xpath->query('//main//form//input[@name="' . $field . '"]')->length);
         }
-        self::assertSame($this->token(), $xpath->evaluate('string(//form//input[@name="_token"]/@value)'));
+        self::assertSame($this->token(), $xpath->evaluate('string(//main//form//input[@name="_token"]/@value)'));
         self::assertSame($this->activeRoleCodes(), $this->offeredRoles($xpath));
         self::assertStringContainsString(htmlspecialchars(self::HOSTILE, ENT_QUOTES, 'UTF-8'), $response->body());
         $this->assertSafeForm($xpath, $response->body());
@@ -329,7 +329,7 @@ final class SchoolAdminHttpTest extends TestCase
         $response = $this->request('POST', '/admin/users', $this->payload([$field => $value]));
         self::assertSame(422, $response->status());
         $this->assertSafe($response->body());
-        self::assertSame(1, $this->xpath($response->body())->query('//form[@action="/admin/users"]')->length);
+        self::assertSame(1, $this->xpath($response->body())->query('//main//form[@action="/admin/users"]')->length);
         $this->assertSafeForm($this->xpath($response->body()), $response->body());
         self::assertSame($before, $this->snapshot());
     }
@@ -369,7 +369,7 @@ final class SchoolAdminHttpTest extends TestCase
         $response = $this->request('GET', $this->path('/admin/users/{id}/edit'), [], ['school_id' => $this->foreignSchoolId]);
         self::assertSame(200, $response->status());
         $xpath = $this->xpath($response->body());
-        self::assertSame(4, $xpath->query('//form')->length);
+        self::assertSame(4, $xpath->query('//main//form')->length);
         foreach (self::mutations() as [$path]) {
             $form = '//form[@method="post" and @action="' . $this->path($path) . '"]';
             self::assertSame(1, $xpath->query($form)->length);
@@ -734,7 +734,7 @@ final class SchoolAdminHttpTest extends TestCase
         self::assertSame(1, $xpath->query('//input[@type="password" and @name="password"]')->length);
         self::assertSame(0, $xpath->query('//input[@type="password"]/@value')->length);
         self::assertSame(0, $xpath->query('//*[@name="school_id" or @name="context_type" or @name="actor_user_id"]')->length);
-        self::assertSame(0, $xpath->query('//script')->length);
+        self::assertSame(0, $xpath->query('//script[not(@src)]')->length);
         self::assertStringNotContainsString('SYSTEM_ADMIN', $html);
         $this->assertSafe($html);
     }
@@ -753,7 +753,7 @@ final class SchoolAdminHttpTest extends TestCase
         foreach (['http7-target', 'http7-foreign', 'http7-admin', 'New User'] as $target) {
             self::assertStringNotContainsString($target, $response->body());
         }
-        self::assertSame(0, $this->xpath($response->body())->query('//form')->length);
+        self::assertSame(0, $this->xpath($response->body())->query('//main//form')->length);
     }
 
     private function assertSafe(string $output, ?string $hash = null): void

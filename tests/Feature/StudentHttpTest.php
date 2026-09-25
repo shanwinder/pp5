@@ -132,7 +132,7 @@ final class StudentHttpTest extends TestCase
         self::assertSame($before, $this->snapshot());
         self::assertStringNotContainsString('/students/create', $response->body());
         self::assertStringNotContainsString('/edit', $response->body());
-        self::assertSame(0, $this->xpath($response->body())->query('//form[@method="post"]')->length);
+        self::assertSame(0, $this->xpath($response->body())->query('//form[@method="post" and not(@action="/logout")]')->length);
     }
 
     public function test_list_is_tenant_scoped_ordered_and_has_only_public_columns(): void
@@ -140,7 +140,7 @@ final class StudentHttpTest extends TestCase
         $this->login(); $this->fixture($this->school, 'AAA', 'INACTIVE');
         $response = $this->request('GET', '/students', [], ['school_id' => $this->foreignSchool, 'national_id' => self::NATIONAL]);
         self::assertSame(200, $response->status());
-        self::assertSame(['AAA', 'OWN'], array_map(static fn (DOMNode $n): string => trim($n->textContent), iterator_to_array($this->xpath($response->body())->query('//tbody/tr/td[1]'))));
+        self::assertSame(['AAA', 'OWN'], array_map(static fn (DOMNode $n): string => trim($n->textContent), iterator_to_array($this->xpath($response->body())->query('//tbody/tr/th[@scope="row"]'))));
         foreach (['ชื่อทดสอบ', 'นามสกุล', 'INACTIVE', '/students/create', '/students/' . $this->student . '/edit'] as $value) { self::assertStringContainsString($value, $response->body()); }
         self::assertSame(4, $this->xpath($response->body())->query('//thead/tr/th')->length);
         self::assertStringNotContainsString('2014-03-04', $response->body());
@@ -170,7 +170,7 @@ final class StudentHttpTest extends TestCase
             $response = $this->request('GET', $path);
             self::assertSame(200, $response->status());
             $xpath = $this->xpath($response->body());
-            $names = $this->values($xpath->query('(//form)[1]//*[@name]/@name'));
+            $names = $this->values($xpath->query('(//main//form)[1]//*[@name]/@name'));
             self::assertEqualsCanonicalizing(['_token', 'student_code', 'national_id', 'prefix_th', 'first_name_th', 'last_name_th', 'gender_code', 'birth_date'], $names);
             self::assertSame($path === '/students/create' ? '' : self::NATIONAL, $xpath->evaluate('string(//input[@name="national_id"]/@value)'));
             $this->assertForms($response);
@@ -188,7 +188,7 @@ final class StudentHttpTest extends TestCase
             foreach ([(string) $this->foreignStudent, '0', '999999999999999999999999'] as $id) {
                 $response = $this->request($method, str_replace('{id}', $id, $path), $this->payload(['school_id' => $this->foreignSchool]), ['school_id' => $this->foreignSchool]);
                 self::assertSame($status, $response->status()); $this->assertSafe($response);
-                self::assertSame(0, $this->xpath($response->body())->query('//form')->length);
+                self::assertSame(0, $this->xpath($response->body())->query('//form[not(@action="/logout")]')->length);
                 self::assertSame($before, $this->snapshot()); $responses[] = $response;
             }
             self::assertEquals($responses[0], $responses[1]); self::assertEquals($responses[0], $responses[2]);
@@ -302,7 +302,14 @@ final class StudentHttpTest extends TestCase
             $response = $this->request('GET', '/students', [], ['q' => $query]);
             self::assertSame(200, $response->status());
             self::assertSame(0, $this->xpath($response->body())->query('//tbody/tr')->length);
-            $this->assertSafe($response);
+            // Safe q is now reflected in its input. Remove only that known request value
+            // from the leak scan; foreign data elsewhere must still never appear.
+            $body = $response->body();
+            if ($query === 'FOREIGN_SECRET') {
+                self::assertSame($query, $this->xpath($body)->evaluate('string(//input[@name="q"]/@value)'));
+                $body = str_replace('value="FOREIGN_SECRET"', 'value=""', $body);
+            }
+            $this->assertSafe(new Response($body, $response->status()));
         }
     }
 
@@ -315,7 +322,7 @@ final class StudentHttpTest extends TestCase
             self::assertSame(200, $response->status());
             self::assertStringContainsString(htmlspecialchars(self::HOSTILE, ENT_QUOTES, 'UTF-8'), $response->body());
             self::assertStringNotContainsString(self::HOSTILE, $response->body());
-            self::assertSame(0, $this->xpath($response->body())->query('//script | //*[@onfocus]')->length);
+            self::assertSame(0, $this->xpath($response->body())->query('//script[not(@src="/assets/app.js")] | //*[@onfocus]')->length);
         }
         $response = $this->request('GET', '/students/create');
         self::assertSame(200, $response->status());
@@ -323,7 +330,7 @@ final class StudentHttpTest extends TestCase
         $this->assertForms($response);
         $response = $this->request('POST', '/students', $this->payload(['student_code' => self::HOSTILE, 'first_name_th' => self::HOSTILE]));
         self::assertSame(422, $response->status()); $this->assertSafe($response);
-        self::assertSame(0, $this->xpath($response->body())->query('//script | //*[@onfocus]')->length);
+        self::assertSame(0, $this->xpath($response->body())->query('//script[not(@src="/assets/app.js")] | //*[@onfocus]')->length);
     }
 
     #[DataProvider('mutations')]
@@ -387,14 +394,14 @@ final class StudentHttpTest extends TestCase
         $response=$this->request('GET',$this->path('/students/{id}'),[],['school_id'=>$this->foreignSchool]);
         self::assertSame(200,$response->status()); $this->assertSafe($response);
         $xpath=$this->xpath($response->body());
-        self::assertSame(['ปีการศึกษา 2569','ปีการศึกษา 2568'],$this->values($xpath->query('//section[@class="enrollment-history"]/h3')));
+        self::assertSame(['ปีการศึกษา 2569','ปีการศึกษา 2568'],$this->values($xpath->query('//section[contains(@class,"enrollment-history")]/h3')));
         foreach (['*********0123','Current class','Old class','WITHDRAWN','ENDED','2025-05-01','2026-03-01','ห้องล่าสุด','ห้องปัจจุบัน'] as $value) { self::assertStringContainsString($value,$response->body()); }
         self::assertStringNotContainsString('/academic/enrollments/',$response->body());
         self::assertSame($before,[$this->rows('SELECT * FROM student_enrollments ORDER BY id'),$this->rows('SELECT * FROM student_classroom_placements ORDER BY id'),$this->snapshot()]);
         $this->pdo->prepare('UPDATE classrooms SET name_th=? WHERE school_id=?')->execute([self::HOSTILE,$this->school]);
         $response=$this->request('GET',$this->path('/students/{id}'));
         self::assertStringContainsString(htmlspecialchars(self::HOSTILE,ENT_QUOTES,'UTF-8'),$response->body());
-        self::assertSame(0,$this->xpath($response->body())->query('//script')->length); $this->assertSafe($response);
+        self::assertSame(0,$this->xpath($response->body())->query('//script[not(@src="/assets/app.js")]')->length); $this->assertSafe($response);
     }
 
     public function test_student_without_enrollments_shows_empty_history(): void

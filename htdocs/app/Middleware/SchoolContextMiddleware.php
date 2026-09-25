@@ -22,7 +22,7 @@ final class SchoolContextMiddleware
     public function handle(Request $request, callable $next): Response
     {
         if ($this->session->get('context_type') !== AccessContext::SCHOOL) {
-            return new Response(View::render('errors/403'), 403);
+            return new Response(View::error(403), 403);
         }
 
         $userId = $this->session->get('user_id');
@@ -35,7 +35,7 @@ final class SchoolContextMiddleware
 
         if (!$this->memberships->isActiveMembership($membershipId, $userId, $schoolId)
             || $this->schools->findActiveById($schoolId) === null) {
-            return new Response(View::render('errors/403'), 403);
+            return new Response(View::error(403), 403);
         }
 
         return $next($request);

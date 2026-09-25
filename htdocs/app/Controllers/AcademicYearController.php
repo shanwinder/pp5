@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -18,14 +19,18 @@ final class AcademicYearController
         private AcademicYearAdministrationService $administration,
         private AcademicYearRepository $years,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(): Response
     {
-        return new Response(View::render('academic/years/index', [
+        $ui = $this->ui->build('academic.years');
+        return new Response(View::page('academic/years/index', [
+            'permissions' => $ui['permissions'],
             'years' => $this->years->listForSchool($this->session->get('school_id')),
-        ]));
+            'canManageYears' => $ui['permissions']['ACADEMIC_YEAR_MANAGE'],
+        ], ['ui' => $ui, 'documentTitle' => 'ปีการศึกษา — PP5', 'pageTitle' => 'ปีการศึกษา']));
     }
 
     public function create(): Response
@@ -57,14 +62,16 @@ final class AcademicYearController
     {
         $target = $this->years->findForSchool($this->session->get('school_id'), $academicYearId);
         if ($target === null) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
-        return new Response(View::render('academic/years/edit', [
+        $ui = $this->ui->build('academic.years');
+        return new Response(View::page('academic/years/edit', [
+            'permissions' => $ui['permissions'],
             'target' => $target,
             'csrfToken' => $this->csrf->token($this->session),
             'error' => null,
-        ]));
+        ], ['ui' => $ui, 'documentTitle' => 'รายละเอียดปีการศึกษา — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดปีการศึกษา']));
     }
 
     public function update(Request $request, int $academicYearId): Response
@@ -149,15 +156,18 @@ final class AcademicYearController
 
     private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('academic/years/create', [
+        $ui = $this->ui->build('academic.years');
+        return new Response(View::page('academic/years/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'เพิ่มปีการศึกษา — ระบบ ปพ.5', 'pageTitle' => 'เพิ่มปีการศึกษา']), $status);
     }
 
     private function mutationError(string $error): Response
     {
-        return new Response(View::render('academic/years/edit', ['target' => null, 'error' => $error]), 422);
+        $ui = $this->ui->build('academic.years');
+        return new Response(View::page('academic/years/edit', ['permissions' => $ui['permissions'], 'target' => null, 'error' => $error], ['ui' => $ui, 'documentTitle' => 'รายละเอียดปีการศึกษา — ระบบ ปพ.5', 'pageTitle' => 'รายละเอียดปีการศึกษา']), 422);
     }
 }

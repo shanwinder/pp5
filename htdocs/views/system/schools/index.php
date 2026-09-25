@@ -1,57 +1,41 @@
-<!doctype html>
-<html lang="th">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>จัดการโรงเรียน — ระบบ ปพ.5</title>
-</head>
-<body>
-<header>
-  <strong>ระบบ ปพ.5</strong>
-  <span><?= htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8') ?></span>
-  <form method="post" action="/logout">
-    <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-    <button type="submit">ออกจากระบบ</button>
-  </form>
-</header>
-<main>
-  <h1>จัดการโรงเรียน</h1>
-  <p><a href="/system/schools/create">สร้างโรงเรียนและผู้ดูแลคนแรก</a></p>
-  <?php if (is_string($error) && $error !== ''): ?>
-    <div role="alert"><?= htmlspecialchars($error, ENT_QUOTES, 'UTF-8') ?></div>
+<div class="pp5-admin-page">
+<?php if ($permissions['SYSTEM_SCHOOL_CREATE']): ?><p><a class="btn btn-primary" href="/system/schools/create">เพิ่มโรงเรียน</a></p><?php endif; ?>
+<?php if ($canChangeStatus): ?><p>การระงับหรือปิดใช้งานโรงเรียนจะหยุดการเข้าถึงข้อมูลในบริบทโรงเรียนนั้น</p><?php endif; ?>
+<?php if (is_string($error) && $error !== ''): ?>
+    <div class="pp5-alert pp5-alert--danger" role="alert"><?= htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></div>
   <?php endif; ?>
 
   <?php if ($schools === []): ?>
-    <p>ยังไม่มีโรงเรียน</p>
+    <p class="pp5-empty-state">ยังไม่มีโรงเรียน</p>
   <?php elseif ($schools !== null): ?>
-    <table>
+    <div class="pp5-table-scroll" role="region" aria-label="รายการโรงเรียน" tabindex="0">
+    <table class="table pp5-table">
       <thead>
         <tr><th scope="col">รหัสโรงเรียน</th><th scope="col">ชื่อโรงเรียน</th><th scope="col">สถานะ</th><th scope="col">เปลี่ยนสถานะ</th></tr>
       </thead>
       <tbody>
       <?php foreach ($schools as $school): ?>
         <tr>
-          <td><?= htmlspecialchars($school['school_code'], ENT_QUOTES, 'UTF-8') ?></td>
-          <td><?= htmlspecialchars($school['name_th'], ENT_QUOTES, 'UTF-8') ?></td>
-          <td><?= htmlspecialchars($school['status'], ENT_QUOTES, 'UTF-8') ?></td>
+          <th scope="row"><?= htmlspecialchars($school['school_code'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></th>
+          <td><?= htmlspecialchars($school['name_th'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></td>
+          <td><?= App\Support\View::render('ui/status', ['status'=>$school['status'], 'kind'=>'school']) ?></td>
           <td>
-            <form method="post" action="/system/schools/<?= htmlspecialchars((string) $school['id'], ENT_QUOTES, 'UTF-8') ?>/status">
-              <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
-              <label>สถานะใหม่
-                <select name="status">
-                  <?php foreach (['ACTIVE' => 'ใช้งาน', 'SUSPENDED' => 'ระงับชั่วคราว', 'INACTIVE' => 'ไม่ใช้งาน'] as $value => $label): ?>
-                    <option value="<?= htmlspecialchars($value, ENT_QUOTES, 'UTF-8') ?>"<?= $school['status'] === $value ? ' selected' : '' ?>><?= htmlspecialchars($label, ENT_QUOTES, 'UTF-8') ?></option>
+            <?php if ($canChangeStatus): ?><form class="pp5-form pp5-surface pp5-sensitive" method="post" action="/system/schools/<?= htmlspecialchars((string) $school['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/status" data-confirm="ยืนยันการเปลี่ยนสถานะโรงเรียนหรือไม่? การระงับหรือปิดใช้งานโรงเรียนจะหยุดการเข้าถึงข้อมูลในบริบทโรงเรียนนั้น">
+              <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+              <label class="form-label" for="system-schools-index-status-<?= (int) $school['id'] ?>">สถานะใหม่
+                <select class="form-select" id="system-schools-index-status-<?= (int) $school['id'] ?>" name="status" required>
+                  <?php foreach (['ACTIVE', 'SUSPENDED', 'INACTIVE'] as $value): ?>
+                    <option value="<?= htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"<?= $school['status'] === $value ? ' selected' : '' ?>><?= htmlspecialchars(App\Support\StatusLabel::text($value, 'school'), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></option>
                   <?php endforeach; ?>
                 </select>
               </label>
-              <button type="submit">บันทึกสถานะ</button>
-            </form>
+              <button class="btn btn-danger" type="submit">เปลี่ยนสถานะโรงเรียน</button>
+            </form><?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>
       </tbody>
     </table>
+    </div>
   <?php endif; ?>
-</main>
-</body>
-</html>
+</div>

@@ -12,6 +12,7 @@ use App\Repositories\GradeLevelRepository;
 use App\Repositories\StudentRepository;
 use App\Repositories\StudentEnrollmentRepository;
 use App\Repositories\StudentClassroomPlacementRepository;
+use App\Services\AppUiContextService;
 use App\Services\AuthorizationService;
 use App\Services\EnrollmentAdministrationService;
 use App\Support\AccessContext;
@@ -31,7 +32,8 @@ final class EnrollmentController
         private ClassroomRepository $classrooms,
         private Session $session,
         private Csrf $csrf,
-        private AuthorizationService $authorization
+        private AuthorizationService $authorization,
+        private AppUiContextService $ui
     ) {}
 
     public function index(Request $request): Response
@@ -51,6 +53,7 @@ final class EnrollmentController
             return $this->notFound();
         }
         $error = null;
+        $search = null;
         $status = null;
         $rows = [];
         try {
@@ -67,12 +70,14 @@ final class EnrollmentController
             $status = null;
         }
 
-        return new Response(View::render('academic/enrollments/index', [
+        return new Response($this->page('academic/enrollments/index', [
             'enrollments' => $rows, 'years' => $this->years->listForSchool($this->school()), 'grades' => $this->grades->listActive(),
             'classrooms' => $year === null ? [] : $this->roomChoices($year['id'], $grade['id'] ?? null, false),
             'yearId' => $year['id'] ?? null, 'gradeId' => $grade['id'] ?? null, 'classroomId' => $classroomId,
+            // Retain safe search text without reflecting ID-shaped input.
+            'search' => $search !== null && !preg_match('/[0-9]{13}/', $search) ? $search : '',
             'status' => $status, 'error' => $error, 'canManage' => $this->can('ENROLLMENT_MANAGE'),
-        ]), $error === null ? 200 : 422);
+        ], 'การลงทะเบียนนักเรียน'), $error === null ? 200 : 422);
     }
 
     public function create(Request $request): Response
@@ -87,13 +92,13 @@ final class EnrollmentController
             return $this->notFound();
         }
 
-        return new Response(View::render('academic/enrollments/create', [
+        return new Response($this->page('academic/enrollments/create', [
             'years' => array_values(array_filter($this->years->listForSchool($this->school()), static fn (array $y): bool => in_array($y['status'], ['DRAFT', 'ACTIVE'], true))),
             'students' => array_values(array_filter($this->students->listForSchool($this->school()), static fn (array $s): bool => $s['status'] === 'ACTIVE')),
             'grades' => $this->grades->listActive(), 'year' => $year, 'grade' => $grade,
             'classrooms' => $year !== null && $grade !== null ? $this->roomChoices($year['id'], $grade['id']) : [],
             'csrfToken' => $this->csrf->token($this->session), 'canView' => $this->can('STUDENT_VIEW'),
-        ]));
+        ], 'เพิ่มการลงทะเบียน'));
     }
 
     public function store(Request $request): Response
@@ -129,12 +134,12 @@ final class EnrollmentController
         }
         $mutable = in_array($target['academic_year_status'], ['DRAFT', 'ACTIVE'], true) && $target['status'] === 'ACTIVE';
 
-        return new Response(View::render('academic/enrollments/edit', [
+        return new Response($this->page('academic/enrollments/edit', [
             'target' => $target, 'history' => $this->placements->listForEnrollment($this->school(), $enrollmentId),
             'classrooms' => $mutable ? $this->roomChoices($target['academic_year_id'], $target['grade_level_id']) : [],
             'mutable' => $mutable, 'csrfToken' => $mutable ? $this->csrf->token($this->session) : null,
             'error' => null, 'canView' => $this->can('STUDENT_VIEW'),
-        ]));
+        ], 'รายละเอียดการลงทะเบียน'));
     }
 
     public function changePlacement(Request $request, int $enrollmentId): Response
@@ -264,9 +269,16 @@ final class EnrollmentController
         $address = $request->server('REMOTE_ADDR');
         return is_string($address) && filter_var($address, FILTER_VALIDATE_IP) !== false ? $address : null;
     }
-    private function notFound(): Response { return new Response(View::render('errors/404'), 404); }
+    private function notFound(): Response { return new Response(View::error(404), 404); }
     private function mutationError(string $error): Response
     {
-        return new Response(View::render('academic/enrollments/edit', ['target' => null, 'error' => $error, 'canView' => $this->can('STUDENT_VIEW')]), 422);
+        return new Response($this->page('academic/enrollments/edit', ['target' => null, 'error' => $error, 'canView' => $this->can('STUDENT_VIEW')], 'รายละเอียดการลงทะเบียน'), 422);
+    }
+
+    private function page(string $template, array $data, string $title): string
+    {
+        return View::page($template, $data, [
+            'ui' => $this->ui->build('enrollments'), 'documentTitle' => $title.' — ปพ.5', 'pageTitle' => $title,
+        ]);
     }
 }

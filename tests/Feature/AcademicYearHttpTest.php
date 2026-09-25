@@ -152,7 +152,7 @@ final class AcademicYearHttpTest extends TestCase
         $response = $this->request('GET', '/academic/years', ['school_id' => $this->foreignSchoolId], ['school_id' => $this->foreignSchoolId]);
         self::assertSame(200, $response->status());
         $xpath = $this->xpath($response->body());
-        $cells = $xpath->query('//tbody/tr/td[1]');
+        $cells = $xpath->query('//tbody/tr/th[@scope="row"]');
         self::assertSame(['2570', '2569'], array_map(static fn (DOMNode $node): string => trim($node->textContent), iterator_to_array($cells)));
         foreach (['2569', '2026-05-16', '2027-03-31', 'DRAFT'] as $value) {
             self::assertStringContainsString($value, $response->body());
@@ -169,7 +169,7 @@ final class AcademicYearHttpTest extends TestCase
         $response = $this->request('GET', '/academic/years/create');
         self::assertSame(200, $response->status());
         $xpath = $this->xpath($response->body());
-        $names = array_map(static fn (DOMNode $node): string => $node->nodeValue, iterator_to_array($xpath->query('//form//*[@name]/@name')));
+        $names = array_map(static fn (DOMNode $node): string => $node->nodeValue, iterator_to_array($xpath->query('//main//form//*[@name]/@name')));
         self::assertEqualsCanonicalizing(['year_be', 'start_date', 'end_date', '_token'], $names);
         self::assertSame(1, $xpath->query('//input[@name="start_date" and @type="date"]')->length);
         self::assertSame(1, $xpath->query('//input[@name="end_date" and @type="date"]')->length);
@@ -189,14 +189,14 @@ final class AcademicYearHttpTest extends TestCase
         foreach (['year_be', 'start_date', 'end_date'] as $field) {
             self::assertSame($editable ? 1 : 0, $xpath->query('//input[@name="' . $field . '" and not(@readonly) and not(@disabled)]')->length);
         }
-        self::assertSame($editable ? 1 : 0, $xpath->query('//form[@action="' . $this->path('/academic/years/{id}') . '"]')->length);
+        self::assertSame($editable ? 1 : 0, $xpath->query('//main//form[@action="' . $this->path('/academic/years/{id}') . '"]')->length);
         $statuses = $xpath->query('//*[@name="status"]/@value');
         self::assertSame($next === null ? [] : [$next], array_map(static fn (DOMNode $node): string => $node->nodeValue, iterator_to_array($statuses)));
         foreach (['2569', '2026-05-16', '2027-03-31', $status] as $value) {
             self::assertStringContainsString($value, $response->body());
         }
         if ($status === 'CLOSED') {
-            self::assertSame(0, $xpath->query('//form')->length);
+            self::assertSame(0, $xpath->query('//main//form')->length);
         }
         $this->assertForms($response);
     }
@@ -339,7 +339,7 @@ final class AcademicYearHttpTest extends TestCase
             self::assertSame(422, $response->status());
             $this->assertSafe($response);
             self::assertStringNotContainsString('2699', $response->body());
-            self::assertSame(0, $this->xpath($response->body())->query('//form')->length);
+            self::assertSame(0, $this->xpath($response->body())->query('//main//form')->length);
             self::assertSame($before, $this->snapshot());
             $responses[] = $response;
         }
@@ -543,7 +543,7 @@ final class AcademicYearHttpTest extends TestCase
     {
         $xpath = $this->xpath($response->body());
         self::assertSame(0, $xpath->query('//*[@name="school_id" or @name="actor_user_id" or @name="user_id"]')->length);
-        foreach ($xpath->query('//form[@method="post"]') as $form) {
+        foreach ($xpath->query('//main//form[@method="post"]') as $form) {
             self::assertSame($this->token(), $xpath->evaluate('string(.//input[@name="_token"]/@value)', $form));
         }
     }

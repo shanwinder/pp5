@@ -5,6 +5,7 @@ namespace App\Controllers;
 
 use App\Http\{Request, Response, Session};
 use App\Repositories\{AcademicYearRepository, StudentImportBatchRepository, StudentImportRowRepository};
+use App\Services\AppUiContextService;
 use App\Services\StudentImportService;
 use App\Support\{CanonicalStudentCsvReader, Csrf, View};
 use DomainException;
@@ -19,7 +20,8 @@ final class StudentImportController
         private AcademicYearRepository $years,
         private CanonicalStudentCsvReader $reader,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(): Response
@@ -56,11 +58,11 @@ final class StudentImportController
         try {
             $this->service->expirePreviews($this->school());
             $batch = $this->batches->findForSchool($this->school(), $batchId);
-            if ($batch === null) { return new Response(View::render('errors/404'), 404); }
-            return new Response(View::render('academic/student-import/preview', [
+            if ($batch === null) { return new Response(View::error(404), 404); }
+            return new Response($this->page('academic/student-import/preview', [
                 'batch' => $batch, 'rows' => $this->rows->listForBatch($this->school(), $batchId),
                 'csrfToken' => $this->csrf->token($this->session), 'error' => null,
-            ]));
+            ], 'ตรวจสอบการนำเข้านักเรียน'));
         } catch (DomainException $exception) { return $this->error($exception->getMessage()); }
         catch (Throwable) { return $this->error('ไม่สามารถอ่านรายการนำเข้าได้'); }
     }
@@ -83,14 +85,14 @@ final class StudentImportController
 
     private function form(): Response
     {
-        return new Response(View::render('academic/student-import/index', [
+        return new Response($this->page('academic/student-import/index', [
             'years' => array_values(array_filter($this->years->listForSchool($this->school()), static fn ($y) => in_array($y['status'], ['DRAFT', 'ACTIVE'], true))),
             'csrfToken' => $this->csrf->token($this->session),
-        ]));
+        ], 'นำเข้านักเรียน'));
     }
     private function error(string $message): Response
     {
-        return new Response(View::render('academic/student-import/preview', ['batch' => null, 'rows' => [], 'error' => $message]), 422);
+        return new Response($this->page('academic/student-import/preview', ['batch' => null, 'rows' => [], 'error' => $message], 'ตรวจสอบการนำเข้านักเรียน'), 422);
     }
     private function school(): int { return $this->session->get('school_id'); }
     private function positiveInt(mixed $value): int
@@ -109,5 +111,12 @@ final class StudentImportController
     {
         $ip = $request->server('REMOTE_ADDR');
         return is_string($ip) && filter_var($ip, FILTER_VALIDATE_IP) !== false ? $ip : null;
+    }
+
+    private function page(string $template, array $data, string $title): string
+    {
+        return View::page($template, $data, [
+            'ui' => $this->ui->build('student-import'), 'documentTitle' => $title.' — ปพ.5', 'pageTitle' => $title,
+        ]);
     }
 }

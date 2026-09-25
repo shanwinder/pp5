@@ -5,7 +5,7 @@ $values = ['total' => $row['entered_score_total'], 'max' => $row['configured_max
     'count' => $row['entered_component_count'] . ' / ' . $row['active_component_count'], 'complete' => $row['complete'] ? 'ครบ' : 'ยังไม่ครบ'];
 ?>
 <?php foreach ($values as $suffix => $value): ?>
-  <?php if (!($outOfBand ?? false)): ?><td><?php endif; ?>
+  <?php if (!($outOfBand ?? false)): ?><td class="pp5-gradebook-summary"><?php endif; ?>
   <span id="<?= $escape($prefix . $suffix) ?>"<?= ($outOfBand ?? false) ? ' hx-swap-oob="outerHTML"' : '' ?>><?= $escape($value) ?></span>
   <?php if (!($outOfBand ?? false)): ?></td><?php endif; ?>
 <?php endforeach; ?>

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -18,7 +19,8 @@ final class SystemSchoolController
         private SystemSchoolAdministrationService $administration,
         private SchoolRepository $schools,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(): Response
@@ -97,20 +99,24 @@ final class SystemSchoolController
 
     private function schoolList(?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('system/schools/index', [
+        $ui = $this->ui->build('system.schools');
+        return new Response(View::page('system/schools/index', [
+            'permissions' => $ui['permissions'],
             'schools' => $error === null ? $this->schools->all() : null,
-            'displayName' => (string) $this->session->get('display_name', ''),
+            'canChangeStatus' => $ui['permissions']['SYSTEM_SCHOOL_STATUS_MANAGE'],
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'จัดการโรงเรียน — ระบบ ปพ.5', 'pageTitle' => 'จัดการโรงเรียน']), $status);
     }
 
     private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
     {
-        return new Response(View::render('system/schools/create', [
+        $ui = $this->ui->build('system.schools.create');
+        return new Response(View::page('system/schools/create', [
+            'permissions' => $ui['permissions'],
             'values' => $values,
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'สร้างโรงเรียนและผู้ดูแลคนแรก — ระบบ ปพ.5', 'pageTitle' => 'สร้างโรงเรียนและผู้ดูแลคนแรก']), $status);
     }
 }

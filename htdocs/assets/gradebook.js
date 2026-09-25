@@ -6,7 +6,9 @@
   const status = (input, state, message) => {
     const cell = input.closest('[data-score-cell]');
     cell.dataset.saveState = state;
-    cell.querySelector('[role="status"]').textContent = message;
+    const feedback = cell.querySelector('[role="status"]');
+    // Identical keystroke/queue states should not repeat live-region announcements.
+    if (feedback.textContent !== message) feedback.textContent = message;
     input.setAttribute('aria-invalid', state === 'error' ? 'true' : 'false');
   };
 

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Services\AppUiContextService;
 use App\Http\Request;
 use App\Http\Response;
 use App\Http\Session;
@@ -25,7 +26,8 @@ final class TeachingAssignmentController
         private AcademicYearRepository $years,
         private SubjectOfferingRepository $offerings,
         private Session $session,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private AppUiContextService $ui
     ) {}
 
     public function index(Request $request): Response
@@ -37,7 +39,7 @@ final class TeachingAssignmentController
                 if ($year === null) { throw new DomainException(self::INVALID); }
             }
         } catch (DomainException) {
-            return new Response(View::render('errors/404'), 404);
+            return new Response(View::error(404), 404);
         }
 
         return $this->page($year);
@@ -80,7 +82,9 @@ final class TeachingAssignmentController
         $schoolId = $this->session->get('school_id');
         $canCreate = $selectedYear !== null && in_array($selectedYear['status'], ['DRAFT', 'ACTIVE'], true);
 
-        return new Response(View::render('academic/teaching-assignments/index', [
+        $ui = $this->ui->build('teaching-assignments');
+        return new Response(View::page('academic/teaching-assignments/index', [
+            'permissions' => $ui['permissions'],
             'years' => $this->years->listForSchool($schoolId),
             'selectedYear' => $selectedYear,
             'assignments' => $this->assignments->listDetailedForSchool($schoolId, $selectedYear['id'] ?? null),
@@ -90,7 +94,7 @@ final class TeachingAssignmentController
                 static fn (array $offering): bool => $offering['status'] === 'ACTIVE')) : [],
             'csrfToken' => $this->csrf->token($this->session),
             'error' => $error,
-        ]), $status);
+        ], ['ui' => $ui, 'documentTitle' => 'การมอบหมายครูประจำวิชา — ระบบ ปพ.5', 'pageTitle' => 'การมอบหมายครูประจำวิชา']), $status);
     }
 
     private function positiveId(mixed $value): int
