@@ -421,7 +421,7 @@ Future DMC adapter ต้องใช้ real approved DMC sample เพื่�
 ทุก mutation สำคัญบันทึก actor จาก session, school, entity type/ID และ timestamp
 Student audit เก็บ safe metadata/changed field names; enrollment/placement เก็บ IDs, status และวันที่
 Import summary เก็บ counts กับ source SHA-256 ไม่มี row PII หรือ password/hash ของรหัสผ่าน
-Exact no-op ไม่สร้าง audit noise; transactions rollback เมื่อ repository/auditล้มเหลว
+Exact no-op ไม่สร้าง audit noise; transactions rollback เมื่อ repository/audit ล้มเหลว
 Composite foreign keys บังคับ parent ให้ตรง tenant/year/grade เสริมจาก service validation
 
 ## การมอบหมายครูประจำวิชาและสมุดคะแนน — Milestone 5
@@ -603,7 +603,7 @@ php tools/seed.php --database=pp5_test
    ทดลอง direct STUDENT_VIEW mapping ให้ role เดิมแล้วอ่าน list/history ได้แต่ mutation/import ไม่ได้
    ถอด mapping แล้วสิทธิ์ต้องหายทันที SYSTEM context เข้า SCHOOL student routes ไม่ได้
 2. สร้าง Thai/Unicode student ทั้งมี national ID และเว้นว่าง; ตรวจ NULL, same-school duplicates,
-   same identity ต่างโรงเรียน, แก้ code/profile โดย historyคงเดิม, masked detail และ escaped HTML
+   same identity ต่างโรงเรียน, แก้ code/profile โดย history คงเดิม, masked detail และ escaped HTML
    ตรวจ open active enrollment block inactivation, CLOSED history-only ไม่ block และ reactivate ได้
 3. สร้าง DRAFT/ACTIVE enrollments รวม unplaced; place/move/unassign และ no-op
    ตรวจ wrong school/year/grade, inactive target, move-away จาก inactive old classroom,
@@ -750,7 +750,7 @@ native form confirmation ไม่มี runtime CDN, remote font หรือ N
 
 Synthetic runs ครอบคลุม foundation, navigation, entry, confirmation, administration,
 student workflow, Gradebook autosave/layout และ cross-screen รวม no-JS fallback
-ใช้ผลรอบเดิมที่ผ่านแล้วเพราะ Task 9 ไม่มี production changes; ปิด fixture serversครบ
+ใช้ผลรอบเดิมที่ผ่านแล้วเพราะ Task 9 ไม่มี production changes; ปิด fixture servers ครบ
 
 Real smoke ใช้ MAMP **7.2**, Apache **2.4.62**, serving/CLI PHP **8.3.14**,
 MySQL **8.0.40** ที่ `127.0.0.1:8889` และ PHPUnit **11.5.56**
