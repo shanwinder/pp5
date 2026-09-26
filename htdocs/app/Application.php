@@ -10,6 +10,7 @@ use App\Controllers\GradebookComponentController;
 use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
 use App\Controllers\ClassroomController;
+use App\Controllers\ClassroomWorkspaceController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
 use App\Controllers\SubjectController;
@@ -51,6 +52,7 @@ use App\Services\AuthenticationService;
 use App\Services\AppUiContextService;
 use App\Services\AuthorizationService;
 use App\Services\ClassroomAdministrationService;
+use App\Services\ClassroomWorkspaceReadService;
 use App\Services\SchoolUserAdministrationService;
 use App\Services\SubjectAdministrationService;
 use App\Services\StudentAdministrationService;
@@ -148,6 +150,10 @@ final class Application
         );
         $grades = new GradeLevelRepository($pdo);
         $classrooms = new ClassroomRepository($pdo);
+        $classroomWorkspace = new ClassroomWorkspaceController(
+            new ClassroomWorkspaceReadService($classrooms, $schools, new AuthorizationService($authorization), $gradebookRead),
+            $session, $ui
+        );
         $classroomController = new ClassroomController(
             new ClassroomAdministrationService($pdo, $schools, $years, $grades, $classrooms, new AuditLogRepository($pdo)),
             $classrooms,
@@ -215,11 +221,14 @@ final class Application
         $routeId = $routeId === false ? 0 : $routeId;
         $offeringId = filter_var($routeInfo[2]['offeringId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $offeringId = $offeringId === false ? 0 : $offeringId;
+        $classroomId = filter_var($routeInfo[2]['classroomId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $classroomId = $classroomId === false ? 0 : $classroomId;
         $componentId = filter_var($routeInfo[2]['componentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $componentId = $componentId === false ? 0 : $componentId;
         $enrollmentId = filter_var($routeInfo[2]['enrollmentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $enrollmentId = $enrollmentId === false ? 0 : $enrollmentId;
         $next = match ($handler['action']) {
+            'workspaces.classrooms.show' => static fn (Request $request): Response => $classroomWorkspace->show($classroomId),
             'gradebook.scores.store' => static fn (Request $request): Response => $scoreController->store($request, $offeringId, $componentId, $enrollmentId),
             'gradebook.index' => static fn (Request $request): Response => $gradebookController->index(),
             'gradebook.view' => static fn (Request $request): Response => $gradebookController->show($offeringId),
@@ -313,8 +322,8 @@ final class Application
             }
 
             $response = $auth->handle($request, $next);
-            // A gradebook target must not reveal existence through context/auth denial either.
-            if ($handler['action'] === 'gradebook.view' && $response->status() === 403) {
+            // Resource reads must not reveal existence through context/auth denial either.
+            if (in_array($handler['action'], ['gradebook.view', 'workspaces.classrooms.show'], true) && $response->status() === 403) {
                 return new Response(View::error(404), 404);
             }
 

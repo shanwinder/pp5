@@ -21,7 +21,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     echo 'Synthetic POST receipt: '.$path; exit;
 }
 if ($path === '/frame') {
-    $fixtures = ['entry'=>'ui-entry.php', 'admin'=>'ui-administration.php', 'student'=>'ui-student-workflow.php', 'gradebook'=>'gradebook-autosave.php'];
+    $fixtures = ['entry'=>'ui-entry.php', 'admin'=>'ui-administration.php', 'student'=>'ui-student-workflow.php', 'gradebook'=>'gradebook-autosave.php',
+        'workspace'=>'classroom-workspace.php'];
     $fixture = $fixtures[$_GET['fixture'] ?? ''] ?? null;
     if ($fixture === null) { http_response_code(404); exit; }
     require __DIR__.'/'.$fixture; exit;
@@ -36,6 +37,7 @@ $cases = [
     'enrollment edit'=>['student','academic/enrollments/edit'], 'import preview'=>['student','academic/student-import/preview'],
     'gradebook landing'=>['entry','gradebooks'], 'gradebook'=>['gradebook','editable'], 'gradebook setup'=>['gradebook','setup'],
     '403'=>['entry','403'], '404'=>['entry','404'],
+    'workspace admin'=>['workspace','admin'], 'workspace limited'=>['workspace','limited'], 'workspace empty'=>['workspace','empty'],
 ];
 ?>
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PP5 cross-screen matrix</title></head><body>
