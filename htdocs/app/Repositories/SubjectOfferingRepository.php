@@ -34,6 +34,16 @@ final class SubjectOfferingRepository
         return $statement->fetchAll();
     }
 
+    public function listForClassroom(int $schoolId, int $academicYearId, int $classroomId): array
+    {
+        $statement = $this->pdo->prepare('SELECT ' . self::COLUMNS . self::DETAILS . self::JOINS
+            . ' WHERE o.school_id = ? AND o.academic_year_id = ? AND o.classroom_id = ?'
+            . ' ORDER BY s.code ASC, s.id ASC, o.term_no ASC, o.id ASC');
+        $statement->execute([$schoolId, $academicYearId, $classroomId]);
+
+        return $statement->fetchAll();
+    }
+
     public function findForSchool(int $schoolId, int $offeringId): ?array
     {
         $statement = $this->pdo->prepare('SELECT ' . self::COLUMNS . self::DETAILS . self::JOINS . ' WHERE o.school_id = ? AND o.id = ? LIMIT 1');

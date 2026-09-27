@@ -151,9 +151,11 @@ final class Application
             $ui
         );
         $grades = new GradeLevelRepository($pdo);
+        $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $classroomWorkspace = new ClassroomWorkspaceController(
             $workspaceRead, $session, $ui,
-            new \App\Services\ClassroomRosterReadService($workspaceRead, new StudentEnrollmentRepository($pdo), new AuthorizationService($authorization))
+            new \App\Services\ClassroomRosterReadService($workspaceRead, new StudentEnrollmentRepository($pdo), new AuthorizationService($authorization)),
+            new \App\Services\ClassroomSubjectsReadService($workspaceRead, $offerings, $teachingAssignments, new AuthorizationService($authorization))
         );
         $classroomController = new ClassroomController(
             new ClassroomAdministrationService($pdo, $schools, $years, $grades, $classrooms, new AuditLogRepository($pdo)),
@@ -185,7 +187,6 @@ final class Application
             new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
             $gradebookComponents, $offerings, $session, $csrf, $ui
         );
-        $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $teachingController = new TeachingAssignmentController(
             new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo)),
             $teachingAssignments, $years, $offerings, $session, $csrf, $ui
@@ -230,6 +231,7 @@ final class Application
         $enrollmentId = $enrollmentId === false ? 0 : $enrollmentId;
         $next = match ($handler['action']) {
             'workspaces.classrooms.students' => static fn (Request $request): Response => $classroomWorkspace->students($classroomId),
+            'workspaces.classrooms.subjects' => static fn (Request $request): Response => $classroomWorkspace->subjects($classroomId),
             'workspaces.classrooms.show' => static fn (Request $request): Response => $classroomWorkspace->show($classroomId),
             'gradebook.scores.store' => static fn (Request $request): Response => $scoreController->store($request, $offeringId, $componentId, $enrollmentId),
             'gradebook.index' => static fn (Request $request): Response => $gradebookController->index(),
@@ -325,7 +327,7 @@ final class Application
 
             $response = $auth->handle($request, $next);
             // Resource reads must not reveal existence through context/auth denial either.
-            if (in_array($handler['action'], ['gradebook.view', 'workspaces.classrooms.show', 'workspaces.classrooms.students'], true) && $response->status() === 403) {
+            if (in_array($handler['action'], ['gradebook.view', 'workspaces.classrooms.show', 'workspaces.classrooms.students', 'workspaces.classrooms.subjects'], true) && $response->status() === 403) {
                 return new Response(View::error(404), 404);
             }
 

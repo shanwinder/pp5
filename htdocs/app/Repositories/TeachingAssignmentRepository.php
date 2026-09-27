@@ -72,6 +72,29 @@ final class TeachingAssignmentRepository
         return array_map($this->castIds(...), $statement->fetchAll());
     }
 
+    /** Current, eligible teachers for an already authorized set of offerings. */
+    public function listActiveForOfferings(int $schoolId, array $offeringIds): array
+    {
+        if ($offeringIds === []) { return []; }
+        $placeholders = implode(', ', array_fill(0, count($offeringIds), '?'));
+        $statement = $this->pdo->prepare("SELECT ps.id, ps.subject_offering_id, u.display_name
+            FROM permission_scopes ps
+            JOIN subject_offerings o ON o.id = ps.subject_offering_id AND o.school_id = ps.school_id
+                AND o.academic_year_id = ps.academic_year_id
+            JOIN user_role_assignments ura ON ura.id = ps.user_role_assignment_id AND ura.school_id = ps.school_id
+            JOIN roles r ON r.id = ura.role_id
+            JOIN school_memberships sm ON sm.school_id = ura.school_id AND sm.user_id = ura.user_id
+            JOIN users u ON u.id = ura.user_id
+            WHERE ps.school_id = ? AND ps.subject_offering_id IN ($placeholders) AND ps.status = 'ACTIVE'
+              AND ura.status = 'ACTIVE' AND ura.academic_year_id IS NULL
+              AND r.code = 'SUBJECT_TEACHER' AND r.scope_type = 'SCHOOL' AND r.status = 'ACTIVE'
+              AND sm.status = 'ACTIVE' AND u.status = 'ACTIVE'
+            ORDER BY ps.subject_offering_id, u.display_name, ps.id");
+        $statement->execute(array_merge([$schoolId], $offeringIds));
+
+        return array_map($this->castIds(...), $statement->fetchAll());
+    }
+
     public function listForSchool(int $schoolId): array
     {
         // History includes inactive scopes and closed years.

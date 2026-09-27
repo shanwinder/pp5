@@ -39,6 +39,8 @@ $cases = [
     '403'=>['entry','403'], '404'=>['entry','404'],
     'roster normal'=>['workspace','roster-normal'], 'roster empty'=>['workspace','roster-empty'], 'roster readonly'=>['workspace','roster-readonly'],
     'workspace admin'=>['workspace','admin'], 'workspace limited'=>['workspace','limited'], 'workspace empty'=>['workspace','empty'],
+    'subjects normal'=>['workspace','subjects-normal'], 'subjects limited'=>['workspace','subjects-limited'],
+    'subjects empty'=>['workspace','subjects-empty'], 'subjects readonly'=>['workspace','subjects-readonly'],
 ];
 ?>
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PP5 cross-screen matrix</title></head><body>

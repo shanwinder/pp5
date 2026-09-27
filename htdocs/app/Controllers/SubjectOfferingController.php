@@ -58,7 +58,9 @@ final class SubjectOfferingController
     public function create(Request $request): Response
     {
         try {
-            $year = $this->queryYear($request);
+            $workspace = $this->ui->classroomWorkspace($request->query('workspace_classroom_id'));
+            $year = $workspace === null ? $this->queryYear($request)
+                : $this->years->findForSchool($this->session->get('school_id'), $workspace['academicYear']['id']);
             if ($year !== null && !in_array($year['status'], ['DRAFT', 'ACTIVE'], true)) {
                 return new Response(View::error(404), 404);
             }
@@ -66,7 +68,8 @@ final class SubjectOfferingController
             return new Response(View::error(404), 404);
         }
 
-        return $this->createForm(['academic_year_id' => $year['id'] ?? null]);
+        return $this->createForm(['academic_year_id' => $year['id'] ?? null,
+            'classroom_id' => $workspace['classroom']['id'] ?? null], workspace: $workspace);
     }
 
     public function store(Request $request): Response
@@ -78,7 +81,7 @@ final class SubjectOfferingController
         try {
             $values = $this->details($request);
             $values['academic_year_id'] = $this->positiveId($request->post('academic_year_id'));
-            $this->administration->createOffering(
+            $offeringId = $this->administration->createOffering(
                 $this->session->get('school_id'), $this->session->get('user_id'), $values['academic_year_id'],
                 $values['classroom_id'], $values['subject_id'], $values['term_no'], $this->ipAddress($request)
             );
@@ -86,7 +89,7 @@ final class SubjectOfferingController
             return $this->createForm($values, $exception->getMessage(), 422);
         }
 
-        return Response::redirect('/academic/offerings');
+        return Response::redirect($this->workspaceReturn($request, $offeringId) ?? '/academic/offerings');
     }
 
     public function edit(int $offeringId): Response
@@ -160,6 +163,19 @@ final class SubjectOfferingController
         return $year;
     }
 
+    private function workspaceReturn(Request $request, int $offeringId): ?string
+    {
+        if ($request->query('workspace_classroom_id') === null) { return null; }
+        try {
+            $workspace = $this->ui->classroomWorkspace($request->query('workspace_classroom_id'));
+        } catch (DomainException) { return null; }
+        $offering = $this->offerings->findForSchool($this->session->get('school_id'), $offeringId);
+        return $workspace !== null && $offering !== null
+            && (int) $offering['classroom_id'] === $workspace['classroom']['id']
+            && (int) $offering['academic_year_id'] === $workspace['academicYear']['id']
+            ? '/workspaces/classrooms/' . $workspace['classroom']['id'] . '/subjects' : null;
+    }
+
     private function positiveId(mixed $value): int
     {
         if ((!is_string($value) && !is_int($value)) || !preg_match('/\A[0-9]+\z/', (string) $value)) {
@@ -208,7 +224,7 @@ final class SubjectOfferingController
             static fn (array $subject): bool => $subject['status'] === 'ACTIVE'));
     }
 
-    private function createForm(array $values = [], ?string $error = null, int $status = 200): Response
+    private function createForm(array $values = [], ?string $error = null, int $status = 200, ?array $workspace = null): Response
     {
         $years = array_values(array_filter($this->years->listForSchool($this->session->get('school_id')),
             static fn (array $year): bool => in_array($year['status'], ['DRAFT', 'ACTIVE'], true)));
@@ -220,7 +236,7 @@ final class SubjectOfferingController
             }
         }
 
-        $ui = $this->ui->build('academic.offerings');
+        $ui = $this->ui->build('academic.offerings', false, $workspace);
         return new Response(View::page('academic/offerings/create', [
             'permissions' => $ui['permissions'],
             'values' => $values,

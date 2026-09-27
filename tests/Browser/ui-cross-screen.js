@@ -27,7 +27,8 @@
       } else check(!panel.hidden && w.getComputedStyle(trigger).display === 'none', 'desktop navigation visible');
     }
     const isRoster = frame.title.startsWith('roster ');
-    const broadWorkspace = frame.title.startsWith('workspace admin') || frame.title.startsWith('roster normal');
+    const isSubjects = frame.title.startsWith('subjects ');
+    const broadWorkspace = frame.title.startsWith('workspace admin') || frame.title.startsWith('roster normal') || frame.title.startsWith('subjects normal') || frame.title.startsWith('subjects empty') || frame.title.startsWith('subjects readonly');
     const workspace = d.querySelector('.pp5-workspace-shell');
     if (workspace) {
       const switcher = workspace.querySelector('details'), summary = switcher.querySelector('summary');
@@ -35,14 +36,14 @@
       summary.focus(); check(d.activeElement === summary, 'native switcher focusable');
       summary.click(); check(switcher.open, 'native disclosure opens');
       check(workspace.querySelectorAll('nav[aria-label="งานในห้องเรียน"] a[aria-current="page"]').length === 1, 'one active local section');
-      check(workspace.querySelector('[aria-current="page"]').textContent === (isRoster ? 'นักเรียน' : 'ภาพรวม'), 'implemented section active');
+      check(workspace.querySelector('[aria-current="page"]').textContent === (isRoster ? 'นักเรียน' : (isSubjects ? 'รายวิชาและครู' : 'ภาพรวม')), 'implemented section active');
       const targets = workspace.querySelectorAll('details a');
       check(targets.length === (broadWorkspace ? 24 : 1), 'only fixture-authorized switch targets');
       const last = targets[targets.length - 1];
       last.focus(); last.scrollIntoView({block:'nearest',inline:'nearest'});
       const bounds = last.getBoundingClientRect(), scroll = last.closest('.pp5-workspace-choices').getBoundingClientRect();
       check(bounds.top >= scroll.top - 1 && bounds.bottom <= scroll.bottom + 1, 'last switch target reachable');
-      check(workspace.querySelectorAll('nav a').length === (broadWorkspace ? 5 : 2), 'capability-dependent local navigation');
+      check(workspace.querySelectorAll('nav a').length === (broadWorkspace ? 4 : (isRoster || frame.title.startsWith('workspace empty') ? 2 : 3)), 'capability-dependent local navigation');
       check(d.querySelector('form[action="/logout"][method="post"] input[name="_token"]'), 'secure logout reachable');
     }
     if (isRoster) {
@@ -52,6 +53,17 @@
       check(table.querySelectorAll('a[href$="#move-classroom"]').length === (broadWorkspace ? 8 : 0), 'manage links only for manager');
       check(table.querySelectorAll('a[href$="#student-status"]').length === (broadWorkspace ? 8 : 0), 'status links only for manager');
       check(!table.querySelector('script, input'), 'no injected markup or hidden profile fields');
+    }
+    if (isSubjects) {
+      const table = d.querySelector('table#classroom-subjects');
+      const empty = frame.title.startsWith('subjects empty');
+      check(empty ? !table : !!table, 'subjects empty/table state');
+      if (table) {
+        check(table.querySelectorAll('thead th[scope="col"]').length === 5, 'semantic subject columns');
+        check(table.querySelectorAll('tr[data-offering-id]').length === (frame.title.startsWith('subjects normal') ? 2 : 1), 'subject term rows');
+        check(table.querySelectorAll('form[action^="/academic/teaching-assignments?"]').length === (frame.title.startsWith('subjects normal') ? 2 : 0), 'assignment actions follow authority');
+        check(!table.querySelector('script'), 'teacher and subject names escaped');
+      }
     }
     for (const region of d.querySelectorAll('.pp5-table-scroll')) {
       check(region.getBoundingClientRect().right <= w.innerWidth + 1, 'table contained');

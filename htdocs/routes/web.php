@@ -86,6 +86,9 @@ return static function (RouteCollector $r): void {
         'action' => 'workspaces.classrooms.students', 'protected' => true, 'context' => AccessContext::SCHOOL,
         'permission' => 'STUDENT_VIEW',
     ]);
+    $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}/subjects', [
+        'action' => 'workspaces.classrooms.subjects', 'protected' => true, 'context' => AccessContext::SCHOOL,
+    ]);
     // The overview composes generic permissions and offering-scoped access, as for Gradebook.
     $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}', [
         'action' => 'workspaces.classrooms.show', 'protected' => true, 'context' => AccessContext::SCHOOL,

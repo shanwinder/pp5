@@ -10,7 +10,7 @@ final class ClassroomWorkspaceNavigation
     {
         $base = '/workspaces/classrooms/' . $workspace['classroom']['id'];
         $items = [['key' => 'overview', 'label' => 'ภาพรวม', 'url' => $base]];
-        $labels = ['students' => 'นักเรียน', 'subjects' => 'รายวิชาในปีนี้', 'teaching' => 'ครูผู้สอนในปีนี้'];
+        $labels = ['students' => 'นักเรียน', 'subjects' => 'รายวิชาและครู'];
         foreach ($workspace['links'] as $link) {
             $items[] = ['key' => $link['key'], 'label' => $labels[$link['key']], 'url' => $link['url']];
         }
@@ -20,7 +20,7 @@ final class ClassroomWorkspaceNavigation
         // Descendant keys inherit their implemented section, without registering speculative routes.
         $active = 'overview';
         foreach (['enrollments' => 'students', 'academic.offerings' => 'subjects',
-            'teaching-assignments' => 'teaching', 'gradebooks' => 'scores'] as $prefix => $section) {
+            'teaching-assignments' => 'subjects', 'gradebooks' => 'scores'] as $prefix => $section) {
             if ($currentKey === $prefix || str_starts_with($currentKey, $prefix . '.')) { $active = $section; }
         }
         if (str_starts_with($currentKey, 'workspaces.classrooms.')) {

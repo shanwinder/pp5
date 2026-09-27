@@ -116,7 +116,8 @@ final class ClassroomWorkspaceTest extends TestCase
         $this->login('SUBJECT_TEACHER');
         $model = $this->overview('SUBJECT_TEACHER');
         self::assertSame(['overview' => true, 'students' => false, 'subjects' => false, 'teaching' => false, 'scores' => true], $model['capabilities']);
-        self::assertSame([], $model['links']);
+        self::assertSame([['key' => 'subjects', 'label' => 'ดูรายวิชาและครูในห้องนี้',
+            'url' => $this->workspacePath() . '/subjects']], $model['links']);
         $body = $this->request('GET', $this->workspacePath())->body();
         $x = $this->xpath($body);
         self::assertSame(0, $x->query('//a[starts-with(@href,"/students") or starts-with(@href,"/academic/") or starts-with(@href,"/admin/")]')->length);
@@ -173,9 +174,9 @@ final class ClassroomWorkspaceTest extends TestCase
 
     public static function permissions(): iterable
     {
-        yield ['STUDENT_VIEW', 'students', '/academic/enrollments'];
-        yield ['ACADEMIC_SETUP_VIEW', 'subjects', '/academic/offerings'];
-        yield ['TEACHING_ASSIGNMENT_MANAGE', 'teaching', '/academic/teaching-assignments'];
+        yield ['STUDENT_VIEW', 'students', '/students'];
+        yield ['ACADEMIC_SETUP_VIEW', 'subjects', '/subjects'];
+        yield ['TEACHING_ASSIGNMENT_MANAGE', 'teaching', '/subjects'];
     }
 
     #[DataProvider('permissions')]
@@ -191,7 +192,7 @@ final class ClassroomWorkspaceTest extends TestCase
         }
         self::assertSame([], $model['gradebooks']);
         self::assertCount(1, $model['links']);
-        self::assertSame($capability === 'students' ? $this->workspacePath() . '/students' : $path, parse_url($model['links'][0]['url'], PHP_URL_PATH));
+        self::assertSame($this->workspacePath() . $path, parse_url($model['links'][0]['url'], PHP_URL_PATH));
         self::assertSame(200, $this->request('GET', $this->workspacePath())->status());
         self::assertSame(404, $this->request('GET', $this->readPath())->status());
         $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='VIEWER' AND p.code=?")->execute([$permission]);

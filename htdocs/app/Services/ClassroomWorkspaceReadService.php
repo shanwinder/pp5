@@ -43,18 +43,14 @@ final class ClassroomWorkspaceReadService
         $school = $this->schools->findActiveById((int) $classroom['school_id']);
         if ($school === null) { return null; }
 
-        // Only existing read destinations. Legacy subject/teaching lists are year-wide.
-        $yearQuery = http_build_query(['academic_year_id' => $classroom['academic_year_id'], 'workspace_classroom_id' => $classroom['id']]);
         $links = [];
         if ($capabilities['students']) {
             $links[] = ['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้',
                 'url' => '/workspaces/classrooms/' . $classroom['id'] . '/students'];
         }
-        if ($capabilities['subjects']) {
-            $links[] = ['key' => 'subjects', 'label' => 'ดูรายวิชาในปีการศึกษานี้', 'url' => '/academic/offerings?' . $yearQuery];
-        }
-        if ($capabilities['teaching']) {
-            $links[] = ['key' => 'teaching', 'label' => 'ดูครูผู้สอนในปีการศึกษานี้', 'url' => '/academic/teaching-assignments?' . $yearQuery];
+        if ($capabilities['subjects'] || $capabilities['teaching'] || $capabilities['scores']) {
+            $links[] = ['key' => 'subjects', 'label' => 'ดูรายวิชาและครูในห้องนี้',
+                'url' => '/workspaces/classrooms/' . $classroom['id'] . '/subjects'];
         }
 
         // Explicit fields keep unrelated metadata and student PII outside this read model.
@@ -85,6 +81,8 @@ final class ClassroomWorkspaceReadService
         foreach (['students' => 'STUDENT_VIEW', 'subjects' => 'ACADEMIC_SETUP_VIEW', 'teaching' => 'TEACHING_ASSIGNMENT_MANAGE'] as $key => $permission) {
             $capabilities[$key] = $this->authorization->hasPermission($userId, $contextType, $schoolId, $permission);
         }
+        $capabilities['subjects'] = $capabilities['subjects']
+            || $this->authorization->hasPermission($userId, $contextType, $schoolId, 'SUBJECT_OFFERING_MANAGE');
         return $capabilities;
     }
 

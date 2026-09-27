@@ -9,7 +9,8 @@ use App\Support\View;
 
 $page = $_GET['page'] ?? 'limited';
 $roster = str_starts_with($page, 'roster-');
-$admin = $page === 'admin' || $page === 'roster-normal';
+$subjectsPage = str_starts_with($page, 'subjects-');
+$admin = in_array($page, ['admin', 'roster-normal', 'subjects-normal', 'subjects-empty', 'subjects-readonly'], true);
 $workspace = [
     'school' => ['id' => 1, 'name' => 'โรงเรียนทดสอบงานชั้นเรียน'],
     'classroom' => ['id' => 1, 'code' => 'P4-1', 'name' => 'ป.4/1', 'status' => 'ACTIVE'],
@@ -18,9 +19,8 @@ $workspace = [
     'capabilities' => ['overview' => true, 'students' => $admin, 'subjects' => $admin, 'teaching' => $admin, 'scores' => $page !== 'empty'],
     'links' => $admin ? [
         ['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้', 'url' => '/workspaces/classrooms/1/students'],
-        ['key' => 'subjects', 'label' => 'ดูรายวิชาในปีการศึกษานี้', 'url' => '/academic/offerings?academic_year_id=1&workspace_classroom_id=1'],
-        ['key' => 'teaching', 'label' => 'ดูครูผู้สอนในปีการศึกษานี้', 'url' => '/academic/teaching-assignments?academic_year_id=1&workspace_classroom_id=1'],
-    ] : [],
+        ['key' => 'subjects', 'label' => 'ดูรายวิชาและครูในห้องนี้', 'url' => '/workspaces/classrooms/1/subjects'],
+    ] : [['key' => 'subjects', 'label' => 'ดูรายวิชาและครูในห้องนี้', 'url' => '/workspaces/classrooms/1/subjects']],
     'gradebooks' => $page === 'empty' ? [] : [
         ['id' => 1, 'subject_code' => 'ว14101', 'subject_name' => str_repeat('วิทยาศาสตร์และเทคโนโลยี ', 6) . '<script>fixture</script>', 'term_no' => 1, 'status' => 'ACTIVE'],
     ],
@@ -42,7 +42,8 @@ if ($roster && !$admin) {
     $workspace['capabilities'] = ['overview' => true, 'students' => true, 'subjects' => false, 'teaching' => false, 'scores' => false];
     $workspace['links'] = [['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้', 'url' => '/workspaces/classrooms/1/students']];
 }
-$currentKey = $roster ? 'workspaces.classrooms.students' : 'workspaces.classrooms';
+if ($page === 'subjects-readonly') { $workspace['academicYear']['status'] = 'CLOSED'; }
+$currentKey = $roster ? 'workspaces.classrooms.students' : ($subjectsPage ? 'workspaces.classrooms.subjects' : 'workspaces.classrooms');
 $workspace['navigation'] = App\Support\ClassroomWorkspaceNavigation::items($workspace, $currentKey);
 $students = [];
 if ($roster && $page !== 'roster-empty') {
@@ -62,9 +63,21 @@ if ($page !== 'empty') {
         ['key' => 'gradebooks', 'label' => 'สมุดคะแนน', 'url' => '/gradebooks', 'detail' => null],
     ]];
 }
-echo View::page($roster ? 'workspaces/classroom/students' : 'workspaces/classroom/overview',
-    ['workspace' => $workspace, 'students' => $students, 'openYear' => true, 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin], [
-    'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => ($roster ? 'นักเรียน' : 'งานชั้นเรียน') . ' · ป.4/1',
+$offerings = $page === 'subjects-empty' ? [] : [[
+    'id' => 1, 'subjectId' => 1, 'code' => 'ว14101',
+    'name' => str_repeat('วิทยาศาสตร์และเทคโนโลยี ', 4) . '<script>fixture</script>',
+    'term' => 1, 'status' => 'ACTIVE',
+    'teachers' => [['id' => 1, 'name' => str_repeat('ครูชื่อยาว ', 5) . '<script>fixture</script>']],
+    'teacherNamesVisible' => true, 'canOpenGradebook' => true,
+    'canSetup' => $admin, 'canEdit' => $admin && $page !== 'subjects-readonly',
+    'canAssign' => $admin && $page !== 'subjects-readonly',
+]];
+if ($page === 'subjects-normal') { $offerings[] = array_replace($offerings[0], ['id' => 2, 'term' => 2, 'teachers' => [], 'canOpenGradebook' => false]); }
+echo View::page($roster ? 'workspaces/classroom/students' : ($subjectsPage ? 'workspaces/classroom/subjects' : 'workspaces/classroom/overview'),
+    ['workspace' => $workspace, 'students' => $students, 'openYear' => $page !== 'subjects-readonly', 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin,
+        'offerings' => $offerings, 'teacherChoices' => $admin ? [['user_role_assignment_id' => 1, 'display_name' => 'ครูทดสอบ']] : [],
+        'canOpenOffering' => $admin && $page !== 'subjects-readonly', 'canManageAssignment' => $admin, 'canViewAll' => $admin, 'csrfToken' => 'synthetic-only'], [
+    'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => ($roster ? 'นักเรียน' : ($subjectsPage ? 'รายวิชาและครู' : 'งานชั้นเรียน')) . ' · ป.4/1',
     'ui' => ['contextType' => 'SCHOOL', 'schoolName' => $workspace['school']['name'], 'displayName' => 'ผู้ใช้ทดสอบ',
         'workspace' => $workspace, 'csrfToken' => 'synthetic-only', 'currentKey' => $currentKey, 'sections' => $sections],
 ]);

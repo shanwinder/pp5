@@ -54,13 +54,13 @@ final class TeachingAssignmentController
         try {
             $teacher = $this->positiveId($request->post('user_role_assignment_id'));
             $offering = $this->positiveId($request->post('subject_offering_id'));
-            $this->teaching->createAssignment($this->session->get('school_id'), $this->session->get('user_id'),
+            $assignmentId = $this->teaching->createAssignment($this->session->get('school_id'), $this->session->get('user_id'),
                 $teacher, $offering, $this->ipAddress($request));
         } catch (DomainException) {
             return $this->page(null, self::INVALID, 422);
         }
 
-        return Response::redirect(self::PATH);
+        return Response::redirect($this->workspaceReturn($request, $assignmentId) ?? self::PATH);
     }
 
     public function changeStatus(Request $request, int $teachingAssignmentId): Response
@@ -77,7 +77,21 @@ final class TeachingAssignmentController
             return $this->page(null, self::INVALID, 422);
         }
 
-        return Response::redirect(self::PATH);
+        return Response::redirect($this->workspaceReturn($request, $teachingAssignmentId) ?? self::PATH);
+    }
+
+    private function workspaceReturn(Request $request, int $assignmentId): ?string
+    {
+        if ($request->query('workspace_classroom_id') === null) { return null; }
+        try {
+            $workspace = $this->ui->classroomWorkspace($request->query('workspace_classroom_id'));
+        } catch (DomainException) { return null; }
+        $assignment = $this->assignments->findForSchool($this->session->get('school_id'), $assignmentId);
+        $offering = $assignment === null ? null : $this->offerings->findForSchool($this->session->get('school_id'), $assignment['subject_offering_id']);
+        return $workspace !== null && $offering !== null
+            && (int) $offering['classroom_id'] === $workspace['classroom']['id']
+            && (int) $offering['academic_year_id'] === $workspace['academicYear']['id']
+            ? '/workspaces/classrooms/' . $workspace['classroom']['id'] . '/subjects' : null;
     }
 
     private function page(?array $selectedYear = null, ?string $error = null, int $status = 200, ?array $workspace = null): Response

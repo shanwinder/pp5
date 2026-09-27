@@ -2,6 +2,8 @@
 <?php if ($permissions['ACADEMIC_SETUP_VIEW']): ?><nav aria-label="เส้นทางหน้า"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/academic/offerings">การเปิดรายวิชา</a></li><li class="breadcrumb-item active" aria-current="page">เพิ่มข้อมูล</li></ol></nav><?php endif; ?>
 <?php if ($error !== null): ?><p class="pp5-alert pp5-alert--danger" role="alert"><?= htmlspecialchars($error, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p><?php endif; ?>
 <p>เลือกปีการศึกษาสถานะร่างหรือกำลังใช้งาน เพื่อแสดงห้องเรียนที่เปิดใช้งานในปีนั้น</p>
+<?php if (($workspace ?? null) !== null): ?><p>เลือกปีการศึกษาและห้องเรียนจากงานชั้นเรียนแล้ว ตรวจสอบรายวิชาและภาคเรียนก่อนบันทึก</p><?php endif; ?>
+<?php if (($workspace ?? null) === null): ?>
 <form class="pp5-filter-bar" method="get" action="/academic/offerings/create">
     <div class="pp5-field"><label class="form-label" for="academic-offerings-create-academic_year_id">ปีการศึกษา (พ.ศ.)
         <select class="form-select" id="academic-offerings-create-academic_year_id" name="academic_year_id" required>
@@ -13,10 +15,11 @@
     </label></div>
     <button class="btn btn-primary" type="submit">เลือกปีการศึกษา</button>
 </form>
+<?php endif; ?>
 <?php if ($selectedYear !== null): ?>
     <p>ปีการศึกษา (พ.ศ.): <?= htmlspecialchars((string) $selectedYear['year_be'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?> เมื่อบันทึกแล้วจะเปลี่ยนปีการศึกษาไม่ได้</p>
     <p>การเปิดรายวิชาใหม่จะมีสถานะใช้งาน</p>
-    <form class="pp5-form pp5-surface" method="post" action="/academic/offerings">
+    <form class="pp5-form pp5-surface" method="post" action="/academic/offerings<?= ($workspace ?? null) === null ? '' : '?workspace_classroom_id=' . (int) $workspace['classroom']['id'] ?>">
         <input type="hidden" name="_token" value="<?= htmlspecialchars($csrfToken, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
         <input type="hidden" name="academic_year_id" value="<?= htmlspecialchars((string) $selectedYear['id'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
         <div class="pp5-field"><label class="form-label" for="academic-offerings-create-classroom_id">ห้องเรียน

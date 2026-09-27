@@ -62,7 +62,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
             self::assertSame(200, $response->status());
             $links = $this->links($response->body(), '//main//a[starts-with(@href,"/workspaces/classrooms/")]');
             self::assertNotEmpty($links);
-            foreach ($links as $link) { self::assertSame($this->workspacePath(), explode('#', $link)[0]); }
+            foreach ($links as $link) { self::assertContains(explode('#', $link)[0], [$this->workspacePath(), $this->workspacePath() . '/subjects']); }
             self::assertSame([], $this->links($response->body(), '//nav[@aria-label="งานในห้องเรียน"]//a[starts-with(@href,"/academic/")]'));
             self::assertStringNotContainsString($this->readPath('Other') . '"', $response->body());
         }
@@ -86,9 +86,9 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
 
     public static function capabilities(): iterable
     {
-        yield ['STUDENT_VIEW', 'students', '/academic/enrollments'];
-        yield ['ACADEMIC_SETUP_VIEW', 'subjects', '/academic/offerings'];
-        yield ['TEACHING_ASSIGNMENT_MANAGE', 'teaching', '/academic/teaching-assignments'];
+        yield ['STUDENT_VIEW', 'students', '/students'];
+        yield ['ACADEMIC_SETUP_VIEW', 'subjects', '/subjects'];
+        yield ['TEACHING_ASSIGNMENT_MANAGE', 'subjects', '/subjects'];
     }
 
     #[DataProvider('capabilities')]
@@ -99,7 +99,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         self::assertStringNotContainsString('id="classroom-workspaces"', $this->request('GET', '/dashboard')->body());
         $this->pdo->prepare("INSERT INTO role_permissions (role_id,permission_id) SELECT r.id,p.id FROM roles r CROSS JOIN permissions p WHERE r.code='VIEWER' AND p.code=?")->execute([$permission]);
         $model = $this->model('VIEWER');
-        if ($section === 'students') { $path = $this->workspacePath() . '/students'; }
+        $path = $this->workspacePath() . $path;
         self::assertSame(['overview', $section], array_column(ClassroomWorkspaceNavigation::items($model, 'workspaces.classrooms'), 'key'));
         self::assertCount(4, $this->targets('VIEWER'));
         $body = $this->request('GET', $this->workspacePath())->body();
@@ -146,9 +146,9 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
             $x = $this->xpath($normal->body());
             self::assertSame(1, $x->query('//section[@aria-label="บริบทงานชั้นเรียน"]')->length);
             self::assertSame([$link['url']], $this->links($normal->body(), '//nav[@aria-label="งานในห้องเรียน"]//a[@aria-current="page"]'));
-            self::assertSame($link['key'] === 'students' ? [] : [$parts['path']], $this->links($normal->body(), '//aside//a[@aria-current="page"]'));
+            self::assertSame([], $this->links($normal->body(), '//aside//a[@aria-current="page"]'));
             self::assertSame(1, $x->query('//form[@method="post" and @action="/logout"]//input[@name="_token"]')->length);
-            if ($link['key'] !== 'students') { self::assertStringContainsString('หน้านี้แสดงทุกห้องในปีการศึกษา 2569', $normal->body()); }
+            if ($link['key'] === 'subjects') { self::assertStringContainsString('แต่ละภาคเรียนเป็นรายการแยกกัน', $normal->body()); }
         }
         $response = $this->request('GET', '/academic/enrollments', [], ['workspace_classroom_id' => $this->f['roomA'], 'q' => '01-CURRENT']);
         self::assertSame(200, $response->status());
@@ -184,7 +184,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         yield ['enrollments', 'students'];
         yield ['enrollments.details', 'students'];
         yield ['academic.offerings.details', 'subjects'];
-        yield ['teaching-assignments.details', 'teaching'];
+        yield ['teaching-assignments.details', 'subjects'];
         yield ['gradebooks.details', 'scores'];
     }
 
@@ -195,7 +195,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         self::assertSame([$section], array_column(array_filter($items, static fn (array $i): bool => $i['active']), 'key'));
         $dispatcher = FastRoute\simpleDispatcher(require dirname(__DIR__, 2) . '/htdocs/routes/web.php');
         self::assertSame(FastRoute\Dispatcher::FOUND, $dispatcher->dispatch('GET', $this->workspacePath() . '/students')[0]);
-        self::assertSame(FastRoute\Dispatcher::NOT_FOUND, $dispatcher->dispatch('GET', $this->workspacePath() . '/subjects')[0]);
+        self::assertSame(FastRoute\Dispatcher::FOUND, $dispatcher->dispatch('GET', $this->workspacePath() . '/subjects')[0]);
     }
 
     public function testSwitchingDoesNotAddQueriesPerClassroomOrReadSensitiveTables(): void
