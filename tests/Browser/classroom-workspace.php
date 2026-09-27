@@ -76,7 +76,8 @@ if ($page === 'subjects-normal') { $offerings[] = array_replace($offerings[0], [
 echo View::page($roster ? 'workspaces/classroom/students' : ($subjectsPage ? 'workspaces/classroom/subjects' : 'workspaces/classroom/overview'),
     ['workspace' => $workspace, 'students' => $students, 'openYear' => $page !== 'subjects-readonly', 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin,
         'offerings' => $offerings, 'teacherChoices' => $admin ? [['user_role_assignment_id' => 1, 'display_name' => 'ครูทดสอบ']] : [],
-        'canOpenOffering' => $admin && $page !== 'subjects-readonly', 'canManageAssignment' => $admin, 'canViewAll' => $admin, 'csrfToken' => 'synthetic-only'], [
+        'canOpenOffering' => $admin && $page !== 'subjects-readonly', 'canManageSubjects' => $admin && $page !== 'subjects-readonly',
+        'canManageAssignment' => $admin, 'canViewAll' => $admin, 'csrfToken' => 'synthetic-only'], [
     'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => ($roster ? 'นักเรียน' : ($subjectsPage ? 'รายวิชาและครู' : 'งานชั้นเรียน')) . ' · ป.4/1',
     'ui' => ['contextType' => 'SCHOOL', 'schoolName' => $workspace['school']['name'], 'displayName' => 'ผู้ใช้ทดสอบ',
         'workspace' => $workspace, 'csrfToken' => 'synthetic-only', 'currentKey' => $currentKey, 'sections' => $sections],

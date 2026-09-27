@@ -77,6 +77,20 @@ final class GradebookReadService
         return $accessible;
     }
 
+    /** Resolve Gradebook links for one already validated classroom without reading other rooms. */
+    public function listAccessibleOfferingsForClassroom(int $userId, string $contextType, int $schoolId, int $academicYearId, int $classroomId): array
+    {
+        if ($contextType !== AccessContext::SCHOOL || $schoolId <= 0 || $academicYearId <= 0 || $classroomId <= 0) { return []; }
+        $accessible = [];
+        foreach ($this->offerings->listForClassroom($schoolId, $academicYearId, $classroomId) as $offering) {
+            if ($this->authorization->hasSubjectOfferingPermission($userId, $contextType, $schoolId, (int) $offering['id'], 'GRADEBOOK_VIEW')) {
+                $accessible[] = $offering;
+            }
+        }
+
+        return $accessible;
+    }
+
     /** Existence only for shell navigation; keep live scoped checks and stop at the first match. */
     public function hasAccessibleOffering(int $userId, string $contextType, int $schoolId): bool
     {

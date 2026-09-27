@@ -30,6 +30,7 @@ final class ClassroomSubjectsReadService
         if (!$canViewAll && $gradebookIds === []) { return null; }
 
         $canManageOffering = $this->authorization->hasPermission($userId, $contextType, $schoolId, 'SUBJECT_OFFERING_MANAGE');
+        $canManageSubjects = $this->authorization->hasPermission($userId, $contextType, $schoolId, 'SUBJECT_MANAGE');
         $canManageAssignment = $workspace['capabilities']['teaching'];
         $canManageComponents = $this->authorization->hasPermission($userId, $contextType, $schoolId, 'GRADEBOOK_COMPONENT_MANAGE');
         $openYear = in_array($workspace['academicYear']['status'], ['DRAFT', 'ACTIVE'], true);
@@ -66,6 +67,7 @@ final class ClassroomSubjectsReadService
 
         return compact('workspace', 'offerings', 'teacherChoices', 'openYear') + [
             'canOpenOffering' => $canManageOffering && $openYear && $workspace['classroom']['status'] === 'ACTIVE',
+            'canManageSubjects' => $canManageSubjects && $openYear,
             'canManageAssignment' => $canManageAssignment,
             'canViewAll' => $canViewAll,
         ];

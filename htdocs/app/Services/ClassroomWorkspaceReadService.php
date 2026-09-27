@@ -27,7 +27,12 @@ final class ClassroomWorkspaceReadService
         if ($classroom === null) { return null; }
 
         $capabilities = $this->capabilities($userId, $contextType, $schoolId);
-        $accessible = $this->gradebooks->listAccessibleOfferings($userId, $contextType, $schoolId);
+        // Broad classroom readers use a room-scoped Gradebook projection. Scope-only readers
+        // still need the school-wide projection to build their authorized room switcher.
+        $accessible = $capabilities['students'] || $capabilities['subjects'] || $capabilities['teaching']
+            ? $this->gradebooks->listAccessibleOfferingsForClassroom($userId, $contextType, $schoolId,
+                (int) $classroom['academic_year_id'], $classroomId)
+            : $this->gradebooks->listAccessibleOfferings($userId, $contextType, $schoolId);
         $gradebooks = [];
         // Reuse the live offering checks, including historical read access. Do not load a roster or scores.
         foreach ($accessible as $offering) {

@@ -9,6 +9,7 @@ $lastSubject = null;
   <p>รายวิชาที่เปิดสอนใน <?= $escape($room['name']) ?> · ปีการศึกษา <?= $escape($year['year_be']) ?> แต่ละภาคเรียนเป็นรายการแยกกัน</p>
   <?php if (!$openYear): ?><p class="pp5-alert pp5-alert--info">ปีการศึกษานี้ปิดแล้ว ดูข้อมูลเดิมได้ แต่แก้ไขการเปิดรายวิชาและการมอบหมายไม่ได้</p><?php endif; ?>
   <div class="pp5-actions">
+    <?php if ($canManageSubjects): ?><a href="/academic/subjects/create">เพิ่มรายวิชาของโรงเรียน</a><?php endif; ?>
     <?php if ($canOpenOffering): ?><a class="btn btn-primary" href="/academic/offerings/create?<?= $escape(http_build_query(['workspace_classroom_id' => $room['id']])) ?>">เปิดรายวิชาในห้องนี้</a><?php endif; ?>
     <?php if ($canViewAll): ?><a href="/academic/offerings?<?= $escape(http_build_query(['academic_year_id' => $year['id'], 'workspace_classroom_id' => $room['id']])) ?>">ดูรายการรายวิชาทั้งปี</a><?php endif; ?>
     <?php if ($canManageAssignment): ?><a href="/academic/teaching-assignments?<?= $escape(http_build_query(['academic_year_id' => $year['id'], 'workspace_classroom_id' => $room['id']])) ?>">ดูประวัติการมอบหมายทั้งปี</a><?php endif; ?>

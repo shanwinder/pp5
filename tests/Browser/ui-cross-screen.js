@@ -58,6 +58,7 @@
       const table = d.querySelector('table#classroom-subjects');
       const empty = frame.title.startsWith('subjects empty');
       check(empty ? !table : !!table, 'subjects empty/table state');
+      check(!!d.querySelector('main a[href="/academic/subjects/create"]') === (broadWorkspace && !frame.title.startsWith('subjects readonly')), 'school subject creation follows permission and year');
       if (table) {
         check(table.querySelectorAll('thead th[scope="col"]').length === 5, 'semantic subject columns');
         check(table.querySelectorAll('tr[data-offering-id]').length === (frame.title.startsWith('subjects normal') ? 2 : 1), 'subject term rows');
