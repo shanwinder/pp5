@@ -8,6 +8,8 @@ use App\Repositories\SchoolRepository;
 use App\Support\AccessContext;
 use App\Support\Csrf;
 use LogicException;
+use DomainException;
+use App\Support\ClassroomWorkspaceNavigation;
 
 /** Presentation only. Call after authentication/context middleware; never use this as a route gate. */
 final class AppUiContextService
@@ -17,7 +19,8 @@ final class AppUiContextService
         private SchoolRepository $schools,
         private AuthorizationService $authorization,
         private GradebookReadService $gradebooks,
-        private Csrf $csrf
+        private Csrf $csrf,
+        private ClassroomWorkspaceReadService $workspaces
     ) {}
 
     /**
@@ -25,9 +28,10 @@ final class AppUiContextService
      * No request parameters, role names, permission cache, SQL, or domain writes belong here.
      *
      * @return array{contextType: string, schoolName: ?string, displayName: string, csrfToken: string,
-     *     currentKey: string, sections: array, permissions: array<string, bool>, gradebooks: array}
+     *     currentKey: string, sections: array, permissions: array<string, bool>, gradebooks: array,
+     *     workspace: ?array, classroomWorkspaces: array}
      */
-    public function build(string $currentKey, bool $includeGradebooks = false): array
+    public function build(string $currentKey, bool $includeGradebooks = false, ?array $workspace = null): array
     {
         $userId = $this->session->get('user_id');
         $context = $this->session->get('context_type');
@@ -83,9 +87,30 @@ final class AppUiContextService
                 ? [$this->item('users', 'ผู้ใช้งาน', '/admin/users')] : []);
         }
 
-        return ['contextType'=>$context, 'schoolName'=>$school['name_th'] ?? null,
+        if ($workspace !== null) {
+            $workspace['navigation'] = ClassroomWorkspaceNavigation::items($workspace, $currentKey);
+        }
+        $classrooms = $context === AccessContext::SCHOOL && $currentKey === 'dashboard'
+            ? $this->workspaces->listAccessibleClassrooms($userId, $context, $schoolId) : [];
+
+        return ['workspace' => $workspace, 'classroomWorkspaces' => $classrooms, 'contextType'=>$context, 'schoolName'=>$school['name_th'] ?? null,
             'displayName'=>(string) $this->session->get('display_name', ''), 'csrfToken'=>$this->csrf->token($this->session),
             'currentKey'=>$currentKey, 'sections'=>$sections, 'permissions'=>$permissions, 'gradebooks'=>$gradebooks];
+    }
+
+    /** A browser locator is re-resolved under the authenticated school on every request. */
+    public function classroomWorkspace(mixed $locator): ?array
+    {
+        if ($locator === null) { return null; }
+        if ((!is_int($locator) && !is_string($locator)) || !preg_match('/\A[0-9]+\z/', (string) $locator)) {
+            throw new DomainException('Workspace not found');
+        }
+        $id = filter_var($locator, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $workspace = $id === false ? null : $this->workspaces->getOverview(
+            (int) $this->session->get('user_id'), (string) $this->session->get('context_type'),
+            (int) $this->session->get('school_id'), $id);
+        if ($workspace === null) { throw new DomainException('Workspace not found'); }
+        return $workspace;
     }
 
     /** @return array<string, bool> */

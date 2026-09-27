@@ -26,6 +26,23 @@
         check(panel.hidden && d.activeElement === trigger, 'close returns focus');
       } else check(!panel.hidden && w.getComputedStyle(trigger).display === 'none', 'desktop navigation visible');
     }
+    const workspace = d.querySelector('.pp5-workspace-shell');
+    if (workspace) {
+      const switcher = workspace.querySelector('details'), summary = switcher.querySelector('summary');
+      check(summary.textContent.includes('เปลี่ยนห้อง'), 'switcher has meaningful label');
+      summary.focus(); check(d.activeElement === summary, 'native switcher focusable');
+      summary.click(); check(switcher.open, 'native disclosure opens');
+      check(workspace.querySelectorAll('nav[aria-label="งานในห้องเรียน"] a[aria-current="page"]').length === 1, 'one active local section');
+      check(workspace.querySelector('[aria-current="page"]').textContent === 'ภาพรวม', 'overview active');
+      const targets = workspace.querySelectorAll('details a');
+      check(targets.length === (frame.title.startsWith('workspace admin') ? 24 : 1), 'only fixture-authorized switch targets');
+      const last = targets[targets.length - 1];
+      last.focus(); last.scrollIntoView({block:'nearest',inline:'nearest'});
+      const bounds = last.getBoundingClientRect(), scroll = last.closest('.pp5-workspace-choices').getBoundingClientRect();
+      check(bounds.top >= scroll.top - 1 && bounds.bottom <= scroll.bottom + 1, 'last switch target reachable');
+      check(workspace.querySelectorAll('nav a').length === (frame.title.startsWith('workspace admin') ? 5 : 2), 'capability-dependent local navigation');
+      check(d.querySelector('form[action="/logout"][method="post"] input[name="_token"]'), 'secure logout reachable');
+    }
     for (const region of d.querySelectorAll('.pp5-table-scroll')) {
       check(region.getBoundingClientRect().right <= w.innerWidth + 1, 'table contained');
       check(region.tabIndex === 0 && region.getAttribute('aria-label'), 'table named/reachable');
@@ -43,7 +60,7 @@
       check(nameColumn.getBoundingClientRect().width >= 12 * parseFloat(w.getComputedStyle(d.documentElement).fontSize), 'Thai name column remains readable');
     }
     // Check actual occlusion, not only the presence of an outline declaration.
-    const controls = d.querySelectorAll('main a,main button,main input:not([type="hidden"]),main select,main textarea,main .pp5-table-scroll');
+    const controls = d.querySelectorAll('main a,main summary,main button,main input:not([type="hidden"]),main select,main textarea,main .pp5-table-scroll');
     for (const control of controls) {
       if (control.disabled) continue;
       control.focus({preventScroll:true});

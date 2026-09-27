@@ -35,12 +35,14 @@ final class SubjectOfferingController
     public function index(Request $request): Response
     {
         try {
-            $year = $this->queryYear($request);
+            $workspace = $this->ui->classroomWorkspace($request->query('workspace_classroom_id'));
+            $year = $workspace === null ? $this->queryYear($request)
+                : $this->years->findForSchool($this->session->get('school_id'), $workspace['academicYear']['id']);
         } catch (DomainException) {
             return new Response(View::error(404), 404);
         }
 
-        $ui = $this->ui->build('academic.offerings');
+        $ui = $this->ui->build('academic.offerings', false, $workspace);
         return new Response(View::page('academic/offerings/index', [
             'permissions' => $ui['permissions'],
             'selectedYear' => $year,

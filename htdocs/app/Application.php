@@ -120,7 +120,9 @@ final class Application
         $gradebookComponents = new GradebookComponentRepository($pdo);
         $gradebookRead = new GradebookReadService(new AuthorizationService($authorization), $offerings,
             $gradebookComponents, new GradebookRepository($pdo));
-        $ui = new AppUiContextService($session, $schools, new AuthorizationService($authorization), $gradebookRead, $csrf);
+        $classrooms = new ClassroomRepository($pdo);
+        $workspaceRead = new ClassroomWorkspaceReadService($classrooms, $schools, new AuthorizationService($authorization), $gradebookRead);
+        $ui = new AppUiContextService($session, $schools, new AuthorizationService($authorization), $gradebookRead, $csrf, $workspaceRead);
         $gradebookController = new GradebookController($gradebookRead, $session, new AuthorizationService($authorization), $csrf, $ui);
         $dashboard = new DashboardController($session, $schools, $ui);
         $systemSchools = new SystemSchoolController(
@@ -149,9 +151,8 @@ final class Application
             $ui
         );
         $grades = new GradeLevelRepository($pdo);
-        $classrooms = new ClassroomRepository($pdo);
         $classroomWorkspace = new ClassroomWorkspaceController(
-            new ClassroomWorkspaceReadService($classrooms, $schools, new AuthorizationService($authorization), $gradebookRead),
+            $workspaceRead,
             $session, $ui
         );
         $classroomController = new ClassroomController(

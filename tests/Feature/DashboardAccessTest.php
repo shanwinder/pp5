@@ -219,10 +219,13 @@ final class DashboardAccessTest extends TestCase
         $this->authenticate();
         $this->pdo->prepare('UPDATE schools SET status = ? WHERE id = ?')->execute(['INACTIVE', $this->schoolId]);
         $authorization = new AuthorizationService(new AuthorizationRepository($this->pdo));
+        $gradebooks = new App\Services\GradebookReadService($authorization, new App\Repositories\SubjectOfferingRepository($this->pdo),
+            new App\Repositories\GradebookComponentRepository($this->pdo), new App\Repositories\GradebookRepository($this->pdo));
+        $workspaces = new App\Services\ClassroomWorkspaceReadService(new App\Repositories\ClassroomRepository($this->pdo),
+            new SchoolRepository($this->pdo), $authorization, $gradebooks);
         $controller = new DashboardController(new Session(), new SchoolRepository($this->pdo),
             new App\Services\AppUiContextService(new Session(), new SchoolRepository($this->pdo), $authorization,
-            new App\Services\GradebookReadService($authorization, new App\Repositories\SubjectOfferingRepository($this->pdo),
-                new App\Repositories\GradebookComponentRepository($this->pdo), new App\Repositories\GradebookRepository($this->pdo)), new Csrf()));
+                $gradebooks, new Csrf(), $workspaces));
 
         $response = $controller->index();
 

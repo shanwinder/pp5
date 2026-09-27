@@ -3,7 +3,6 @@ use App\Support\View;
 $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 ?>
 <div class="pp5-admin-page">
-  <p>ปีการศึกษา <?= $escape($workspace['academicYear']['year_be']) ?> · <?= $escape($workspace['classroom']['name']) ?> · <?= $escape($workspace['school']['name']) ?></p>
   <section aria-labelledby="workspace-overview">
     <h2 id="workspace-overview">ภาพรวม</h2>
     <dl>
@@ -11,13 +10,6 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
       <dt>สถานะปีการศึกษา</dt><dd><?= View::render('ui/status', ['status' => $workspace['academicYear']['status'], 'kind' => 'academic-year']) ?></dd>
       <dt>สถานะห้องเรียน</dt><dd><?= View::render('ui/status', ['status' => $workspace['classroom']['status'], 'kind' => 'entity']) ?></dd>
     </dl>
-    <?php if ($workspace['links'] !== []): ?>
-      <ul>
-        <?php foreach ($workspace['links'] as $link): ?>
-          <li><a href="<?= $escape($link['url']) ?>"><?= $escape($link['label']) ?></a></li>
-        <?php endforeach; ?>
-      </ul>
-    <?php endif; ?>
   </section>
   <section aria-labelledby="workspace-scores">
     <h2 id="workspace-scores">สมุดคะแนนที่คุณเข้าถึงได้</h2>

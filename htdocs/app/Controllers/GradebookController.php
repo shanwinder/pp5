@@ -46,7 +46,7 @@ final class GradebookController
                 $this->session->get('context_type'), $this->session->get('school_id'), 'GRADEBOOK_COMPONENT_MANAGE'),
             'csrfToken' => $canScore ? $this->csrf->token($this->session) : null,
         ], [
-            'ui' => $this->ui->build('gradebooks'), 'documentTitle' => 'สมุดคะแนน — ระบบ ปพ.5', 'pageTitle' => 'สมุดคะแนน',
+            'ui' => $this->ui->build('gradebooks', false, $this->ui->classroomWorkspace((int) $offering['classroom_id'])), 'documentTitle' => 'สมุดคะแนน — ระบบ ปพ.5', 'pageTitle' => 'สมุดคะแนน',
             'headAssets' => $canScore ? View::render('gradebook/scoring-assets') : '',
         ]));
     }

@@ -24,7 +24,7 @@ final class ClassroomWorkspaceController
         if ($workspace === null) { return new Response(View::error(404), 404); }
 
         return new Response(View::page('workspaces/classroom/overview', ['workspace' => $workspace], [
-            'ui' => $this->ui->build('workspaces.classrooms'),
+            'ui' => $this->ui->build('workspaces.classrooms', false, $workspace),
             'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5',
             'pageTitle' => 'งานชั้นเรียน · ' . $workspace['classroom']['name'],
         ]));

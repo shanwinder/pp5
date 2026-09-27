@@ -39,9 +39,12 @@ final class EnrollmentController
     public function index(Request $request): Response
     {
         try {
-            $year = $this->queryYear($request, true);
-            $grade = $this->queryGrade($request);
-            $classroomId = $this->optionalId($request->query('classroom_id'));
+            $workspace = $this->ui->classroomWorkspace($request->query('workspace_classroom_id'));
+            $year = $workspace === null ? $this->queryYear($request, true)
+                : $this->years->findForSchool($this->school(), $workspace['academicYear']['id']);
+            $grade = $workspace === null ? $this->queryGrade($request)
+                : ['id' => $workspace['gradeLevel']['id']];
+            $classroomId = $workspace === null ? $this->optionalId($request->query('classroom_id')) : $workspace['classroom']['id'];
             if ($classroomId !== null) {
                 $room = $this->classrooms->findForSchool($this->school(), $classroomId);
                 if ($room === null || $year === null || $room['academic_year_id'] !== $year['id']
@@ -77,7 +80,7 @@ final class EnrollmentController
             // Retain safe search text without reflecting ID-shaped input.
             'search' => $search !== null && !preg_match('/[0-9]{13}/', $search) ? $search : '',
             'status' => $status, 'error' => $error, 'canManage' => $this->can('ENROLLMENT_MANAGE'),
-        ], 'การลงทะเบียนนักเรียน'), $error === null ? 200 : 422);
+        ], 'การลงทะเบียนนักเรียน', $workspace), $error === null ? 200 : 422);
     }
 
     public function create(Request $request): Response
@@ -275,10 +278,10 @@ final class EnrollmentController
         return new Response($this->page('academic/enrollments/edit', ['target' => null, 'error' => $error, 'canView' => $this->can('STUDENT_VIEW')], 'รายละเอียดการลงทะเบียน'), 422);
     }
 
-    private function page(string $template, array $data, string $title): string
+    private function page(string $template, array $data, string $title, ?array $workspace = null): string
     {
         return View::page($template, $data, [
-            'ui' => $this->ui->build('enrollments'), 'documentTitle' => $title.' — ปพ.5', 'pageTitle' => $title,
+            'ui' => $this->ui->build('enrollments', false, $workspace), 'documentTitle' => $title.' — ปพ.5', 'pageTitle' => $title,
         ]);
     }
 }

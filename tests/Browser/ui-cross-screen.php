@@ -47,4 +47,5 @@ $cases = [
 <iframe title="<?= $name.' '.$width.'x'.$height ?>" src="/frame?<?= htmlspecialchars(http_build_query(['fixture'=>$fixture, $fixture==='gradebook'?'mode':'page'=>$page, 'variant'=>'normal']), ENT_QUOTES, 'UTF-8') ?>" width="<?= $width ?>" height="<?= $height ?>"></iframe>
 <?php endforeach; endforeach; ?>
 <iframe title="no-JS navigation 390x844" src="/frame?fixture=student&amp;page=students/index&amp;variant=normal" width="390" height="844" sandbox="allow-same-origin allow-forms"></iframe>
+<iframe title="workspace no-JS 390x844" src="/frame?fixture=workspace&amp;page=limited" width="390" height="844" sandbox="allow-same-origin allow-forms"></iframe>
 <script src="/matrix.js" defer></script></body></html>

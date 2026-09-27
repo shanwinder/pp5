@@ -169,7 +169,9 @@ final class UiNavigationTest extends TestCase
     {
         $this->login('SUBJECT_TEACHER');
         $service = new AppUiContextService(new Session(), new SchoolRepository($this->pdo),
-            new AuthorizationService(new AuthorizationRepository($this->pdo)), $this->readService(), new Csrf());
+            new AuthorizationService(new AuthorizationRepository($this->pdo)), $this->readService(), new Csrf(), new App\Services\ClassroomWorkspaceReadService(
+                new App\Repositories\ClassroomRepository($this->pdo), new SchoolRepository($this->pdo),
+                new AuthorizationService(new AuthorizationRepository($this->pdo)), $this->readService()));
         $before = $this->readSnapshot();
         $this->pdo->queries = [];
         $context = $service->build('dashboard');

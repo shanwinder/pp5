@@ -348,3 +348,17 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-gradebook td { min-width: 9rem; max-width: 14rem; overflow-wrap: anywhere; }
 .pp5-gradebook [data-score-cell] { min-width: 7rem; }
 .pp5-gradebook [role="status"] { font-size: 0.8125rem; }
+
+/* Classroom context stays inside the application shell; native disclosures work without JS. */
+.pp5-workspace-shell { margin-block-end: var(--pp5-space-4); overflow-wrap: anywhere; }
+.pp5-workspace-context { margin-block-end: var(--pp5-space-3); }
+.pp5-workspace-switcher summary { cursor: pointer; padding-block: var(--pp5-space-2); }
+.pp5-workspace-choices { max-height: 20rem; overflow: auto; padding: var(--pp5-space-3); }
+.pp5-workspace-choices ul { padding-inline-start: var(--pp5-space-4); }
+.pp5-workspace-choices a { display: inline-block; padding-block: var(--pp5-space-2); overflow-wrap: anywhere; }
+.pp5-workspace-choices [aria-current] { font-weight: 700; text-decoration-thickness: 3px; }
+.pp5-workspace-nav { display: flex; flex-wrap: wrap; gap: var(--pp5-space-2); list-style: none; padding: 0; margin: var(--pp5-space-3) 0 0; }
+.pp5-workspace-nav li { min-width: 0; max-width: 100%; }
+.pp5-workspace-nav a { display: block; padding: var(--pp5-space-2) var(--pp5-space-3); border-radius: var(--pp5-radius-sm); }
+.pp5-workspace-nav [aria-current] { font-weight: 700; text-decoration: underline; text-decoration-thickness: 3px; background: var(--pp5-surface-muted); }
+#workspace-scores { scroll-margin-top: calc(var(--pp5-header-height) + var(--pp5-space-4)); }

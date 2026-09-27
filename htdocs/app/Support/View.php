@@ -29,7 +29,9 @@ final class View
      */
     public static function page(string $template, array $data = [], array $pageContext = []): string
     {
-        $content = self::render($template, $data);
+        $workspace = $pageContext['ui']['workspace'] ?? null;
+        $content = ($workspace === null ? '' : self::render('workspaces/classroom/shell', ['workspace' => $workspace]))
+            . self::render($template, $data + ['workspace' => $workspace]);
 
         return self::render('layouts/' . ($pageContext['layout'] ?? 'app'), [
             'content' => $content,

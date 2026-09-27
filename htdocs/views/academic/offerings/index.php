@@ -1,5 +1,8 @@
 <div class="pp5-admin-page">
 <?php if ($permissions['SUBJECT_OFFERING_MANAGE']): ?><p><a class="btn btn-primary" href="/academic/offerings/create">เพิ่มการเปิดรายวิชา</a></p><?php endif; ?>
+<?php if (($workspace ?? null) !== null): ?>
+<p class="text-muted">หน้านี้แสดงทุกห้องในปีการศึกษา <?= (int) $workspace['academicYear']['year_be'] ?> <a href="/academic/offerings">เลือกปีนอกงานชั้นเรียน</a></p>
+<?php else: ?>
 <form class="pp5-filter-bar" method="get" action="/academic/offerings">
     <div class="pp5-field"><label class="form-label" for="offerings-year">ปีการศึกษา (พ.ศ.)</label>
         <select class="form-select" id="offerings-year" name="academic_year_id" required>
@@ -12,6 +15,7 @@
     <button class="btn btn-outline-secondary" type="submit">แสดงปีที่เลือก</button>
     <a class="btn btn-link" href="/academic/offerings">แสดงทุกปี</a>
 </form>
+<?php endif; ?>
 <div class="pp5-table-scroll" role="region" aria-label="การเปิดรายวิชา" tabindex="0">
 <table class="table pp5-table">
     <thead><tr><th scope="col">ปีการศึกษา (พ.ศ.)</th><th scope="col">ห้องเรียน</th><th scope="col">รายวิชา</th><th scope="col">ภาคเรียน</th><th scope="col">สถานะ</th><th scope="col">รายละเอียด</th></tr></thead>

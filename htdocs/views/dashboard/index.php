@@ -4,6 +4,13 @@ $workAreas = array_values(array_filter($ui['sections'], static fn (array $sectio
 $descriptions = ['students' => 'ตรวจสอบข้อมูลนักเรียนและการลงทะเบียน', 'academic' => 'จัดเตรียมปีการศึกษา ห้องเรียน และรายวิชา', 'management' => 'ดูแลบัญชีผู้ใช้งานของโรงเรียน'];
 ?>
 <p class="pp5-welcome">ยินดีต้อนรับ <?= $escape($ui['displayName']) ?> <span class="text-muted">— <?= $escape($ui['schoolName']) ?></span></p>
+<?php if (($ui['classroomWorkspaces'] ?? []) !== []): ?>
+<section aria-labelledby="classroom-workspaces">
+  <h2 id="classroom-workspaces">งานชั้นเรียน</h2>
+  <p class="text-muted">เลือกห้องและปีการศึกษาเพื่อทำงานต่อในบริบทเดียวกัน</p>
+  <?= App\Support\View::render('workspaces/classroom/choices', ['targets' => $ui['classroomWorkspaces']]) ?>
+</section>
+<?php endif; ?>
 <section aria-labelledby="my-gradebooks">
   <div class="pp5-page-header">
     <div><h2 id="my-gradebooks">สมุดคะแนนของฉัน</h2><p class="text-muted">เลือกรายวิชาเพื่อเริ่มงาน หรือดูสมุดคะแนนย้อนหลัง</p></div>

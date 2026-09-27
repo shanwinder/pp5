@@ -22,7 +22,7 @@ if ($path === '/frame') {
     $hostile = str_repeat('โรงเรียนภาษาไทยชื่อยาว', 8).'<script>alert("entry")</script>';
     $offerings = [];
     foreach (['DRAFT', 'ACTIVE', 'CLOSED'] as $i=>$status) {
-        $offerings[] = ['id'=>$i+1, 'year_be'=>2569-$i, 'classroom_code'=>'ป.1/1', 'classroom_name'=>'ห้องเรียนภาษาไทย',
+        $offerings[] = ['id'=>$i+1, 'classroom_id'=>$i+1, 'year_be'=>2569-$i, 'classroom_code'=>'ป.1/1', 'classroom_name'=>'ห้องเรียนภาษาไทย',
             'subject_code'=>'ว101', 'subject_name'=>$hostile, 'term_no'=>1, 'academic_year_status'=>$status,
             'status'=>$status === 'CLOSED' ? 'INACTIVE' : 'ACTIVE'];
     }
@@ -33,6 +33,7 @@ if ($path === '/frame') {
             ['key'=>'teaching','label'=>'การเรียนการสอน','items'=>[['key'=>'gradebooks','label'=>'สมุดคะแนน','url'=>'/gradebooks','detail'=>null]]],
             ['key'=>'students','label'=>'นักเรียน','items'=>[['key'=>'students','label'=>'รายชื่อนักเรียน','url'=>'/students','detail'=>null]]],
         ]];
+    $ui['classroomWorkspaces'] = $page === 'empty' ? [] : [['id'=>1, 'year_be'=>2569, 'code'=>'ป.1/1', 'name'=>$hostile, 'url'=>'/workspaces/classrooms/1']];
     $context = ['scripts'=>'<script src="/checks.js" defer></script>'];
     $html = match ($page) {
         'login' => View::page('auth/login', ['error'=>'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 'csrfToken'=>'fixture-only'],

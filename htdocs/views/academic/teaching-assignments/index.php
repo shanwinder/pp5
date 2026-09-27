@@ -2,7 +2,10 @@
 <?php $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
   <?php if ($error !== null): ?><p class="pp5-alert pp5-alert--danger" role="alert"><?= $escape($error) ?></p><?php endif; ?>
 
-  <form class="pp5-filter-bar" method="get" action="/academic/teaching-assignments">
+  <?php if (($workspace ?? null) !== null): ?>
+<p class="text-muted">หน้านี้แสดงทุกห้องในปีการศึกษา <?= (int) $workspace['academicYear']['year_be'] ?> <a href="/academic/teaching-assignments">เลือกปีนอกงานชั้นเรียน</a></p>
+<?php else: ?>
+<form class="pp5-filter-bar" method="get" action="/academic/teaching-assignments">
     <label class="form-label" for="academic-year">ปีการศึกษา</label>
     <select class="form-select" id="academic-year" name="academic_year_id" required>
       <option value="" disabled <?= $selectedYear === null ? 'selected' : '' ?>>เลือกปีการศึกษา</option>
@@ -13,6 +16,7 @@
     <button class="btn btn-outline-secondary" type="submit">แสดงปีที่เลือก</button>
     <a class="btn btn-link" href="/academic/teaching-assignments">แสดงทุกปี</a>
   </form>
+<?php endif; ?>
 
   <?php if ($canCreate): ?>
     <section aria-labelledby="create-heading">

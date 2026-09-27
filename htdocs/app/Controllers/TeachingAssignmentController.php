@@ -34,7 +34,10 @@ final class TeachingAssignmentController
     {
         $year = null;
         try {
-            if ($request->query('academic_year_id') !== null) {
+            $workspace = $this->ui->classroomWorkspace($request->query('workspace_classroom_id'));
+            if ($workspace !== null) {
+                $year = $this->years->findForSchool($this->session->get('school_id'), $workspace['academicYear']['id']);
+            } elseif ($request->query('academic_year_id') !== null) {
                 $year = $this->years->findForSchool($this->session->get('school_id'), $this->positiveId($request->query('academic_year_id')));
                 if ($year === null) { throw new DomainException(self::INVALID); }
             }
@@ -42,7 +45,7 @@ final class TeachingAssignmentController
             return new Response(View::error(404), 404);
         }
 
-        return $this->page($year);
+        return $this->page($year, workspace: $workspace);
     }
 
     public function store(Request $request): Response
@@ -77,12 +80,12 @@ final class TeachingAssignmentController
         return Response::redirect(self::PATH);
     }
 
-    private function page(?array $selectedYear = null, ?string $error = null, int $status = 200): Response
+    private function page(?array $selectedYear = null, ?string $error = null, int $status = 200, ?array $workspace = null): Response
     {
         $schoolId = $this->session->get('school_id');
         $canCreate = $selectedYear !== null && in_array($selectedYear['status'], ['DRAFT', 'ACTIVE'], true);
 
-        $ui = $this->ui->build('teaching-assignments');
+        $ui = $this->ui->build('teaching-assignments', false, $workspace);
         return new Response(View::page('academic/teaching-assignments/index', [
             'permissions' => $ui['permissions'],
             'years' => $this->years->listForSchool($schoolId),

@@ -19,7 +19,7 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
   <?php foreach ($offerings as $offering): ?>
     <tr>
       <td><?= $escape($offering['year_be']) ?></td>
-      <td><?= $escape($offering['classroom_code']) ?><br><?= $escape($offering['classroom_name']) ?></td>
+      <td><?= $escape($offering['classroom_code']) ?><br><?= $escape($offering['classroom_name']) ?><br><a href="/workspaces/classrooms/<?= (int) $offering['classroom_id'] ?>">งานชั้นเรียน<span class="visually-hidden"> <?= $escape($offering['year_be'].' '.$offering['classroom_code']) ?></span></a></td>
       <th scope="row"><?= $escape($offering['subject_code']) ?><br><?= $escape($offering['subject_name']) ?></th>
       <td><?= $escape($offering['term_no']) ?></td>
       <td><span class="pp5-badge" data-status="<?= $escape($offering['academic_year_status']) ?>"><?= $escape(StatusLabel::text($offering['academic_year_status'], 'academic-year')) ?></span></td>

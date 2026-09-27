@@ -2,6 +2,9 @@
 <div class="pp5-admin-page">
 <?php if ($canManage): ?><p><a class="btn btn-primary" href="/academic/enrollments/create">เพิ่มการลงทะเบียน</a></p><?php endif; ?>
 <form class="pp5-filter-bar" method="get" action="/academic/enrollments">
+    <?php if (($workspace ?? null) !== null): ?>
+    <input type="hidden" name="workspace_classroom_id" value="<?= (int) $workspace['classroom']['id'] ?>">
+    <?php else: ?>
     <div class="pp5-field"><label class="form-label" for="academic-enrollments-index-1">ปีการศึกษา <select class="form-select" id="academic-enrollments-index-1" name="academic_year_id"><option value="">เลือกปีการศึกษา</option>
         <?php foreach ($years as $year): ?><option value="<?= $escape($year['id']) ?>"<?= $yearId === $year['id'] ? ' selected' : '' ?>><?= $escape($year['year_be']) ?></option><?php endforeach; ?>
     </select></label></div>
@@ -11,12 +14,13 @@
     <div class="pp5-field"><label class="form-label" for="academic-enrollments-index-3">ห้องเรียน <select class="form-select" id="academic-enrollments-index-3" name="classroom_id"><option value="">ทุกห้อง / ยังไม่จัดห้อง</option>
         <?php foreach ($classrooms as $room): ?><option value="<?= $escape($room['id']) ?>"<?= $classroomId === $room['id'] ? ' selected' : '' ?>><?= $escape($room['name_th']) ?></option><?php endforeach; ?>
     </select></label></div>
+    <?php endif; ?>
     <div class="pp5-field"><label class="form-label" for="academic-enrollments-index-4">สถานะ <select class="form-select" id="academic-enrollments-index-4" name="status"><option value="">ทุกสถานะ</option>
         <?php foreach (['ACTIVE','TRANSFERRED_OUT','WITHDRAWN'] as $state): ?><option value="<?= $escape($state) ?>"<?= $status === $state ? ' selected' : '' ?>><?= $escape(App\Support\StatusLabel::text($state, 'enrollment')) ?></option><?php endforeach; ?>
     </select></label></div>
     <div class="pp5-field"><label class="form-label" for="academic-enrollments-index-5">ค้นหารหัสหรือชื่อนักเรียน <input class="form-control" id="academic-enrollments-index-5" type="search" name="q" maxlength="100" value="<?= $escape($search) ?>"></label></div>
     <button class="btn btn-primary" type="submit">ค้นหา</button>
-<a class="btn btn-outline-secondary" href="/academic/enrollments">ล้างตัวกรอง</a>
+<a class="btn btn-outline-secondary" href="/academic/enrollments<?= ($workspace ?? null) === null ? '' : '?workspace_classroom_id=' . (int) $workspace['classroom']['id'] ?>">ล้างตัวกรอง</a>
 </form>
 <?php if ($error !== null): ?><p class="pp5-alert pp5-alert--danger" role="alert"><?= $escape($error) ?></p><?php endif; ?>
 <div class="pp5-table-scroll" role="region" aria-label="การลงทะเบียน" tabindex="0"><table class="table pp5-table">
