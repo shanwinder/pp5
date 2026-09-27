@@ -99,6 +99,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         self::assertStringNotContainsString('id="classroom-workspaces"', $this->request('GET', '/dashboard')->body());
         $this->pdo->prepare("INSERT INTO role_permissions (role_id,permission_id) SELECT r.id,p.id FROM roles r CROSS JOIN permissions p WHERE r.code='VIEWER' AND p.code=?")->execute([$permission]);
         $model = $this->model('VIEWER');
+        if ($section === 'students') { $path = $this->workspacePath() . '/students'; }
         self::assertSame(['overview', $section], array_column(ClassroomWorkspaceNavigation::items($model, 'workspaces.classrooms'), 'key'));
         self::assertCount(4, $this->targets('VIEWER'));
         $body = $this->request('GET', $this->workspacePath())->body();
@@ -136,7 +137,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         $this->login();
         $model = $this->model();
         foreach ($model['links'] as $link) {
-            $parts = parse_url($link['url']); parse_str($parts['query'], $query);
+            $parts = parse_url($link['url']); parse_str($parts['query'] ?? '', $query);
             $normal = $this->request('GET', $parts['path'], [], $query);
             self::assertSame(200, $normal->status());
             $forged = array_replace($query, ['school_id' => $this->f['schoolB'], 'academic_year_id' => $this->f['yearB'],
@@ -145,7 +146,7 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
             $x = $this->xpath($normal->body());
             self::assertSame(1, $x->query('//section[@aria-label="บริบทงานชั้นเรียน"]')->length);
             self::assertSame([$link['url']], $this->links($normal->body(), '//nav[@aria-label="งานในห้องเรียน"]//a[@aria-current="page"]'));
-            self::assertSame([$parts['path']], $this->links($normal->body(), '//aside//a[@aria-current="page"]'));
+            self::assertSame($link['key'] === 'students' ? [] : [$parts['path']], $this->links($normal->body(), '//aside//a[@aria-current="page"]'));
             self::assertSame(1, $x->query('//form[@method="post" and @action="/logout"]//input[@name="_token"]')->length);
             if ($link['key'] !== 'students') { self::assertStringContainsString('หน้านี้แสดงทุกห้องในปีการศึกษา 2569', $normal->body()); }
         }
@@ -193,7 +194,8 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         $items = ClassroomWorkspaceNavigation::items($this->model(), $key);
         self::assertSame([$section], array_column(array_filter($items, static fn (array $i): bool => $i['active']), 'key'));
         $dispatcher = FastRoute\simpleDispatcher(require dirname(__DIR__, 2) . '/htdocs/routes/web.php');
-        self::assertSame(FastRoute\Dispatcher::NOT_FOUND, $dispatcher->dispatch('GET', $this->workspacePath() . '/students')[0]);
+        self::assertSame(FastRoute\Dispatcher::FOUND, $dispatcher->dispatch('GET', $this->workspacePath() . '/students')[0]);
+        self::assertSame(FastRoute\Dispatcher::NOT_FOUND, $dispatcher->dispatch('GET', $this->workspacePath() . '/subjects')[0]);
     }
 
     public function testSwitchingDoesNotAddQueriesPerClassroomOrReadSensitiveTables(): void

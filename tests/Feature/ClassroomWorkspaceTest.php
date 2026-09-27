@@ -191,7 +191,7 @@ final class ClassroomWorkspaceTest extends TestCase
         }
         self::assertSame([], $model['gradebooks']);
         self::assertCount(1, $model['links']);
-        self::assertSame($path, parse_url($model['links'][0]['url'], PHP_URL_PATH));
+        self::assertSame($capability === 'students' ? $this->workspacePath() . '/students' : $path, parse_url($model['links'][0]['url'], PHP_URL_PATH));
         self::assertSame(200, $this->request('GET', $this->workspacePath())->status());
         self::assertSame(404, $this->request('GET', $this->readPath())->status());
         $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='VIEWER' AND p.code=?")->execute([$permission]);
@@ -211,9 +211,10 @@ final class ClassroomWorkspaceTest extends TestCase
             self::assertDoesNotMatchRegularExpression('/\b(students|student_enrollments|student_classroom_placements|gradebook_scores|gradebook_components|national_id|birth_date)\b/i', $sql);
             self::assertArrayNotHasKey('counts', $model);
             self::assertArrayNotHasKey('students', $model);
+            self::assertSame($role === 'SCHOOL_ADMIN' ? 1 : 0, $this->xpath($response->body())->query('//nav[@aria-label="งานในห้องเรียน"]//a[@href="' . $this->workspacePath() . '/students"]')->length);
             $this->assertReadSafe(json_encode($model));
             $this->assertReadSafe($response->body());
-            foreach (['เวลาเรียน', 'การประเมิน', 'สมรรถนะ', 'กิจกรรมพัฒนาผู้เรียน', 'สรุปผล', 'เอกสาร', '/reports', '/workspaces/classrooms/' . $this->f['roomA'] . '/students'] as $future) {
+            foreach (['เวลาเรียน', 'การประเมิน', 'สมรรถนะ', 'กิจกรรมพัฒนาผู้เรียน', 'สรุปผล', 'เอกสาร', '/reports'] as $future) {
                 self::assertStringNotContainsString($future, $response->body());
             }
         }

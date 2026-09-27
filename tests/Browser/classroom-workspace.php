@@ -8,7 +8,8 @@ require_once dirname(__DIR__, 2) . '/htdocs/vendor/autoload.php';
 use App\Support\View;
 
 $page = $_GET['page'] ?? 'limited';
-$admin = $page === 'admin';
+$roster = str_starts_with($page, 'roster-');
+$admin = $page === 'admin' || $page === 'roster-normal';
 $workspace = [
     'school' => ['id' => 1, 'name' => 'โรงเรียนทดสอบงานชั้นเรียน'],
     'classroom' => ['id' => 1, 'code' => 'P4-1', 'name' => 'ป.4/1', 'status' => 'ACTIVE'],
@@ -16,7 +17,7 @@ $workspace = [
     'gradeLevel' => ['id' => 4, 'name' => 'ประถมศึกษาปีที่ 4'],
     'capabilities' => ['overview' => true, 'students' => $admin, 'subjects' => $admin, 'teaching' => $admin, 'scores' => $page !== 'empty'],
     'links' => $admin ? [
-        ['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้', 'url' => '/academic/enrollments?academic_year_id=1&grade_level_id=4&classroom_id=1&workspace_classroom_id=1'],
+        ['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้', 'url' => '/workspaces/classrooms/1/students'],
         ['key' => 'subjects', 'label' => 'ดูรายวิชาในปีการศึกษานี้', 'url' => '/academic/offerings?academic_year_id=1&workspace_classroom_id=1'],
         ['key' => 'teaching', 'label' => 'ดูครูผู้สอนในปีการศึกษานี้', 'url' => '/academic/teaching-assignments?academic_year_id=1&workspace_classroom_id=1'],
     ] : [],
@@ -28,7 +29,7 @@ $workspace = [
 if ($page === 'empty') {
     $workspace['capabilities']['students'] = true;
     $workspace['links'] = [['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้',
-        'url' => '/academic/enrollments?workspace_classroom_id=1']];
+        'url' => '/workspaces/classrooms/1/students']];
 }
 $workspace['switchTargets'] = [['id' => 1, 'year_be' => 2569, 'code' => 'P4-1', 'name' => 'ป.4/1', 'url' => '/workspaces/classrooms/1']];
 if ($admin) {
@@ -37,7 +38,20 @@ if ($admin) {
             'name' => str_repeat('ห้องเรียนชื่อยาว ', 5), 'url' => '/workspaces/classrooms/' . $i];
     }
 }
-$workspace['navigation'] = App\Support\ClassroomWorkspaceNavigation::items($workspace, 'workspaces.classrooms');
+if ($roster && !$admin) {
+    $workspace['capabilities'] = ['overview' => true, 'students' => true, 'subjects' => false, 'teaching' => false, 'scores' => false];
+    $workspace['links'] = [['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้', 'url' => '/workspaces/classrooms/1/students']];
+}
+$currentKey = $roster ? 'workspaces.classrooms.students' : 'workspaces.classrooms';
+$workspace['navigation'] = App\Support\ClassroomWorkspaceNavigation::items($workspace, $currentKey);
+$students = [];
+if ($roster && $page !== 'roster-empty') {
+    for ($i = 1; $i <= 8; ++$i) {
+        $students[] = ['studentId' => $i, 'enrollmentId' => $i, 'code' => sprintf('S%03d', $i),
+            'name' => 'ด.ญ. ' . str_repeat('ชื่อยาวเพื่อทดสอบ ', $i === 1 ? 5 : 1) . 'นามสกุล <script>fixture</script>', 'status' => 'ACTIVE'];
+    }
+}
+
 $sections = [
     ['key' => 'overview', 'label' => 'ภาพรวม', 'items' => [
         ['key' => 'dashboard', 'label' => 'แดชบอร์ด', 'url' => '/dashboard', 'detail' => null],
@@ -48,8 +62,9 @@ if ($page !== 'empty') {
         ['key' => 'gradebooks', 'label' => 'สมุดคะแนน', 'url' => '/gradebooks', 'detail' => null],
     ]];
 }
-echo View::page('workspaces/classroom/overview', ['workspace' => $workspace], [
-    'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => 'งานชั้นเรียน · ป.4/1',
+echo View::page($roster ? 'workspaces/classroom/students' : 'workspaces/classroom/overview',
+    ['workspace' => $workspace, 'students' => $students, 'openYear' => true, 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin], [
+    'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => ($roster ? 'นักเรียน' : 'งานชั้นเรียน') . ' · ป.4/1',
     'ui' => ['contextType' => 'SCHOOL', 'schoolName' => $workspace['school']['name'], 'displayName' => 'ผู้ใช้ทดสอบ',
-        'workspace' => $workspace, 'csrfToken' => 'synthetic-only', 'currentKey' => 'workspaces.classrooms', 'sections' => $sections],
+        'workspace' => $workspace, 'csrfToken' => 'synthetic-only', 'currentKey' => $currentKey, 'sections' => $sections],
 ]);

@@ -47,10 +47,8 @@ final class ClassroomWorkspaceReadService
         $yearQuery = http_build_query(['academic_year_id' => $classroom['academic_year_id'], 'workspace_classroom_id' => $classroom['id']]);
         $links = [];
         if ($capabilities['students']) {
-            $links[] = ['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้', 'url' => '/academic/enrollments?' . http_build_query([
-                'academic_year_id' => $classroom['academic_year_id'], 'grade_level_id' => $classroom['grade_level_id'],
-                'classroom_id' => $classroom['id'], 'workspace_classroom_id' => $classroom['id'],
-            ])];
+            $links[] = ['key' => 'students', 'label' => 'ดูนักเรียนในห้องนี้',
+                'url' => '/workspaces/classrooms/' . $classroom['id'] . '/students'];
         }
         if ($capabilities['subjects']) {
             $links[] = ['key' => 'subjects', 'label' => 'ดูรายวิชาในปีการศึกษานี้', 'url' => '/academic/offerings?' . $yearQuery];

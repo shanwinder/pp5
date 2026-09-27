@@ -12,7 +12,7 @@
     <dt>สถานะ</dt><dd><?= App\Support\View::render('ui/status', ['status'=>$target['status'], 'kind'=>'enrollment']) ?></dd>
     <dt>ห้องปัจจุบัน</dt><dd><?= $escape($target['classroom_name'] ?? 'ยังไม่จัดห้อง') ?></dd>
 </dl>
-<section class="pp5-surface pp5-sensitive">
+<section class="pp5-surface pp5-sensitive" id="student-status">
 <h2>สถานะการลงทะเบียน</h2>
 <p>การย้ายออกหรือลาออกเป็นการสิ้นสุดการลงทะเบียน และสิ้นสุดการจัดห้องเรียนปัจจุบัน ไม่มีการเปิดกลับในหน้านี้</p>
 <?php if ($mutable): ?>
@@ -24,7 +24,7 @@
 </form>
 <?php else: ?><p>ประวัติการลงทะเบียนนี้แสดงเพื่ออ่านเท่านั้น</p><?php endif; ?>
 </section>
-<section class="pp5-surface">
+<section class="pp5-surface" id="move-classroom">
 <h2>การจัดห้องเรียน</h2>
 <?php if ($mutable): ?>
 <p>เลือกห้องเพื่อจัดหรือย้ายห้องเรียน เลือกไม่จัดห้องเพื่อยกเลิกการจัดห้องปัจจุบัน โดยไม่เปลี่ยนสถานะการลงทะเบียน</p>

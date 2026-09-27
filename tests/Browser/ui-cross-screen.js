@@ -26,6 +26,8 @@
         check(panel.hidden && d.activeElement === trigger, 'close returns focus');
       } else check(!panel.hidden && w.getComputedStyle(trigger).display === 'none', 'desktop navigation visible');
     }
+    const isRoster = frame.title.startsWith('roster ');
+    const broadWorkspace = frame.title.startsWith('workspace admin') || frame.title.startsWith('roster normal');
     const workspace = d.querySelector('.pp5-workspace-shell');
     if (workspace) {
       const switcher = workspace.querySelector('details'), summary = switcher.querySelector('summary');
@@ -33,15 +35,23 @@
       summary.focus(); check(d.activeElement === summary, 'native switcher focusable');
       summary.click(); check(switcher.open, 'native disclosure opens');
       check(workspace.querySelectorAll('nav[aria-label="งานในห้องเรียน"] a[aria-current="page"]').length === 1, 'one active local section');
-      check(workspace.querySelector('[aria-current="page"]').textContent === 'ภาพรวม', 'overview active');
+      check(workspace.querySelector('[aria-current="page"]').textContent === (isRoster ? 'นักเรียน' : 'ภาพรวม'), 'implemented section active');
       const targets = workspace.querySelectorAll('details a');
-      check(targets.length === (frame.title.startsWith('workspace admin') ? 24 : 1), 'only fixture-authorized switch targets');
+      check(targets.length === (broadWorkspace ? 24 : 1), 'only fixture-authorized switch targets');
       const last = targets[targets.length - 1];
       last.focus(); last.scrollIntoView({block:'nearest',inline:'nearest'});
       const bounds = last.getBoundingClientRect(), scroll = last.closest('.pp5-workspace-choices').getBoundingClientRect();
       check(bounds.top >= scroll.top - 1 && bounds.bottom <= scroll.bottom + 1, 'last switch target reachable');
-      check(workspace.querySelectorAll('nav a').length === (frame.title.startsWith('workspace admin') ? 5 : 2), 'capability-dependent local navigation');
+      check(workspace.querySelectorAll('nav a').length === (broadWorkspace ? 5 : 2), 'capability-dependent local navigation');
       check(d.querySelector('form[action="/logout"][method="post"] input[name="_token"]'), 'secure logout reachable');
+    }
+    if (isRoster) {
+      const table = d.querySelector('table#classroom-roster');
+      check(table && table.querySelectorAll('thead th[scope="col"]').length === 4, 'semantic roster columns');
+      check(table.querySelectorAll('tbody th[scope="row"]').length === (frame.title.startsWith('roster empty') ? 0 : 8), 'expected roster rows');
+      check(table.querySelectorAll('a[href$="#move-classroom"]').length === (broadWorkspace ? 8 : 0), 'manage links only for manager');
+      check(table.querySelectorAll('a[href$="#student-status"]').length === (broadWorkspace ? 8 : 0), 'status links only for manager');
+      check(!table.querySelector('script, input'), 'no injected markup or hidden profile fields');
     }
     for (const region of d.querySelectorAll('.pp5-table-scroll')) {
       check(region.getBoundingClientRect().right <= w.innerWidth + 1, 'table contained');

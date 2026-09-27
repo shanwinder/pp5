@@ -82,7 +82,11 @@ return static function (RouteCollector $r): void {
     $r->addRoute('POST', '/login', ['action' => 'login']);
     $r->addRoute('POST', '/logout', ['action' => 'logout']);
     $r->addRoute('GET', '/gradebooks', ['action' => 'gradebook.index', 'protected' => true, 'context' => AccessContext::SCHOOL]);
-    // The read service composes generic permissions and offering-scoped access, as for Gradebook.
+    $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}/students', [
+        'action' => 'workspaces.classrooms.students', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'STUDENT_VIEW',
+    ]);
+    // The overview composes generic permissions and offering-scoped access, as for Gradebook.
     $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}', [
         'action' => 'workspaces.classrooms.show', 'protected' => true, 'context' => AccessContext::SCHOOL,
     ]);
