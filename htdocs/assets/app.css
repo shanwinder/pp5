@@ -347,6 +347,15 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-gradebook-summary { border-inline-start: 1px solid var(--pp5-border); font-variant-numeric: tabular-nums; }
 .pp5-gradebook td { min-width: 9rem; max-width: 14rem; overflow-wrap: anywhere; }
 .pp5-gradebook [data-score-cell] { min-width: 7rem; }
+.pp5-gradebook [data-score-cell][data-active-cell="true"] {
+  outline: 2px solid var(--pp5-focus);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+  box-shadow: inset 0 0 0 2px var(--pp5-focus);
+}
+.pp5-gradebook-code { color: var(--pp5-text-muted); font-weight: normal; }
+.pp5-gradebook-total { margin-block: var(--pp5-space-3); }
+.pp5-gradebook-teachers { margin-block-start: var(--pp5-space-4); }
 .pp5-gradebook [role="status"] { font-size: 0.8125rem; }
 
 /* Classroom context stays inside the application shell; native disclosures work without JS. */

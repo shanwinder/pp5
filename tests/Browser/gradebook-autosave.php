@@ -27,8 +27,9 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~
     $score = $_POST['score'] ?? '';
     if ($score === 'login') { echo '<!doctype html><html><body>Login page</body></html>'; exit; }
     if ($score === 'csrf') { http_response_code(419); echo 'CSRF token mismatch'; exit; }
+    if ($score === 'revoked') { http_response_code(403); echo 'Score permission revoked'; exit; }
     if ($score === 'failure') { http_response_code(500); echo 'Internal Server Error'; exit; }
-    $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '6' => '6.00', '01.50' => '1.50', '12.5' => '12.50'];
+    $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '6' => '6.00', '01.50' => '1.50', '12.5' => '12.50', '12.50' => '12.50'];
     if (!array_key_exists($score, $normalized)) {
         http_response_code(422); echo View::render('gradebook/score-error', ['message' => 'คะแนนไม่ถูกต้องหรือเกินคะแนนเต็ม']); exit;
     }
@@ -44,7 +45,7 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~
 if (!in_array($path, ['/', '/frame', '/matrix'], true)) { http_response_code(404); exit; }
 if ($path === '/matrix') {
     echo '<!doctype html><html lang="th"><head><meta charset="utf-8"><title>Gradebook layout checks</title></head><body><h1>Gradebook layout checks</h1><pre id="browser-results">Running…</pre>';
-    foreach (['editable','readonly','setup','empty-setup','inactive-setup','error-setup','closed-setup','empty','nojs'] as $mode) {
+    foreach (['editable','active','error','readonly','setup','empty-setup','inactive-setup','error-setup','closed-setup','empty','nojs'] as $mode) {
         foreach ([390,768,1024,1440] as $width) {
             echo '<iframe title="'.$mode.' '.$width.'" src="/frame?mode='.$mode.'" width="'.$width.'" height="900"'.($mode === 'nojs' ? ' sandbox="allow-same-origin"' : '').'></iframe>';
         }
@@ -52,7 +53,7 @@ if ($path === '/matrix') {
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','empty','nojs'], true);
+$canScore = in_array($mode, ['editable','active','error','empty','nojs'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $rows = [];
 foreach ([1, 2, 3, 4] as $id) {

@@ -37,6 +37,18 @@
             assert(rect.top >= d.querySelector('thead').getBoundingClientRect().bottom, 'sticky header does not cover focused score');
             assert(d.getElementById('score-1-10-1-input').value === '' && d.getElementById('score-1-11-1-input').value === '0.00', 'blank and real zero distinct');
             assert(d.querySelector('[role="status"][aria-live="polite"]'), 'cell live feedback');
+            if (mode === 'active' || mode === 'error') {
+              const cell = input.closest('[data-score-cell]');
+              assert(d.querySelectorAll('[data-active-cell="true"]').length === 1 && cell.dataset.activeCell === 'true', 'one logical active cell');
+              const style = w.getComputedStyle(cell);
+              assert(style.outlineStyle !== 'none' && parseFloat(style.outlineWidth) > 0, 'active outline is visible without color');
+              if (mode === 'error') {
+                cell.dataset.saveState = 'error';
+                cell.querySelector('[role="status"]').textContent = 'ผิดพลาด — คะแนนไม่ถูกต้องหรือเกินคะแนนเต็ม';
+                input.setAttribute('aria-invalid', 'true');
+                assert(d.documentElement.scrollWidth <= width + 1 && input.getBoundingClientRect().right <= bounds.right + 1, 'error feedback remains inside internal grid scroll');
+              }
+            }
           }
           if (mode === 'readonly') {
             assert(!d.querySelector('main input,[hx-post],script[src*="htmx"],script[src*="gradebook.js"]'), 'read-only has no scoring controls/assets');

@@ -8,22 +8,15 @@ $offering = $gradebook['offering'];
     <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
-  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter ไปยังนักเรียนคนถัดไปในหัวข้อคะแนนเดิม · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?></p>
+  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter/Shift+Enter ไปยังนักเรียนถัดไป/ก่อนหน้าในหัวข้อเดิม · ↑/↓ ย้ายแถว · ←/→ แก้ไขตำแหน่งข้อความ · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
     <noscript><p>ต้องเปิดใช้งาน JavaScript เพื่อบันทึกคะแนนอัตโนมัติ</p></noscript>
   <?php endif; ?>
   <?= App\Support\View::render('gradebook/metadata', ['offering'=>$offering]) ?>
-  <p>คะแนนเต็มรวม <?= $escape($gradebook['configured_max_total']) ?></p>
-  <h2>ครูประจำวิชา</h2>
-  <?php if ($gradebook['teachers'] === []): ?><p>ไม่มีการมอบหมายครูที่ใช้งานอยู่</p><?php endif; ?>
-  <ul>
-    <?php foreach ($gradebook['teachers'] as $teacher): ?>
-      <li><?= $escape($teacher['display_name']) ?> — <?= App\Support\View::render('ui/status', ['status'=>$teacher['status'], 'kind'=>'assignment']) ?></li>
-    <?php endforeach; ?>
-  </ul>
-  <h2>คะแนนรายองค์ประกอบ</h2>
+  <p class="pp5-gradebook-total">คะแนนเต็มรวมที่ใช้งานอยู่ <strong><?= $escape($gradebook['configured_max_total']) ?></strong></p>
+  <h2>คะแนนรายหัวข้อ</h2>
   <?php if ($gradebook['components'] === []): ?><p>ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน จึงยังไม่ถือว่าคะแนนครบ</p><?php endif; ?>
   <div class="pp5-table-scroll pp5-gradebook" role="region" aria-label="คะแนนรายองค์ประกอบ" aria-describedby="gradebook-guidance" tabindex="0">
     <table class="table pp5-table">
@@ -31,7 +24,7 @@ $offering = $gradebook['offering'];
       <thead><tr>
         <th class="pp5-gradebook-identity" scope="col">นักเรียน</th><th scope="col">ประเภทแถว</th>
         <?php foreach ($gradebook['components'] as $component): ?>
-          <th id="<?= $escape('component-' . $component['id']) ?>" scope="col" data-component-id="<?= $escape($component['id']) ?>"><?= $escape($component['code'] . ' — ' . $component['name_th']) ?><br>เต็ม <?= $escape($component['max_score']) ?></th>
+          <th id="<?= $escape('component-' . $component['id']) ?>" scope="col" data-component-id="<?= $escape($component['id']) ?>"><strong><?= $escape($component['name_th']) ?></strong><br>เต็ม <?= $escape($component['max_score']) ?><br><small class="pp5-gradebook-code">รหัส <?= $escape($component['code']) ?></small></th>
         <?php endforeach; ?>
         <th class="pp5-gradebook-summary" scope="col">คะแนนที่บันทึกรวม</th><th scope="col">คะแนนเต็มรวม</th><th scope="col">บันทึกแล้ว / องค์ประกอบทั้งหมด</th><th scope="col">ความครบถ้วน</th>
       </tr></thead>
@@ -55,4 +48,12 @@ $offering = $gradebook['offering'];
       </tbody>
     </table>
   </div>
+  <details class="pp5-gradebook-teachers"><summary>ครูประจำวิชา</summary>
+    <?php if ($gradebook['teachers'] === []): ?><p>ไม่มีการมอบหมายครูที่ใช้งานอยู่</p><?php endif; ?>
+    <ul>
+      <?php foreach ($gradebook['teachers'] as $teacher): ?>
+        <li><?= $escape($teacher['display_name']) ?> — <?= App\Support\View::render('ui/status', ['status'=>$teacher['status'], 'kind'=>'assignment']) ?></li>
+      <?php endforeach; ?>
+    </ul>
+  </details>
 </div>

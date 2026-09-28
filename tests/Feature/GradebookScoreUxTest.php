@@ -56,7 +56,7 @@ final class GradebookScoreUxTest extends TestCase
         self::assertSame(8, $this->xpath($r->body())->query('//input[@hx-post]')->length);
     }
 
-    public function testAutosaveAssetsAndKeyboardSafetyRemainPinnedAndLocal(): void
+    public function testAutosaveAssetsAndActiveCellNavigationRemainPinnedAndLocal(): void
     {
         $this->login();
         $r = $this->request('GET', $this->readPath());
@@ -84,11 +84,17 @@ final class GradebookScoreUxTest extends TestCase
         self::assertIsString($js);
 
         foreach ([
-            "event.key !== 'Enter'",
+            "event.key === 'Enter'",
+            "event.key === 'ArrowUp'",
+            "event.key === 'ArrowDown'",
+            'const positions = new Map();',
+            'let activeKey = null;',
+            'focusRevision',
+            'event.isComposing',
             'event.preventDefault();',
-            'if (next) next.focus();',
-            'else input.blur();',
-            "getResponseHeader('X-Gradebook-Saved') !== '1'",
+            'target.focus({ preventScroll: true });',
+            'input.blur();',
+            "getResponseHeader('X-Gradebook-Saved') === '1'",
             "input.readOnly = true;",
             "input.readOnly = false;",
         ] as $contract) {
@@ -96,7 +102,7 @@ final class GradebookScoreUxTest extends TestCase
         }
 
         self::assertStringNotContainsString("event.key === 'Tab'", $js);
-        self::assertStringNotContainsString("event.key === 'ArrowUp'", $js);
-        self::assertStringNotContainsString("event.key === 'ArrowDown'", $js);
+        self::assertStringNotContainsString("event.key === 'ArrowLeft'", $js);
+        self::assertStringNotContainsString("event.key === 'ArrowRight'", $js);
     }
 }

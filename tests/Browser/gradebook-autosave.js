@@ -45,10 +45,51 @@
     assert(document.getElementById('row-1-1-total').textContent === '19.25', 'OOB summary uses the server value');
     assert(requests[0].keys.join(',') === '_token,score', 'Request body contains only score and CSRF');
 
+    assert(document.querySelectorAll('[data-active-cell="true"]').length === 1 && get(2).closest('[data-score-cell]').dataset.activeCell === 'true', 'Exactly one logical cell is active');
+    const activeStyle = get(2).ownerDocument.defaultView.getComputedStyle(get(2).closest('[data-score-cell]'));
+    assert(activeStyle.outlineStyle !== 'none' && parseFloat(activeStyle.outlineWidth) > 0, 'Active cell has a non-color outline');
     assert(!key(get(2), 'Tab').defaultPrevented, 'Tab is not intercepted');
     assert(!key(get(2), 'Tab', { shiftKey: true }).defaultPrevented, 'Shift+Tab is not intercepted');
-    for (const arrow of ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown']) assert(!key(get(2), arrow).defaultPrevented, `${arrow} is not intercepted`);
-    assert(!key(get(2), 'Enter', { isComposing: true }).defaultPrevented, 'IME composition does not submit');
+    for (const arrow of ['ArrowLeft','ArrowRight']) assert(!key(get(2), arrow).defaultPrevented, `${arrow} preserves text caret navigation`);
+    for (const modifier of [{ctrlKey:true},{metaKey:true},{altKey:true}]) {
+      const before = document.activeElement;
+      assert(!key(get(2), 'ArrowDown', modifier).defaultPrevented && document.activeElement === before, 'Modified arrow remains a browser shortcut');
+    }
+    const composingInput = get(2);
+    composingInput.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
+    assert(!key(composingInput, 'Enter').defaultPrevented && !key(composingInput, 'ArrowDown').defaultPrevented && document.activeElement === composingInput, 'IME composition does not move or submit');
+    composingInput.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
+    assert(!key(get(2), 'Enter', { isComposing: true }).defaultPrevented, 'IME-marked key event does not submit');
+    assert(!key(get(2), 'ArrowDown', { shiftKey: true }).defaultPrevented, 'Shift+arrow does not create a range');
+    assert(!key(get(2), 'Enter', { repeat: true }).defaultPrevented, 'Key repeat cannot queue a second Enter save');
+
+    const beforeShift = requests.length;
+    assert(key(get(2), 'Enter', { shiftKey: true }).defaultPrevented && document.activeElement === get(1), 'Shift+Enter moves to the prior current row in the same component');
+    await until(() => requests.length > beforeShift && active === 0);
+    assert(document.activeElement === get(1) && document.querySelectorAll('[data-active-cell="true"]').length === 1, 'Older response cannot steal focus from the new active cell');
+    assert(!composingInput.isConnected && get(2) !== composingInput, 'Active identity survives replacement without retaining the old input');
+    assert(key(get(1), 'ArrowUp').defaultPrevented && document.activeElement === get(1), 'ArrowUp at first row does not wrap');
+    assert(key(get(1), 'Enter', { shiftKey: true }).defaultPrevented && document.activeElement !== get(1), 'Shift+Enter at first row blurs without wrapping');
+    await until(() => active === 0);
+    get(2).focus();
+    const beforeDown = get(2);
+    assert(key(get(2), 'ArrowDown').defaultPrevented && document.activeElement === get(3), 'ArrowDown moves to next current row');
+    assert(key(get(3), 'ArrowDown').defaultPrevented && document.activeElement === get(3), 'ArrowDown at last current row does not enter history');
+    await until(() => get(2) !== beforeDown && active === 0);
+    assert(key(get(3), 'ArrowUp').defaultPrevented && document.activeElement === get(2), 'ArrowUp moves to prior current row');
+    await until(() => active === 0);
+    assert(!key(get(2), 'ArrowUp', { isComposing: true }).defaultPrevented, 'IME-marked arrow stays native');
+
+    const priorSecond = get(2);
+    get(1).focus();
+    await until(() => get(2) !== priorSecond && active === 0);
+    const rapidStart = requests.length;
+    assert(key(get(1), 'Enter').defaultPrevented && document.activeElement === get(2), 'Rapid Enter first step moves by logical row');
+    assert(key(get(2), 'Enter').defaultPrevented && document.activeElement === get(3), 'Rapid Enter second step keeps newest focus');
+    await until(() => requests.length - rapidStart === 2 && active === 0);
+    assert(document.activeElement === get(3), 'Queued Enter responses do not reclaim focus');
+    document.querySelector('details summary').focus();
+    assert(document.querySelectorAll('[data-active-cell="true"]').length === 0, 'Leaving score inputs clears active styling');
 
     // Repeated blur on a queued or in-flight field must not stall later cells.
     get(2).blur(); await until(() => active === 0); await wait(30);
@@ -62,7 +103,7 @@
     assert(maxActive === 1, 'Table requests are serialized');
     assert(get(1).value === '5.00' && get(2).value === '6.00' && get(3).value === '1.50', 'Queued cells keep their intended values');
 
-    for (const value of ['20.01','1.234','<img src=x onerror=alert(1)>','csrf','failure','login']) {
+    for (const value of ['20.01','1.234','<img src=x onerror=alert(1)>','csrf','revoked','failure','login']) {
       const input = get(); edit(input, value); input.blur();
       await until(() => state(input) === 'error');
       assert(input.value === value && !input.readOnly, `${value}: error retains the exact editable input`);
@@ -85,6 +126,10 @@
       const input = get(); edit(input, value); input.blur(); await until(() => get() !== input);
       assert(get().value === normalized && state(get()) === 'saved', `Saved ${JSON.stringify(value)} displays ${JSON.stringify(normalized)}`);
     }
+    const returning = get(); edit(returning, '5'); returning.blur(); returning.focus();
+    await until(() => get() !== returning);
+    await until(() => document.activeElement === get());
+    assert(get().value === '5.00' && document.querySelectorAll('[data-active-cell="true"]').length === 1, 'Focused in-flight logical cell restores focus to server replacement');
     const last = get(3); edit(last, '5'); key(last, 'Enter');
     assert(document.activeElement !== last, 'Enter on the last writable row blurs and skips historical rows');
     await until(() => get(3) !== last);

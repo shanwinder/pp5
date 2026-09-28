@@ -120,11 +120,13 @@ final class UiGradebookTest extends TestCase
         }
     }
 
-    public function testSaveLoopRemainsPresentationOnlyAndOnlyEnterIsIntercepted(): void
+    public function testSaveLoopRemainsPresentationOnlyWithVerticalNavigation(): void
     {
         $js=file_get_contents(dirname(__DIR__,2).'/htdocs/assets/gradebook.js');
-        foreach (["event.key !== 'Enter'",'event.detail.xhr.status !== 200',"getResponseHeader('X-Gradebook-Saved') !== '1'",'event.detail.shouldSwap = false',"status(input, 'error', message)",'if (next) next.focus();','else input.blur();'] as $contract) { self::assertStringContainsString($contract,$js); }
-        self::assertSame(1,preg_match_all('/event\.key\s*[!=]==?/',$js));
+        foreach (["event.key === 'Enter'", "event.key === 'ArrowUp'", "event.key === 'ArrowDown'", "xhr?.status === 200", "getResponseHeader('X-Gradebook-Saved') === '1'",'event.detail.shouldSwap = false',"status(input, 'ERROR', 'error', message)",'target.focus({ preventScroll: true });','input.blur();'] as $contract) { self::assertStringContainsString($contract,$js); }
+        self::assertStringNotContainsString("event.key === 'Tab'",$js);
+        self::assertStringNotContainsString("event.key === 'ArrowLeft'",$js);
+        self::assertStringNotContainsString("event.key === 'ArrowRight'",$js);
         self::assertDoesNotMatchRegularExpression('/fetch\s*\(|XMLHttpRequest|parseFloat|parseInt|\.reduce\s*\(|GRADEBOOK_|school_id|Math\./',$js);
     }
 
