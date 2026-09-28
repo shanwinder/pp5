@@ -9,6 +9,38 @@ final class GradebookScoreUxTest extends TestCase
 {
     use GradebookScoreFixtures;
 
+    #[DataProvider('matrixReaders')]
+    public function testScoreMatrixMetadataIsOrderedAndExcludesIdentityAndSummaries(string $role, bool $editable): void
+    {
+        $this->login($role);
+        $r = $this->request('GET', $this->readPath());
+        self::assertSame(200, $r->status());
+        $x = $this->xpath($r->body());
+        $headers = $x->query('//thead//th[@data-component-id]');
+        $rows = $x->query('//tbody/tr[@data-enrollment-id]');
+        self::assertGreaterThan(0, $headers->length);
+        self::assertGreaterThan(0, $rows->length);
+        foreach ($rows as $rowIndex => $row) {
+            $cells = $x->query('./td[@data-grid-score-cell]', $row);
+            self::assertSame($headers->length, $cells->length);
+            self::assertSame(0, $x->query('./th[@data-grid-score-cell]|./td[contains(@class,"pp5-gradebook-summary") and @data-grid-score-cell]', $row)->length);
+            foreach ($cells as $columnIndex => $cell) {
+                self::assertSame((string) $rowIndex, $cell->getAttribute('data-grid-row'));
+                self::assertSame((string) $columnIndex, $cell->getAttribute('data-grid-column'));
+                self::assertSame($headers->item($columnIndex)->getAttribute('data-component-id'), $cell->getAttribute('data-component-id'));
+                self::assertSame($row->getAttribute('data-enrollment-id'), $cell->getAttribute('data-enrollment-id'));
+                $canEditCell = $editable && str_contains($row->getAttribute('class'), 'pp5-current');
+                self::assertSame($canEditCell ? 'true' : 'false', $cell->getAttribute('data-grid-editable'));
+                self::assertSame($canEditCell ? 1 : 0, $x->query('.//input[@data-score-input]', $cell)->length);
+                self::assertSame($canEditCell ? 0 : 1, $x->query('.//span[@data-grid-value]', $cell)->length);
+                self::assertFalse($cell->hasAttribute('data-student-code'));
+                self::assertFalse($cell->hasAttribute('data-national-id'));
+            }
+        }
+    }
+
+    public static function matrixReaders(): array { return [['SCHOOL_ADMIN', true], ['EXECUTIVE', false]]; }
+
     public static function readers(): array { return [['SCHOOL_ADMIN',8], ['ACADEMIC_ADMIN',8], ['SUBJECT_TEACHER',8], ['EXECUTIVE',0], ['VIEWER',0], ['HOMEROOM_TEACHER',0]]; }
     #[DataProvider('readers')]
     public function testOnlyAuthorizedCurrentRowsHaveAccessibleInputs(string $role, int $count): void

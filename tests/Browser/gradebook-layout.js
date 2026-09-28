@@ -51,7 +51,7 @@
             }
           }
           if (mode === 'readonly') {
-            assert(!d.querySelector('main input,[hx-post],script[src*="htmx"],script[src*="gradebook.js"]'), 'read-only has no scoring controls/assets');
+            assert(!d.querySelector('main input,[hx-post],script[src*="htmx"]') && d.querySelector('script[src*="gradebook.js"]'), 'read-only has selection asset but no scoring controls');
             assert(d.querySelector('main').textContent.includes('อ่านอย่างเดียว'), 'read-only mode explicit');
             assert(d.querySelector('td[data-component-id="10"]').textContent.trim()==='' && d.querySelector('td[data-component-id="11"]').textContent.trim()==='0.00','read-only blank and zero distinct');
           }

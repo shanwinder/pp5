@@ -18,6 +18,26 @@
     const event = new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true, ...options });
     input.dispatchEvent(event); return event;
   };
+  const cell = (row, column) => document.querySelector(`td[data-grid-row="${row}"][data-grid-column="${column}"]`);
+  const selected = () => [...document.querySelectorAll('td[data-grid-selected="true"]')]
+    .map(td => `${td.dataset.gridRow}:${td.dataset.gridColumn}`).sort().join(',');
+  const pointer = (type, td, pointerId = 7) => {
+    td.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    const box = td.getBoundingClientRect();
+    const event = new PointerEvent(type, { bubbles: true, cancelable: true, pointerId, pointerType: 'mouse',
+      isPrimary: true, button: 0, buttons: type === 'pointerup' || type === 'pointercancel' ? 0 : 1,
+      clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 });
+    const hit = document.elementFromPoint(event.clientX, event.clientY);
+    (type === 'pointerdown' ? td : document).dispatchEvent(event);
+    return `${event.pointerId}:${hit?.closest('td')?.dataset.gridRow}:${hit?.closest('td')?.dataset.gridColumn}`;
+  };
+  const drag = (start, end) => { pointer('pointerdown', start); const hit = pointer('pointermove', end); pointer('pointerup', end); return hit; };
+  const copy = () => {
+    const clipboardData = new DataTransfer();
+    const event = new ClipboardEvent('copy', { bubbles: true, cancelable: true, clipboardData });
+    document.dispatchEvent(event);
+    return { text: clipboardData.getData('text/plain'), handled: event.defaultPrevented };
+  };
   document.addEventListener('htmx:beforeRequest', event => {
     requests.push({ score: event.detail.requestConfig.parameters.score, keys: Object.keys(event.detail.requestConfig.parameters).sort(), xhr: event.detail.xhr });
     active++; maxActive = Math.max(maxActive, active);
@@ -27,6 +47,38 @@
   try {
     // Let HTMX process the server-rendered document first.
     await wait(50);
+    const initialPosts = requests.length;
+    const touch = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 19,
+      pointerType: 'touch', isPrimary: true, button: 0 });
+    cell(0, 0).dispatchEvent(touch);
+    assert(!touch.defaultPrevented && selected() === '', 'Touch pointer keeps native scrolling and does not start selection');
+    const hit = drag(cell(0, 0), cell(3, 1));
+    assert(selected() === '0:0,0:1,1:0,1:1,2:0,2:1,3:0,3:1', `Pointer drag selects the full rectangular score matrix (got ${selected()}, hit ${hit})`);
+    const chosenStyle = getComputedStyle(cell(0, 0));
+    assert(chosenStyle.outlineStyle !== 'none' && parseFloat(chosenStyle.outlineWidth) > 0, 'Selected range has a non-color outline');
+    const rightClick = new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 20,
+      pointerType: 'mouse', isPrimary: true, button: 2 });
+    cell(0, 0).dispatchEvent(rightClick);
+    assert(!rightClick.defaultPrevented && selected() === '0:0,0:1,1:0,1:1,2:0,2:1,3:0,3:1', 'Right click does not replace selection');
+    assert(cell(3, 0).dataset.gridEditable === 'false' && !cell(3, 0).querySelector('input'), 'Selected historical score remains read-only');
+    const matrix = copy();
+    assert(matrix.handled && matrix.text === '\t0.00\n1.50\t6.00\n5.00\t\n7.25\t', 'Clipboard preserves row geometry, blank, zero, history, and trailing blank');
+    const unavailableClipboard = new ClipboardEvent('copy', { bubbles: true, cancelable: true });
+    document.dispatchEvent(unavailableClipboard);
+    assert(!unavailableClipboard.defaultPrevented, 'Missing clipboardData safely keeps native copy');
+    assert(!matrix.text.includes('STUDENT-') && !matrix.text.includes('งาน') && !matrix.text.includes('สอบ'), 'Clipboard excludes identity and component headers');
+    assert(requests.length === initialPosts, 'Range selection and copy do not POST');
+    drag(cell(3, 1), cell(0, 0));
+    assert(selected() === '0:0,0:1,1:0,1:1,2:0,2:1,3:0,3:1' && copy().text === matrix.text, 'Reverse diagonal drag normalizes to the same rectangle');
+    drag(cell(2, 1), cell(1, 0));
+    assert(selected() === '1:0,1:1,2:0,2:1', 'Up-left drag creates a contiguous rectangle');
+    drag(cell(0, 1), cell(0, 1));
+    assert(selected() === '0:1', 'A new range replaces every old selected marker');
+    document.dispatchEvent(new PointerEvent('pointercancel', { bubbles: true, pointerId: 7, pointerType: 'mouse', isPrimary: true }));
+    key(cell(0, 1), 'Escape');
+    assert(selected() === '' && requests.length === initialPosts, 'Escape clears range without a score POST');
+    assert(!cell(0, 1).querySelector('input').readOnly, 'Selection never changes input editability');
+
     const first = get(); first.focus();
     const live = first.closest('[data-score-cell]').querySelector('[role="status"]');
     const observer = new MutationObserver(() => {});
@@ -60,7 +112,8 @@
     assert(!key(composingInput, 'Enter').defaultPrevented && !key(composingInput, 'ArrowDown').defaultPrevented && document.activeElement === composingInput, 'IME composition does not move or submit');
     composingInput.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
     assert(!key(get(2), 'Enter', { isComposing: true }).defaultPrevented, 'IME-marked key event does not submit');
-    assert(!key(get(2), 'ArrowDown', { shiftKey: true }).defaultPrevented, 'Shift+arrow does not create a range');
+    assert(key(get(2), 'ArrowDown', { shiftKey: true }).defaultPrevented, 'Shift+Down extends a score range');
+    assert(document.querySelectorAll('[data-grid-selected="true"]').length === 2, 'Shift+Down selects two score cells');
     assert(!key(get(2), 'Enter', { repeat: true }).defaultPrevented, 'Key repeat cannot queue a second Enter save');
 
     const beforeShift = requests.length;
@@ -134,6 +187,48 @@
     assert(document.activeElement !== last, 'Enter on the last writable row blurs and skips historical rows');
     await until(() => get(3) !== last);
     assert(!document.querySelector('tr[data-enrollment-id="4"] input'), 'Historical row has no editable cells');
+
+    const selectionPosts = requests.length;
+    get(2).focus();
+    key(get(2), 'Escape');
+    assert(key(get(2), 'ArrowUp', { shiftKey: true }).defaultPrevented && selected() === '0:0,1:0', 'Shift+Up anchors at the active cell');
+    assert(!key(get(2), 'ArrowUp', { shiftKey: true }).defaultPrevented && selected() === '0:0,1:0', 'Shift+Up stops at the first row');
+    assert(key(get(2), 'ArrowDown', { shiftKey: true }).defaultPrevented && selected() === '1:0', 'Shift+Down shrinks a range toward its fixed anchor');
+    assert(!key(get(2), 'ArrowLeft', { shiftKey: true }).defaultPrevented
+      && !key(get(2), 'ArrowRight', { shiftKey: true }).defaultPrevented, 'Shift+Left/Right retain native input text selection');
+    assert(requests.length === selectionPosts, 'Keyboard range extension alone does not POST');
+
+    drag(cell(0, 0), cell(0, 1));
+    const summary = document.querySelector('tbody tr.pp5-current td.pp5-gradebook-summary');
+    pointer('pointerdown', summary);
+    assert(selected() === '0:0,0:1' && !summary.hasAttribute('data-grid-selected'), 'Summary cells cannot start or join score selection');
+    pointer('pointerdown', cell(1, 1)); pointer('pointercancel', cell(1, 1));
+    assert(selected() === '', 'Pointer cancellation clears transient range state');
+    pointer('pointerdown', cell(1, 1));
+    document.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 7,
+      pointerType: 'mouse', isPrimary: true, button: 0, buttons: 0 }));
+    assert(selected() === '', 'Lost pointer button cannot leave selection mode stuck');
+
+    const unsaved = get(); edit(unsaved, '9.99');
+    const dirtyPosts = requests.length;
+    drag(cell(0, 0), cell(0, 1));
+    assert(copy().text === '9.99\t0.00' && requests.length === dirtyPosts, 'Dirty visible score copies without save or normalization');
+    unsaved.setSelectionRange(0, 1);
+    const nativeInputCopy = copy();
+    assert(!nativeInputCopy.handled && nativeInputCopy.text === '', 'Selected input characters retain native copy precedence');
+    unsaved.setSelectionRange(1, 1);
+    const pageText = document.createRange(); pageText.selectNodeContents(document.getElementById('gradebook-guidance'));
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(pageText);
+    assert(!copy().handled, 'Selected page text outside the Gradebook retains native copy');
+    window.getSelection().removeAllRanges();
+    unsaved.blur(); await until(() => state(unsaved) === 'error');
+    assert(selected() === '0:0,0:1' && copy().text === '9.99\t0.00', 'Failed save keeps selection and copies visible error value');
+    edit(unsaved, '5'); unsaved.blur();
+    assert(copy().text === '5\t0.00', 'In-flight copy snapshots visible saving value');
+    await until(() => get() !== unsaved);
+    assert(selected() === '0:0,0:1' && copy().text === '5.00\t0.00', 'HTMX replacement keeps TD range and copies new visible value');
+    assert(document.querySelectorAll('[data-grid-selected="true"]').length === 2, 'HTMX replacement does not duplicate range markers');
+
     output.textContent = `PASS: ${checks.length} browser assertions\n` + checks.join('\n');
     document.title = `PASS ${checks.length} — Gradebook browser tests`;
   } catch (error) {

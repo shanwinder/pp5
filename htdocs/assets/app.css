@@ -347,6 +347,23 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-gradebook-summary { border-inline-start: 1px solid var(--pp5-border); font-variant-numeric: tabular-nums; }
 .pp5-gradebook td { min-width: 9rem; max-width: 14rem; overflow-wrap: anywhere; }
 .pp5-gradebook [data-score-cell] { min-width: 7rem; }
+.pp5-gradebook td[data-grid-score-cell] { position: relative; }
+.pp5-gradebook td[data-grid-selected="true"] {
+  --bs-table-bg: color-mix(in srgb, var(--pp5-focus) 12%, var(--pp5-surface));
+  outline: 1px dashed var(--pp5-focus);
+  outline-offset: -3px;
+}
+.pp5-gradebook td[data-grid-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid transparent;
+}
+.pp5-gradebook td[data-grid-edge~="top"]::after { border-top-color: var(--pp5-focus); }
+.pp5-gradebook td[data-grid-edge~="bottom"]::after { border-bottom-color: var(--pp5-focus); }
+.pp5-gradebook td[data-grid-edge~="left"]::after { border-left-color: var(--pp5-focus); }
+.pp5-gradebook td[data-grid-edge~="right"]::after { border-right-color: var(--pp5-focus); }
 .pp5-gradebook [data-score-cell][data-active-cell="true"] {
   outline: 2px solid var(--pp5-focus);
   outline-offset: 2px;

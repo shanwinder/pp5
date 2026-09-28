@@ -16,7 +16,7 @@ final class UiGradebookTest extends TestCase
         $this->login($role); $r=$this->request('GET',$this->readPath()); self::assertSame(200,$r->status());
         $x=$this->assertPage($r->body()); $this->assertReadSafe($r->body());
         foreach (['/assets/vendor/htmx-2.0.8.min.js','/assets/gradebook.js'] as $src) {
-            self::assertSame($score?1:0,$x->query('//script[@src="'.$src.'" and @defer]')->length);
+            self::assertSame($src === '/assets/gradebook.js' ? 1 : ($score ? 1 : 0),$x->query('//script[@src="'.$src.'" and @defer]')->length);
         }
         self::assertSame($score?1:0,$x->query('//meta[@name="htmx-config"]')->length);
         self::assertSame($setup?1:0,$x->query('//main//a[@href="'.$this->path().'"]')->length);
@@ -64,7 +64,8 @@ final class UiGradebookTest extends TestCase
         $this->login(); $this->changePrerequisite($kind);
         foreach ([$this->readPath(),$this->path()] as $path) {
             $r=$this->request('GET',$path); self::assertSame(200,$r->status()); $x=$this->assertPage($r->body());
-            self::assertSame(0,$x->query('//main//form|//main//input|//script[contains(@src,"htmx") or contains(@src,"gradebook.js")]')->length);
+            self::assertSame(0,$x->query('//main//form|//main//input|//script[contains(@src,"htmx")]')->length);
+            self::assertSame($path === $this->readPath() ? 1 : 0,$x->query('//script[contains(@src,"gradebook.js")]')->length);
         }
     }
 

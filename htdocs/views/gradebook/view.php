@@ -8,7 +8,8 @@ $offering = $gradebook['offering'];
     <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
-  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter/Shift+Enter ไปยังนักเรียนถัดไป/ก่อนหน้าในหัวข้อเดิม · ↑/↓ ย้ายแถว · ←/→ แก้ไขตำแหน่งข้อความ · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?></p>
+  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter/Shift+Enter ไปยังนักเรียนถัดไป/ก่อนหน้าในหัวข้อเดิม · ↑/↓ ย้ายแถว · ←/→ แก้ไขตำแหน่งข้อความ · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากจากพื้นที่ว่างในช่องคะแนนเพื่อเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอกคะแนน<?= $canScore ? ' · Shift+↑/↓ ขยายช่วงจากช่องที่กำลังแก้ไข' : '' ?> · Escape ล้างช่วงที่เลือก</p>
+  <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
@@ -29,17 +30,17 @@ $offering = $gradebook['offering'];
         <th class="pp5-gradebook-summary" scope="col">คะแนนที่บันทึกรวม</th><th scope="col">คะแนนเต็มรวม</th><th scope="col">บันทึกแล้ว / องค์ประกอบทั้งหมด</th><th scope="col">ความครบถ้วน</th>
       </tr></thead>
       <tbody>
-        <?php foreach ($gradebook['rows'] as $row): ?>
+        <?php foreach ($gradebook['rows'] as $rowIndex => $row): ?>
           <tr class="<?= $row['row_type'] === 'HISTORICAL' ? 'pp5-historical' : 'pp5-current' ?>" data-enrollment-id="<?= $escape($row['enrollment_id']) ?>">
             <th id="<?= $escape('student-' . $row['enrollment_id']) ?>" class="pp5-gradebook-identity" scope="row"><span><?= $escape($row['student_code']) ?></span><span><?= $escape($row['display_name']) ?></span></th>
             <td><?= $row['row_type'] === 'CURRENT' ? 'รายชื่อปัจจุบัน' : 'ประวัติ — อ่านอย่างเดียว' ?> (<?= App\Support\View::render('ui/status', ['status'=>$row['enrollment_status'], 'kind'=>'enrollment']) ?>)</td>
-            <?php foreach ($gradebook['components'] as $component): ?>
-              <td data-component-id="<?= $escape($component['id']) ?>"><?php if ($canScore && $row['row_type'] === 'CURRENT'): ?>
+            <?php foreach ($gradebook['components'] as $columnIndex => $component): ?>
+              <td data-grid-score-cell data-grid-row="<?= (int) $rowIndex ?>" data-grid-column="<?= (int) $columnIndex ?>" data-grid-editable="<?= $canScore && $row['row_type'] === 'CURRENT' ? 'true' : 'false' ?>" data-component-id="<?= $escape($component['id']) ?>" data-enrollment-id="<?= $escape($row['enrollment_id']) ?>"><?php if ($canScore && $row['row_type'] === 'CURRENT'): ?>
                 <?= \App\Support\View::render('gradebook/score-cell', [
                     'offeringId' => $offering['id'], 'componentId' => $component['id'], 'enrollmentId' => $row['enrollment_id'],
                     'score' => $row['scores'][$component['id']],
                 ]) ?>
-              <?php else: ?><?= $row['scores'][$component['id']] === null ? '' : $escape($row['scores'][$component['id']]) ?><?php endif; ?></td>
+              <?php else: ?><span data-grid-value><?= $row['scores'][$component['id']] === null ? '' : $escape($row['scores'][$component['id']]) ?></span><?php endif; ?></td>
             <?php endforeach; ?>
             <?= \App\Support\View::render('gradebook/row-summary', ['offeringId' => $offering['id'], 'row' => $row]) ?>
           </tr>

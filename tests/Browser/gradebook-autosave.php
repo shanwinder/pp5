@@ -18,6 +18,7 @@ $assets = [
     '/assets/vendor/bootstrap-5.3.8.min.css' => '/htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
     '/browser-tests.js' => '/tests/Browser/gradebook-autosave.js',
+    '/readonly-tests.js' => '/tests/Browser/gradebook-range-readonly.js',
 ];
 if (isset($assets[$path])) {
     header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
@@ -29,7 +30,8 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~
     if ($score === 'csrf') { http_response_code(419); echo 'CSRF token mismatch'; exit; }
     if ($score === 'revoked') { http_response_code(403); echo 'Score permission revoked'; exit; }
     if ($score === 'failure') { http_response_code(500); echo 'Internal Server Error'; exit; }
-    $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '6' => '6.00', '01.50' => '1.50', '12.5' => '12.50', '12.50' => '12.50'];
+    $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '5.00' => '5.00', '6' => '6.00', '6.00' => '6.00',
+        '1.50' => '1.50', '0.00' => '0.00', '01.50' => '1.50', '12.5' => '12.50', '12.50' => '12.50'];
     if (!array_key_exists($score, $normalized)) {
         http_response_code(422); echo View::render('gradebook/score-error', ['message' => 'คะแนนไม่ถูกต้องหรือเกินคะแนนเต็ม']); exit;
     }
@@ -55,10 +57,12 @@ if ($path === '/matrix') {
 $mode = $_GET['mode'] ?? 'editable';
 $canScore = in_array($mode, ['editable','active','error','empty','nojs'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
+$fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
+    3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
 $rows = [];
 foreach ([1, 2, 3, 4] as $id) {
     $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => $long.' '.$id,
-        'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 ? 'HISTORICAL' : 'CURRENT', 'scores' => [10 => null, 11 => '0.00'],
+        'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 ? 'HISTORICAL' : 'CURRENT', 'scores' => $fixtureScores[$id],
         'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 1, 'active_component_count' => 2, 'complete' => false];
 }
 $offering = ['id' => 1, 'year_be' => 2569, 'academic_year_status' => $mode === 'closed-setup' ? 'CLOSED' : 'ACTIVE',
@@ -80,7 +84,7 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'summary'=>['active_count'=>$activeSetupCount, 'inactive_count'=>count($setupComponents)-$activeSetupCount, 'active_max_total'=>$setupTotal],
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
 ], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
-    'headAssets'=>$canScore ? View::render('gradebook/scoring-assets') : '',
-    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="/browser-tests.js" defer></script>' : '',
+    'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.($canScore ? '/browser-tests.js' : '/readonly-tests.js').'" defer></script>' : '',
 ]);
 echo $html;

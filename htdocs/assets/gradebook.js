@@ -19,7 +19,124 @@
     positions.set(key, { column, index: items.length });
     items.push(key);
   }
-  if (positions.size === 0) return; // Read-only pages never intercept score keys.
+
+  // Score TDs and row/column coordinates survive inner score-cell HTMX replacement.
+  const scoreCells = new Map();
+  for (const cell of grid.querySelectorAll('tbody td[data-grid-score-cell]')) {
+    scoreCells.set(`${cell.dataset.gridRow}:${cell.dataset.gridColumn}`, cell);
+  }
+  const rowCount = grid.querySelectorAll('tbody tr[data-enrollment-id]').length;
+  const at = (row, column) => scoreCells.get(`${row}:${column}`);
+  const coordinate = cell => ({ row: Number(cell.dataset.gridRow), column: Number(cell.dataset.gridColumn) });
+  const rectangle = (anchor, extent) => ({
+    rowStart: anchor.row < extent.row ? anchor.row : extent.row,
+    rowEnd: anchor.row > extent.row ? anchor.row : extent.row,
+    columnStart: anchor.column < extent.column ? anchor.column : extent.column,
+    columnEnd: anchor.column > extent.column ? anchor.column : extent.column,
+  });
+  const rangeStatus = document.getElementById('gradebook-range-status');
+  let selectionAnchor = null;
+  let selectionExtent = null;
+  let dragging = null;
+
+  const visit = (rect, callback) => {
+    if (!rect) return;
+    for (let row = rect.rowStart; row <= rect.rowEnd; row++) {
+      for (let column = rect.columnStart; column <= rect.columnEnd; column++) {
+        const cell = at(row, column);
+        if (cell) callback(cell, row, column);
+      }
+    }
+  };
+  const includes = (rect, row, column) => rect && row >= rect.rowStart && row <= rect.rowEnd
+    && column >= rect.columnStart && column <= rect.columnEnd;
+  const setRange = (anchor, extent, announce = false) => {
+    const old = selectionAnchor && rectangle(selectionAnchor, selectionExtent);
+    const next = anchor && rectangle(anchor, extent);
+    visit(old, (cell, row, column) => {
+      if (!includes(next, row, column)) { delete cell.dataset.gridSelected; delete cell.dataset.gridEdge; }
+    });
+    selectionAnchor = anchor;
+    selectionExtent = extent;
+    visit(next, (cell, row, column) => {
+      if (cell.dataset.gridSelected !== 'true') cell.dataset.gridSelected = 'true';
+      const edge = [row === next.rowStart ? 'top' : '', row === next.rowEnd ? 'bottom' : '',
+        column === next.columnStart ? 'left' : '', column === next.columnEnd ? 'right' : ''].filter(Boolean).join(' ');
+      if (cell.dataset.gridEdge !== edge) cell.dataset.gridEdge = edge;
+    });
+    if (announce && rangeStatus) rangeStatus.textContent = next
+      ? `เลือก ${next.rowEnd - next.rowStart + 1} แถว × ${next.columnEnd - next.columnStart + 1} หัวข้อคะแนน`
+      : 'ล้างช่วงคะแนนที่เลือกแล้ว';
+  };
+  const scoreTd = target => target instanceof Element ? target.closest('td[data-grid-score-cell]') : null;
+  const displayedValue = cell => {
+    const input = cell.querySelector(selector);
+    if (input) return input.value;
+    return cell.querySelector('[data-grid-value]')?.textContent ?? '';
+  };
+  const rangeTsv = () => {
+    const rect = rectangle(selectionAnchor, selectionExtent);
+    const lines = [];
+    for (let row = rect.rowStart; row <= rect.rowEnd; row++) {
+      const fields = [];
+      for (let column = rect.columnStart; column <= rect.columnEnd; column++) {
+        fields.push(displayedValue(at(row, column)));
+      }
+      lines.push(fields.join('\t'));
+    }
+    return lines.join('\n');
+  };
+
+  document.addEventListener('pointerdown', event => {
+    if (event.pointerType === 'touch' || !event.isPrimary || event.button !== 0) return;
+    const cell = scoreTd(event.target);
+    if (!cell || !grid.contains(cell)) return;
+    if (event.target.closest('input, button, a, textarea, select')) {
+      setRange(null, null);
+      return;
+    }
+    // Padding/display text starts the range; an input retains native caret selection.
+    event.preventDefault();
+    window.getSelection()?.removeAllRanges();
+    dragging = { pointerId: event.pointerId };
+    const start = coordinate(cell);
+    setRange(start, start);
+  });
+  document.addEventListener('pointermove', event => {
+    if (!dragging || event.pointerId !== dragging.pointerId) return;
+    if (event.buttons === 0) { dragging = null; setRange(null, null, true); return; }
+    const cell = scoreTd(document.elementFromPoint(event.clientX, event.clientY));
+    if (!cell || !grid.contains(cell)) return;
+    const extent = coordinate(cell);
+    if (selectionExtent.row !== extent.row || selectionExtent.column !== extent.column) {
+      setRange(selectionAnchor, extent);
+    }
+  });
+  const finishDrag = (event, cancelled) => {
+    if (!dragging || event.pointerId !== dragging.pointerId) return;
+    dragging = null;
+    if (cancelled) setRange(null, null, true);
+    else setRange(selectionAnchor, selectionExtent, true);
+  };
+  document.addEventListener('pointerup', event => finishDrag(event, false));
+  document.addEventListener('pointercancel', event => finishDrag(event, true));
+  window.addEventListener('blur', () => {
+    if (dragging) { dragging = null; setRange(null, null, true); }
+  });
+  document.addEventListener('copy', event => {
+    if (!selectionAnchor || !event.clipboardData) return;
+    const focused = document.activeElement;
+    if (focused instanceof HTMLInputElement && focused.selectionStart !== null
+      && focused.selectionEnd > focused.selectionStart) return;
+    const nativeSelection = window.getSelection();
+    if (nativeSelection && !nativeSelection.isCollapsed && !grid.contains(nativeSelection.anchorNode)) return;
+    if (focused !== document.body && focused !== grid && !grid.contains(focused)) return;
+    try {
+      event.clipboardData.setData('text/plain', rangeTsv());
+      event.preventDefault();
+      if (rangeStatus) rangeStatus.textContent = 'คัดลอกช่วงคะแนนแล้ว';
+    } catch (_) { /* Keep native copy when clipboardData is unavailable. */ }
+  });
 
   const phases = new Map();
   let activeKey = null;
@@ -77,6 +194,7 @@
 
   document.addEventListener('focusin', event => {
     ++focusRevision;
+    if (!grid.contains(event.target)) setRange(null, null);
     if (editable(event.target)) setActive(keyOf(event.target));
     else if (isScore(event.target)) setActive(keyOf(event.target)); // A frozen in-flight cell can still receive focus.
     else setActive(null);
@@ -101,12 +219,30 @@
 
   document.addEventListener('keydown', event => {
     const input = event.target;
+    if (event.key === 'Escape' && selectionAnchor && !composing && !event.isComposing) {
+      event.preventDefault();
+      setRange(null, null, true);
+      return;
+    }
     if (!editable(input) || composing || event.isComposing || event.repeat
       || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.shiftKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      const cell = scoreTd(input);
+      if (!cell) return;
+      const anchor = selectionAnchor || coordinate(cell);
+      const extent = selectionExtent || anchor;
+      const row = extent.row + (event.key === 'ArrowUp' ? -1 : 1);
+      if (row < 0 || row >= rowCount || !at(row, extent.column)) return;
+      event.preventDefault();
+      setRange(anchor, { row, column: extent.column }, true);
+      return;
+    }
     if (event.key === 'Enter') {
+      setRange(null, null);
       event.preventDefault();
       move(input, event.shiftKey ? -1 : 1, true);
     } else if (!event.shiftKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+      setRange(null, null);
       event.preventDefault();
       move(input, event.key === 'ArrowUp' ? -1 : 1, false);
     }
