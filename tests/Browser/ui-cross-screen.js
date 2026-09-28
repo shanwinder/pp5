@@ -28,6 +28,7 @@
     }
     const isRoster = frame.title.startsWith('roster ');
     const isSubjects = frame.title.startsWith('subjects ');
+    const isScoreSetup = frame.title.startsWith('gradebook setup');
     const broadWorkspace = frame.title.startsWith('workspace admin') || frame.title.startsWith('roster normal') || frame.title.startsWith('subjects normal') || frame.title.startsWith('subjects empty') || frame.title.startsWith('subjects readonly');
     const workspace = d.querySelector('.pp5-workspace-shell');
     if (workspace) {
@@ -60,11 +61,23 @@
       check(empty ? !table : !!table, 'subjects empty/table state');
       check(!!d.querySelector('main a[href="/academic/subjects/create"]') === (broadWorkspace && !frame.title.startsWith('subjects readonly')), 'school subject creation follows permission and year');
       if (table) {
-        check(table.querySelectorAll('thead th[scope="col"]').length === 5, 'semantic subject columns');
+        check(table.querySelectorAll('thead th[scope="col"]').length === 6, 'semantic subject columns');
         check(table.querySelectorAll('tr[data-offering-id]').length === (frame.title.startsWith('subjects normal') ? 2 : 1), 'subject term rows');
         check(table.querySelectorAll('form[action^="/academic/teaching-assignments?"]').length === (frame.title.startsWith('subjects normal') ? 2 : 0), 'assignment actions follow authority');
+        check(table.textContent.includes('คะแนนเต็มรวม') || table.textContent.includes('ยังไม่ได้ตั้งค่าการเก็บคะแนน'), 'score setup summary visible');
         check(!table.querySelector('script'), 'teacher and subject names escaped');
       }
+    }
+    if (isScoreSetup) {
+      const main = d.querySelector('main');
+      check(main.textContent.includes('การเก็บคะแนน') && main.textContent.includes('หัวข้อคะแนน'), 'teacher terminology');
+      check(main.textContent.includes('ปีการศึกษา 2569 · ภาคเรียนที่ 1'), 'authoritative context visible');
+      check(!!main.querySelector('a[href="/gradebooks"]'), 'legacy return available');
+      check(!main.querySelector('input[name="code"],input[name="sort_order"]'), 'internal fields absent from normal form');
+      if (frame.title.includes('empty')) check(main.textContent.includes('ยังไม่ได้ตั้งค่าการเก็บคะแนน'), 'empty setup state');
+      if (frame.title.includes('inactive')) check(main.textContent.includes('รายการคะแนนที่ปิดใช้งาน / ประวัติ'), 'inactive structure visible');
+      if (frame.title.includes('error')) check(!!main.querySelector('[role="alert"]'), 'validation error announced');
+      if (frame.title.includes('closed')) check(!main.querySelector('form'), 'closed setup read only');
     }
     for (const region of d.querySelectorAll('.pp5-table-scroll')) {
       check(region.getBoundingClientRect().right <= w.innerWidth + 1, 'table contained');

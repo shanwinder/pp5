@@ -133,8 +133,12 @@ final class UiCrossScreenContractTest extends TestCase
             self::assertSame(1, $x->query('//a[@class="pp5-skip-link" and @href="#main-content"]')->length);
             self::assertSame(1, $x->query('//main[@id="main-content" and @tabindex="-1"]')->length);
             self::assertSame(1, $x->query('//nav[@aria-label="เมนูหลัก"]')->length);
-            self::assertSame([$active], array_map(static fn($n)=>$n->nodeValue,
-                iterator_to_array($x->query('//nav[@aria-label="เมนูหลัก"]//a[@aria-current="page"]/@href'))));
+            $sidebarCurrent = array_map(static fn($n)=>$n->nodeValue,
+                iterator_to_array($x->query('//nav[@aria-label="เมนูหลัก"]//a[@aria-current="page"]/@href')));
+            if (str_ends_with($path, '/setup')) {
+                self::assertSame([], $sidebarCurrent);
+                self::assertSame(1, $x->query('//nav[@aria-label="งานในห้องเรียน"]//a[@aria-current="page" and contains(@href,"/subjects")]')->length);
+            } else { self::assertSame([$active], $sidebarCurrent); }
             self::assertSame(0, $x->query('//nav//section[not(.//a)]')->length);
             self::assertSame(1, $x->query('//button[@data-nav-toggle and @aria-expanded="true" and @aria-controls="app-navigation" and normalize-space(.)!=""]')->length);
             self::assertSame(1, $x->query('//*[@id="app-navigation" and not(@hidden)]')->length);

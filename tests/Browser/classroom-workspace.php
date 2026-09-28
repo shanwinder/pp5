@@ -69,10 +69,12 @@ $offerings = $page === 'subjects-empty' ? [] : [[
     'term' => 1, 'status' => 'ACTIVE',
     'teachers' => [['id' => 1, 'name' => str_repeat('ครูชื่อยาว ', 5) . '<script>fixture</script>']],
     'teacherNamesVisible' => true, 'canOpenGradebook' => true,
+    'scoreSummary' => ['active_count' => 2, 'inactive_count' => 1, 'active_max_total' => '35.50'],
     'canSetup' => $admin, 'canEdit' => $admin && $page !== 'subjects-readonly',
     'canAssign' => $admin && $page !== 'subjects-readonly',
 ]];
-if ($page === 'subjects-normal') { $offerings[] = array_replace($offerings[0], ['id' => 2, 'term' => 2, 'teachers' => [], 'canOpenGradebook' => false]); }
+if ($page === 'subjects-normal') { $offerings[] = array_replace($offerings[0], ['id' => 2, 'term' => 2, 'teachers' => [], 'canOpenGradebook' => false,
+    'scoreSummary' => ['active_count' => 0, 'inactive_count' => 0, 'active_max_total' => '0.00']]); }
 echo View::page($roster ? 'workspaces/classroom/students' : ($subjectsPage ? 'workspaces/classroom/subjects' : 'workspaces/classroom/overview'),
     ['workspace' => $workspace, 'students' => $students, 'openYear' => $page !== 'subjects-readonly', 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin,
         'offerings' => $offerings, 'teacherChoices' => $admin ? [['user_role_assignment_id' => 1, 'display_name' => 'ครูทดสอบ']] : [],

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Repositories\GradebookComponentRepository;
 use App\Repositories\SubjectOfferingRepository;
 use App\Repositories\TeachingAssignmentRepository;
 use App\Support\AccessContext;
@@ -14,7 +15,8 @@ final class ClassroomSubjectsReadService
         private ClassroomWorkspaceReadService $workspaces,
         private SubjectOfferingRepository $offerings,
         private TeachingAssignmentRepository $assignments,
-        private AuthorizationService $authorization
+        private AuthorizationService $authorization,
+        private GradebookComponentRepository $components
     ) {}
 
     public function getSubjects(int $userId, string $contextType, int $schoolId, int $classroomId): ?array
@@ -37,6 +39,7 @@ final class ClassroomSubjectsReadService
         $rows = $this->offerings->listForClassroom($schoolId, $workspace['academicYear']['id'], $classroomId);
         $rows = array_values(array_filter($rows, static fn (array $row): bool => $canViewAll || isset($gradebookIds[(int) $row['id']])));
         $offeringIds = array_map(static fn (array $row): int => (int) $row['id'], $rows);
+        $scoreSummaries = $this->components->summariesForOfferings($schoolId, $offeringIds);
         $teachers = [];
         // Existing Gradebook reads authorize teacher names per offering. Assignment managers also see this data.
         $teacherIds = $canManageAssignment ? $offeringIds : array_values(array_intersect($offeringIds, array_keys($gradebookIds)));
@@ -53,6 +56,7 @@ final class ClassroomSubjectsReadService
                 'id' => $id, 'subjectId' => (int) $row['subject_id'],
                 'code' => $row['subject_code'], 'name' => $row['subject_name'],
                 'term' => (int) $row['term_no'], 'status' => $row['status'],
+                'scoreSummary' => $scoreSummaries[$id] ?? ['active_count' => 0, 'inactive_count' => 0, 'active_max_total' => '0.00'],
                 'teachers' => $teachers[$id] ?? [],
                 'teacherNamesVisible' => $canManageAssignment || isset($gradebookIds[$id]),
                 'canOpenGradebook' => isset($gradebookIds[$id]),

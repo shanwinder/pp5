@@ -20,7 +20,7 @@ $lastSubject = null;
     <div class="pp5-table-scroll" role="region" aria-label="รายวิชาและครูในห้องนี้" tabindex="0">
       <table class="table pp5-table" id="classroom-subjects">
         <caption>รายวิชาและครู · <?= $escape($room['name']) ?> · ปีการศึกษา <?= $escape($year['year_be']) ?></caption>
-        <thead><tr><th scope="col">รหัส / รายวิชา</th><th scope="col">ภาคเรียน</th><th scope="col">สถานะ</th><th scope="col">ครูผู้สอน</th><th scope="col">การทำงาน</th></tr></thead>
+        <thead><tr><th scope="col">รหัส / รายวิชา</th><th scope="col">ภาคเรียน</th><th scope="col">สถานะ</th><th scope="col">ครูผู้สอน</th><th scope="col">การเก็บคะแนน</th><th scope="col">การทำงาน</th></tr></thead>
         <?php foreach ($offerings as $offering): ?>
           <?php if ($lastSubject !== $offering['subjectId']): ?>
             <?php if ($lastSubject !== null): ?></tbody><?php endif; ?>
@@ -47,6 +47,11 @@ $lastSubject = null;
                 </li><?php endforeach; ?>
                 </ul>
               <?php endif; ?>
+            </td>
+            <td>
+              <?php if ($offering['scoreSummary']['active_count'] === 0): ?>ยังไม่ได้ตั้งค่าการเก็บคะแนนที่ใช้งานอยู่
+              <?php else: ?><?= $escape($offering['scoreSummary']['active_count']) ?> รายการ · คะแนนเต็มรวม <?= $escape($offering['scoreSummary']['active_max_total']) ?><?php endif; ?>
+              <?php if ($offering['scoreSummary']['inactive_count'] > 0): ?><br><?= $escape($offering['scoreSummary']['inactive_count']) ?> รายการปิดใช้งาน<?php endif; ?>
             </td>
             <td>
               <div class="pp5-actions">

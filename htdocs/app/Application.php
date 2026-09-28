@@ -155,7 +155,7 @@ final class Application
         $classroomWorkspace = new ClassroomWorkspaceController(
             $workspaceRead, $session, $ui,
             new \App\Services\ClassroomRosterReadService($workspaceRead, new StudentEnrollmentRepository($pdo), new AuthorizationService($authorization)),
-            new \App\Services\ClassroomSubjectsReadService($workspaceRead, $offerings, $teachingAssignments, new AuthorizationService($authorization))
+            new \App\Services\ClassroomSubjectsReadService($workspaceRead, $offerings, $teachingAssignments, new AuthorizationService($authorization), $gradebookComponents)
         );
         $classroomController = new ClassroomController(
             new ClassroomAdministrationService($pdo, $schools, $years, $grades, $classrooms, new AuditLogRepository($pdo)),
@@ -185,7 +185,7 @@ final class Application
         );
         $componentController = new GradebookComponentController(
             new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
-            $gradebookComponents, $offerings, $session, $csrf, $ui
+            $gradebookComponents, $offerings, $session, $csrf, $ui, $workspaceRead
         );
         $teachingController = new TeachingAssignmentController(
             new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo)),

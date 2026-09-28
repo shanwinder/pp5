@@ -31,6 +31,26 @@ final class ClassroomSubjectsTest extends TestCase
             ->execute([$permission]);
     }
 
+    public function testScoreStructureSummaryIsExactBatchedAndOfferingScoped(): void
+    {
+        $this->login();
+        $empty = $this->insert('subject_offerings', ['school_id' => $this->f['schoolA'], 'academic_year_id' => $this->f['yearA'],
+            'classroom_id' => $this->f['roomA'], 'subject_id' => $this->f['subjectA'], 'term_no' => 2]);
+        $this->pdo->queries = [];
+        $body = $this->request('GET', $this->path())->body();
+        $x = $this->xpath($body);
+        $configured = $x->evaluate('string(//tr[@data-offering-id="' . $this->f['offeringA'] . '"]/td[4])');
+        self::assertStringContainsString('2 รายการ · คะแนนเต็มรวม 35.50', $configured);
+        self::assertStringContainsString('1 รายการปิดใช้งาน', $configured);
+        self::assertStringContainsString('ยังไม่ได้ตั้งค่าการเก็บคะแนนที่ใช้งานอยู่',
+            $x->evaluate('string(//tr[@data-offering-id="' . $empty . '"]/td[4])'));
+        self::assertSame(1, count(array_filter($this->pdo->queries,
+            static fn (string $sql): bool => str_contains($sql, 'FROM gradebook_components WHERE school_id = ? AND subject_offering_id IN'))));
+        self::assertDoesNotMatchRegularExpression('/FROM gradebook_scores|FROM students|FROM student_enrollments/i', implode("\n", $this->pdo->queries));
+        self::assertStringNotContainsString('FOREIGN_SECRET', $body);
+        self::assertStringNotContainsString('ต้องรวม 100 คะแนน', $body);
+    }
+
     public function testClassroomOfferingsAreSeparateByTermWithTeacherAndContextualActions(): void
     {
         $this->login();

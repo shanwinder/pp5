@@ -5,7 +5,7 @@ $offering = $gradebook['offering'];
 <div class="pp5-gradebook-page">
   <div class="pp5-actions">
     <a class="btn btn-outline-secondary" href="/gradebooks">กลับรายการสมุดคะแนน</a>
-    <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าโครงสร้างคะแนน</a><?php endif; ?>
+    <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
   <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter ไปยังนักเรียนคนถัดไปในหัวข้อคะแนนเดิม · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?></p>

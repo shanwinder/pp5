@@ -22,6 +22,39 @@ final class GradebookComponentRepository
         return $statement->fetchAll();
     }
 
+    /** One tenant-scoped projection for already-authorized offering IDs. MySQL DECIMAL SUM stays exact. */
+    public function summariesForOfferings(int $schoolId, array $offeringIds): array
+    {
+        if ($offeringIds === []) { return []; }
+        $ids = array_values(array_unique(array_map('intval', $offeringIds)));
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $statement = $this->pdo->prepare('SELECT subject_offering_id,
+            SUM(CASE WHEN status = \'ACTIVE\' THEN 1 ELSE 0 END) AS active_count,
+            SUM(CASE WHEN status = \'INACTIVE\' THEN 1 ELSE 0 END) AS inactive_count,
+            COALESCE(SUM(CASE WHEN status = \'ACTIVE\' THEN max_score ELSE 0 END), 0) AS active_max_total
+            FROM gradebook_components WHERE school_id = ? AND subject_offering_id IN (' . $placeholders . ')
+            GROUP BY subject_offering_id');
+        $statement->execute([$schoolId, ...$ids]);
+        $result = [];
+        foreach ($statement->fetchAll() as $row) {
+            $result[(int) $row['subject_offering_id']] = [
+                'active_count' => (int) $row['active_count'],
+                'inactive_count' => (int) $row['inactive_count'],
+                'active_max_total' => (string) $row['active_max_total'],
+            ];
+        }
+        return $result;
+    }
+
+    /** Non-locking display hint. The write service still checks history under lock. */
+    public function historyIdsForOffering(int $schoolId, int $offeringId): array
+    {
+        $statement = $this->pdo->prepare('SELECT DISTINCT component_id FROM gradebook_scores
+            WHERE school_id = ? AND subject_offering_id = ?');
+        $statement->execute([$schoolId, $offeringId]);
+        return array_fill_keys(array_map('intval', $statement->fetchAll(PDO::FETCH_COLUMN)), true);
+    }
+
     public function findForOffering(int $schoolId, int $subjectOfferingId, int $componentId): ?array
     {
         return $this->find($schoolId, $subjectOfferingId, $componentId, false);

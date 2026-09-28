@@ -38,25 +38,64 @@ final class GradebookComponentService
         });
     }
 
+    /** Teacher form: allocate the internal code and append position while holding the offering lock. */
+    public function createScoreItem(int $schoolId, int $actorUserId, int $subjectOfferingId, string $nameTh, string $maxScore, ?string $ipAddress = null): int
+    {
+        return $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $nameTh, $maxScore, $ipAddress): int {
+            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId);
+            $existing = $this->components->listForOffering($schoolId, $subjectOfferingId);
+            $codes = array_fill_keys(array_map(static fn (array $row): string => mb_strtolower($row['code'], 'UTF-8'), $existing), true);
+            $index = 1;
+            do { $code = 'SCORE' . str_pad((string) $index++, 3, '0', STR_PAD_LEFT); }
+            while (isset($codes[mb_strtolower($code, 'UTF-8')]));
+            $lastOrder = $existing === [] ? -1 : max(array_map(static fn (array $row): int => (int) $row['sort_order'], $existing));
+            // At the column limit, an equal sort_order still appends by the stable id tie-breaker.
+            $values = $this->details($code, $nameTh, $maxScore, min(65535, $lastOrder + 1));
+            $id = $this->components->create($schoolId, (int) $offering['academic_year_id'], $subjectOfferingId,
+                $values['code'], $values['name_th'], $values['max_score'], $values['sort_order']);
+            $this->audit->record($schoolId, $actorUserId, 'GRADEBOOK_COMPONENT_CREATED', 'gradebook_components', $id, null,
+                ['subject_offering_id' => $subjectOfferingId] + $values + ['status' => 'ACTIVE'], null, $ipAddress);
+            return $id;
+        });
+    }
+
+    /** Teacher edit: preserve the persisted code and position without browser-supplied hidden fields. */
+    public function updateScoreItem(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $nameTh, string $maxScore, ?string $ipAddress = null): void
+    {
+        $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $componentId, $nameTh, $maxScore, $ipAddress): void {
+            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId);
+            $target = $this->target($schoolId, $subjectOfferingId, $componentId, (int) $offering['academic_year_id']);
+            $this->updateLocked($schoolId, $actorUserId, $subjectOfferingId, $componentId, $target,
+                $target['code'], $nameTh, $maxScore, $target['sort_order'], $ipAddress);
+        });
+    }
+
     public function updateComponent(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $code, string $nameTh, string $maxScore, mixed $sortOrder, ?string $ipAddress = null): void
     {
         $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $componentId, $code, $nameTh, $maxScore, $sortOrder, $ipAddress): void {
             $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId);
             $target = $this->target($schoolId, $subjectOfferingId, $componentId, (int) $offering['academic_year_id']);
-            $values = $this->details($code, $nameTh, $maxScore, $sortOrder);
-            $old = [];
-            $new = [];
-            foreach ($values as $field => $value) {
-                if ($target[$field] !== $value) { $old[$field] = $target[$field]; $new[$field] = $value; }
-            }
-            if ($new === []) { return; }
-            if (isset($new['max_score']) && $this->components->hasScoreHistory($schoolId, $subjectOfferingId, $componentId)) {
-                throw new DomainException('ไม่สามารถเปลี่ยนคะแนนเต็มขององค์ประกอบที่มีประวัติคะแนนแล้ว');
-            }
-            $this->components->update($schoolId, $subjectOfferingId, $componentId,
-                $values['code'], $values['name_th'], $values['max_score'], $values['sort_order']);
-            $this->audit->record($schoolId, $actorUserId, 'GRADEBOOK_COMPONENT_UPDATED', 'gradebook_components', $componentId, $old, $new, null, $ipAddress);
+            $this->updateLocked($schoolId, $actorUserId, $subjectOfferingId, $componentId, $target,
+                $code, $nameTh, $maxScore, $sortOrder, $ipAddress);
         });
+    }
+
+    private function updateLocked(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId,
+        array $target, string $code, string $nameTh, string $maxScore, mixed $sortOrder, ?string $ipAddress): void
+    {
+        $values = $this->details($code, $nameTh, $maxScore, $sortOrder);
+        $old = [];
+        $new = [];
+        foreach ($values as $field => $value) {
+            if ($target[$field] !== $value) { $old[$field] = $target[$field]; $new[$field] = $value; }
+        }
+        if ($new === []) { return; }
+        if (isset($new['max_score']) && $this->components->hasScoreHistory($schoolId, $subjectOfferingId, $componentId)) {
+            throw new DomainException('ไม่สามารถเปลี่ยนคะแนนเต็มขององค์ประกอบที่มีประวัติคะแนนแล้ว');
+        }
+        $this->components->update($schoolId, $subjectOfferingId, $componentId,
+            $values['code'], $values['name_th'], $values['max_score'], $values['sort_order']);
+        $this->audit->record($schoolId, $actorUserId, 'GRADEBOOK_COMPONENT_UPDATED', 'gradebook_components', $componentId, $old, $new, null, $ipAddress);
     }
 
     public function changeStatus(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $status, ?string $ipAddress = null): void
