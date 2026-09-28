@@ -63,6 +63,20 @@ final class StudentEnrollmentRepository
         return $statement->fetchAll();
     }
 
+    /** Safe labels for an already authorized/validated batch; no student private fields. */
+    public function displayNamesForSchoolYear(int $schoolId, int $yearId, array $enrollmentIds): array
+    {
+        if ($enrollmentIds === []) { return []; }
+        $placeholders = implode(',', array_fill(0, count($enrollmentIds), '?'));
+        $statement = $this->pdo->prepare('SELECT e.id, s.prefix_th, s.first_name_th, s.last_name_th
+            FROM student_enrollments e JOIN students s ON s.id = e.student_id AND s.school_id = e.school_id
+            WHERE e.school_id = ? AND e.academic_year_id = ? AND e.id IN (' . $placeholders . ')');
+        $statement->execute([$schoolId, $yearId, ...$enrollmentIds]);
+        $names = [];
+        foreach ($statement->fetchAll() as $row) { $names[(int) $row['id']] = $row['prefix_th'] . $row['first_name_th'] . ' ' . $row['last_name_th']; }
+        return $names;
+    }
+
     public function findForSchool(int $schoolId, int $enrollmentId): ?array
     {
         return $this->fetch('SELECT ' . self::COLUMNS . ' FROM student_enrollments e WHERE e.school_id = :school_id AND e.id = :enrollment_id LIMIT 1',

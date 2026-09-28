@@ -12,6 +12,7 @@ $offering = $gradebook['offering'];
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>
+    <p id="gradebook-batch-status" role="status" aria-live="polite" aria-atomic="true">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากช่องที่กำลังแก้ไข · ช่องว่างในตารางที่วางจะล้างคะแนน</p>
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
     <noscript><p>ต้องเปิดใช้งาน JavaScript เพื่อบันทึกคะแนนอัตโนมัติ</p></noscript>
   <?php endif; ?>
@@ -19,7 +20,7 @@ $offering = $gradebook['offering'];
   <p class="pp5-gradebook-total">คะแนนเต็มรวมที่ใช้งานอยู่ <strong><?= $escape($gradebook['configured_max_total']) ?></strong></p>
   <h2>คะแนนรายหัวข้อ</h2>
   <?php if ($gradebook['components'] === []): ?><p>ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน จึงยังไม่ถือว่าคะแนนครบ</p><?php endif; ?>
-  <div class="pp5-table-scroll pp5-gradebook" role="region" aria-label="คะแนนรายองค์ประกอบ" aria-describedby="gradebook-guidance" tabindex="0">
+  <div class="pp5-table-scroll pp5-gradebook"<?php if ($canScore): ?> data-batch-url="/hx/gradebook/<?= $escape($offering['id']) ?>/scores/batch" data-batch-limit="<?= \App\Services\GradebookScoreService::MAX_BATCH_CELLS ?>"<?php endif; ?> role="region" aria-label="คะแนนรายองค์ประกอบ" aria-describedby="gradebook-guidance" tabindex="0">
     <table class="table pp5-table">
       <caption>คะแนนของรายชื่อปัจจุบันและประวัติการลงทะเบียน</caption>
       <thead><tr>

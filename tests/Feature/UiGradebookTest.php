@@ -128,7 +128,11 @@ final class UiGradebookTest extends TestCase
         self::assertStringNotContainsString("event.key === 'Tab'",$js);
         self::assertStringNotContainsString("event.key === 'ArrowLeft'",$js);
         self::assertStringNotContainsString("event.key === 'ArrowRight'",$js);
-        self::assertDoesNotMatchRegularExpression('/fetch\s*\(|XMLHttpRequest|parseFloat|parseInt|\.reduce\s*\(|GRADEBOOK_|school_id|Math\./',$js);
+        // Task 8 adds one fetch for transactional paste. Copy and single-cell autosave keep their boundaries.
+        self::assertSame(1, preg_match_all('/fetch\s*\(/', $js));
+        $copy = substr($js, strpos($js, "document.addEventListener('copy'"), strpos($js, 'const phases') - strpos($js, "document.addEventListener('copy'"));
+        self::assertStringNotContainsString('fetch(', $copy);
+        self::assertDoesNotMatchRegularExpression('/XMLHttpRequest|parseFloat|parseInt|\.reduce\s*\(|GRADEBOOK_|school_id|Math\./',$js);
     }
 
     private function postCell(string $value): App\Http\Response

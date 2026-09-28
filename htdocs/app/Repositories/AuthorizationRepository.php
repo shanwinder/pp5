@@ -157,6 +157,7 @@ final class AuthorizationRepository
         $statement = $this->pdo->prepare(
             "SELECT ura.id
              FROM user_role_assignments ura
+             INNER JOIN users u ON u.id = ura.user_id AND u.status = 'ACTIVE'
              INNER JOIN roles r ON r.id = ura.role_id
              INNER JOIN role_permissions rp ON rp.role_id = r.id
              INNER JOIN permissions p ON p.id = rp.permission_id

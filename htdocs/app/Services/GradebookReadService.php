@@ -20,6 +20,20 @@ final class GradebookReadService
 
     public function getGradebook(int $userId, string $contextType, int $schoolId, int $subjectOfferingId): ?array
     {
+        return $this->read($userId, $contextType, $schoolId, $subjectOfferingId);
+    }
+
+    /** Reuse the same roster and exact-decimal summary logic, restricted to affected rows. */
+    public function getAffectedRows(int $userId, string $contextType, int $schoolId, int $subjectOfferingId, array $enrollmentIds): ?array
+    {
+        if ($enrollmentIds === [] || count($enrollmentIds) > GradebookScoreService::MAX_BATCH_CELLS) { return null; }
+        foreach ($enrollmentIds as $id) { if (!is_int($id) || $id <= 0) { return null; } }
+        $model = $this->read($userId, $contextType, $schoolId, $subjectOfferingId, array_values(array_unique($enrollmentIds)));
+        return $model === null ? null : $model['rows'];
+    }
+
+    private function read(int $userId, string $contextType, int $schoolId, int $subjectOfferingId, ?array $enrollmentIds = null): ?array
+    {
         if (!$this->authorization->hasSubjectOfferingPermission($userId, $contextType, $schoolId, $subjectOfferingId, 'GRADEBOOK_VIEW')) {
             return null;
         }
@@ -29,9 +43,9 @@ final class GradebookReadService
             static fn (array $component): bool => $component['status'] === 'ACTIVE'));
         $configuredMax = '0.00';
         foreach ($components as $component) { $configuredMax = $this->add($configuredMax, $component['max_score']); }
-        $roster = $this->gradebooks->listRoster($schoolId, $subjectOfferingId);
+        $roster = $this->gradebooks->listRoster($schoolId, $subjectOfferingId, $enrollmentIds);
         $scores = [];
-        foreach ($this->gradebooks->listActiveScores($schoolId, $subjectOfferingId) as $cell) {
+        foreach ($this->gradebooks->listActiveScores($schoolId, $subjectOfferingId, $enrollmentIds) as $cell) {
             $scores[$cell['enrollment_id']][$cell['component_id']] = $cell['score'];
         }
         $rows = [];
@@ -60,7 +74,7 @@ final class GradebookReadService
             ];
         }
 
-        return ['offering' => $offering, 'teachers' => $this->gradebooks->listTeachers($schoolId, $subjectOfferingId),
+        return ['offering' => $offering, 'teachers' => $enrollmentIds === null ? $this->gradebooks->listTeachers($schoolId, $subjectOfferingId) : [],
             'components' => $components, 'configured_max_total' => $configuredMax, 'active_component_count' => $activeCount, 'rows' => $rows];
     }
 

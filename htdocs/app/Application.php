@@ -233,6 +233,7 @@ final class Application
             'workspaces.classrooms.students' => static fn (Request $request): Response => $classroomWorkspace->students($classroomId),
             'workspaces.classrooms.subjects' => static fn (Request $request): Response => $classroomWorkspace->subjects($classroomId),
             'workspaces.classrooms.show' => static fn (Request $request): Response => $classroomWorkspace->show($classroomId),
+            'gradebook.scores.batch' => static fn (Request $request): Response => $scoreController->storeBatch($request, $offeringId),
             'gradebook.scores.store' => static fn (Request $request): Response => $scoreController->store($request, $offeringId, $componentId, $enrollmentId),
             'gradebook.index' => static fn (Request $request): Response => $gradebookController->index(),
             'gradebook.view' => static fn (Request $request): Response => $gradebookController->show($offeringId),

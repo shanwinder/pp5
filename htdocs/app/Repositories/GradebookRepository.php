@@ -15,8 +15,10 @@ final class GradebookRepository
 
     public function __construct(private PDO $pdo) {}
 
-    public function listRoster(int $schoolId, int $offeringId): array
+    public function listRoster(int $schoolId, int $offeringId, ?array $enrollmentIds = null): array
     {
+        if ($enrollmentIds === []) { return []; }
+        $filter = $enrollmentIds === null ? '' : ' AND e.id IN (' . implode(',', array_fill(0, count($enrollmentIds), '?')) . ')';
         // History depends on row existence, including NULL scores and inactive components.
         $statement = $this->pdo->prepare('SELECT e.id AS enrollment_id, e.status AS enrollment_status,
                 s.student_code, s.prefix_th, s.first_name_th, s.last_name_th,
@@ -29,21 +31,23 @@ final class GradebookRepository
                 WHERE gs.school_id = e.school_id AND gs.academic_year_id = e.academic_year_id
                   AND gs.subject_offering_id = o.id AND gs.enrollment_id = e.id
             ))
-            ORDER BY s.student_code ASC, e.id ASC');
-        $statement->execute([$schoolId, $offeringId]);
+            ' . $filter . ' ORDER BY s.student_code ASC, e.id ASC');
+        $statement->execute([$schoolId, $offeringId, ...($enrollmentIds ?? [])]);
 
         return $statement->fetchAll();
     }
 
-    public function listActiveScores(int $schoolId, int $offeringId): array
+    public function listActiveScores(int $schoolId, int $offeringId, ?array $enrollmentIds = null): array
     {
+        if ($enrollmentIds === []) { return []; }
+        $filter = $enrollmentIds === null ? '' : ' AND gs.enrollment_id IN (' . implode(',', array_fill(0, count($enrollmentIds), '?')) . ')';
         $statement = $this->pdo->prepare("SELECT gs.enrollment_id, gs.component_id, gs.score
             FROM gradebook_scores gs
             JOIN gradebook_components c ON c.id = gs.component_id AND c.school_id = gs.school_id
                 AND c.academic_year_id = gs.academic_year_id AND c.subject_offering_id = gs.subject_offering_id
             WHERE gs.school_id = ? AND gs.subject_offering_id = ? AND c.status = 'ACTIVE'
-            ORDER BY gs.enrollment_id ASC, gs.component_id ASC");
-        $statement->execute([$schoolId, $offeringId]);
+            " . $filter . " ORDER BY gs.enrollment_id ASC, gs.component_id ASC");
+        $statement->execute([$schoolId, $offeringId, ...($enrollmentIds ?? [])]);
 
         return $statement->fetchAll();
     }

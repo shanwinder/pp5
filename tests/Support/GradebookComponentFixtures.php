@@ -163,16 +163,19 @@ final class ComponentTestPDO extends PDO
     public int $depth = 0;
     public array $queries = [];
     public ?string $failPrepare = null;
+    public int $failPrepareOccurrence = 1;
     public bool $failureTriggered = false;
     public ?Closure $beforeLock = null;
     public function beginTransaction(): bool
     {
         $ok = $this->depth === 0 ? parent::beginTransaction() : $this->exec('SAVEPOINT component_' . $this->depth) !== false;
+        $this->queries[] = 'BEGIN';
         ++$this->depth; return $ok;
     }
     public function commit(): bool
     {
         $ok = $this->depth === 1 ? parent::commit() : $this->exec('RELEASE SAVEPOINT component_' . ($this->depth - 1)) !== false;
+        $this->queries[] = 'COMMIT';
         --$this->depth; return $ok;
     }
     public function rollBack(): bool
@@ -185,8 +188,8 @@ final class ComponentTestPDO extends PDO
     {
         $this->queries[] = $query;
         if ($this->beforeLock !== null && str_contains($query, 'FOR UPDATE')) { ($this->beforeLock)($query); }
-        if ($this->failPrepare !== null && str_contains($query, $this->failPrepare)) {
-            $this->failPrepare = null; $this->failureTriggered = true;
+        if ($this->failPrepare !== null && str_contains($query, $this->failPrepare) && --$this->failPrepareOccurrence === 0) {
+            $this->failPrepare = null; $this->failPrepareOccurrence = 1; $this->failureTriggered = true;
             throw new PDOException('SQLSTATE private-db-details /Applications/MAMP/htdocs/app/secret.php');
         }
         return parent::prepare($query, $options);

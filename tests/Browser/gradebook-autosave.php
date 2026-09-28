@@ -18,10 +18,41 @@ $assets = [
     '/assets/vendor/bootstrap-5.3.8.min.css' => '/htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
     '/browser-tests.js' => '/tests/Browser/gradebook-autosave.js',
+    '/paste-tests.js' => '/tests/Browser/gradebook-paste.js',
     '/readonly-tests.js' => '/tests/Browser/gradebook-range-readonly.js',
 ];
 if (isset($assets[$path])) {
     header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
+}
+if ($path === '/hx/gradebook/1/scores/batch') {
+    usleep(150000);
+    $matrix = json_decode($_POST['batch'] ?? '{}', true);
+    $first = $matrix['values'][0][0] ?? '';
+    if ($first === 'login') { echo '<html><body>Login</body></html>'; exit; }
+    header('Content-Type: application/json; charset=UTF-8');
+    header('Cache-Control: no-store');
+    if (in_array($first, ['csrf','revoked','failure','refresh'], true)) {
+        http_response_code(['csrf'=>419,'revoked'=>422,'failure'=>500,'refresh'=>409][$first]);
+        echo json_encode(['committed'=>$first==='refresh','message'=>'ทดสอบการปฏิเสธ / โหลดหน้าใหม่เพื่อตรวจสอบคะแนน'], JSON_UNESCAPED_UNICODE); exit;
+    }
+    $cells=[]; $rows=[];
+    foreach ($matrix['enrollment_ids'] as $r=>$enrollment) {
+        foreach ($matrix['component_ids'] as $c=>$component) {
+            $value=$matrix['values'][$r][$c];
+            if ($value !== '' && (!preg_match('/\A[0-9]+(?:\.[0-9]{1,2})?\z/', $value) || (float)$value > 20)) {
+                http_response_code(422);
+                echo json_encode(['committed'=>false,'message'=>'นักเรียนทดสอบ '.$enrollment.' · หัวข้อคะแนน '.$component.' คะแนนไม่ถูกต้องหรือเกินคะแนนเต็ม',
+                    'location'=>['row'=>$r+1,'column'=>$c+1,'enrollment_id'=>$enrollment,'component_id'=>$component]],JSON_UNESCAPED_UNICODE); exit;
+            }
+            // Synthetic normalization only. Domain arithmetic is tested against MySQL in PHPUnit.
+            $cells[]=['enrollment_id'=>$enrollment,'component_id'=>$component,'score'=>$value===''?null:number_format((float)$value,2,'.',''),'changed'=>true];
+        }
+        $rows[]=['enrollment_id'=>$enrollment,'entered_score_total'=>'987.65','configured_max_total'=>'432.10',
+            'entered_component_count'=>2,'active_component_count'=>2,'complete'=>true];
+    }
+    header('X-Gradebook-Batch-Saved: 1');
+    echo json_encode(['committed'=>true,'offering_id'=>1,'targeted_count'=>count($cells),'changed_count'=>count($cells),
+        'row_count'=>count($rows),'column_count'=>count($matrix['component_ids']),'cells'=>$cells,'rows'=>$rows]); exit;
 }
 if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~', $path, $ids)) {
     usleep(150000); // Make focus changes and queued requests observable.
@@ -85,6 +116,6 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
 ], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
-    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.($canScore ? '/browser-tests.js' : '/readonly-tests.js').'" defer></script>' : '',
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'paste' ? '/paste-tests.js' : ($canScore ? '/browser-tests.js' : '/readonly-tests.js')).'" defer></script>' : '',
 ]);
 echo $html;
