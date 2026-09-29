@@ -8,7 +8,7 @@ $offering = $gradebook['offering'];
     <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
-  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter/Shift+Enter ไปยังนักเรียนถัดไป/ก่อนหน้าในหัวข้อเดิม · ↑/↓ ย้ายแถว · ←/→ แก้ไขตำแหน่งข้อความ · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากจากพื้นที่ว่างในช่องคะแนนเพื่อเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอกคะแนน<?= $canScore ? ' · Shift+↑/↓ ขยายช่วงจากช่องที่กำลังแก้ไข' : '' ?> · Escape ล้างช่วงที่เลือก</p>
+  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter/Shift+Enter ไปยังนักเรียนถัดไป/ก่อนหน้าในหัวข้อเดิม · ↑/↓ ย้ายแถว · ←/→ แก้ไขตำแหน่งข้อความ · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากจากพื้นที่ว่างในช่องคะแนนเพื่อเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอกคะแนน<?= $canScore ? ' · Shift+↑/↓ ขยายช่วงจากช่องที่กำลังแก้ไข · Shift+Tab ย้อนกลับไปยังแผงใส่คะแนนช่วงที่เลือก' : '' ?> · Escape ล้างช่วงที่เลือก</p>
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>
@@ -20,7 +20,18 @@ $offering = $gradebook['offering'];
   <p class="pp5-gradebook-total">คะแนนเต็มรวมที่ใช้งานอยู่ <strong><?= $escape($gradebook['configured_max_total']) ?></strong></p>
   <h2>คะแนนรายหัวข้อ</h2>
   <?php if ($gradebook['components'] === []): ?><p>ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน จึงยังไม่ถือว่าคะแนนครบ</p><?php endif; ?>
-  <div class="pp5-table-scroll pp5-gradebook"<?php if ($canScore): ?> data-batch-url="/hx/gradebook/<?= $escape($offering['id']) ?>/scores/batch" data-batch-limit="<?= \App\Services\GradebookScoreService::MAX_BATCH_CELLS ?>"<?php endif; ?> role="region" aria-label="คะแนนรายองค์ประกอบ" aria-describedby="gradebook-guidance" tabindex="0">
+  <?php if ($canScore): ?>
+    <form id="gradebook-range-actions" class="pp5-gradebook-range-actions" aria-label="ใส่คะแนนในช่วงที่เลือก" hidden>
+      <p id="gradebook-range-summary">ยังไม่ได้เลือกช่วงคะแนน</p>
+      <label for="gradebook-fill-value">คะแนนสำหรับช่วงที่เลือก</label>
+      <div class="pp5-gradebook-range-controls">
+        <input id="gradebook-fill-value" class="form-control" type="text" inputmode="decimal" autocomplete="off" aria-describedby="gradebook-range-summary">
+        <button id="gradebook-fill-submit" class="btn btn-primary" type="submit" disabled>ใส่คะแนนให้ช่วงที่เลือก</button>
+        <button id="gradebook-clear-submit" class="btn btn-outline-secondary" type="button" disabled>ล้างคะแนนในช่วงที่เลือก</button>
+      </div>
+    </form>
+  <?php endif; ?>
+  <div class="pp5-table-scroll pp5-gradebook" data-offering-id="<?= $escape($offering['id']) ?>"<?php if ($canScore): ?> data-batch-url="/hx/gradebook/<?= $escape($offering['id']) ?>/scores/batch" data-batch-limit="<?= \App\Services\GradebookScoreService::MAX_BATCH_CELLS ?>"<?php endif; ?> role="region" aria-label="คะแนนรายองค์ประกอบ" aria-describedby="gradebook-guidance" tabindex="0">
     <table class="table pp5-table">
       <caption>คะแนนของรายชื่อปัจจุบันและประวัติการลงทะเบียน</caption>
       <thead><tr>

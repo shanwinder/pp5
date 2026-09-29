@@ -29,6 +29,18 @@
           }
           const input = d.querySelector('[data-score-input]');
           if (input) {
+            if (mode !== 'nojs') {
+              const panel = d.getElementById('gradebook-range-actions');
+              assert(panel && !panel.hidden && panel.getBoundingClientRect().right <= width + 1,
+                'range actions remain inside document width');
+              assert(d.getElementById('gradebook-fill-value').labels.length === 1,
+                'range scalar has native label');
+              for (const control of panel.querySelectorAll('input,button')) {
+                const bounds = control.getBoundingClientRect();
+                assert(bounds.left >= -1 && bounds.right <= width + 1 && bounds.width > 0,
+                  'range action reachable at viewport width');
+              }
+            }
             input.focus();
             const rect=input.getBoundingClientRect(), bounds=grid.getBoundingClientRect();
             assert(d.activeElement === input && w.getComputedStyle(input).outlineStyle !== 'none', 'score focus visible');
@@ -58,7 +70,7 @@
           if (mode === 'nojs') {
             assert(!d.querySelector('[data-nav-ready]'), 'application JS did not run');
             assert(d.querySelector('noscript').textContent.includes('JavaScript'), 'no-JS autosave limitation visible');
-            assert(!d.querySelector('main form'), 'no invented no-JS score submission');
+            assert(!d.querySelector('main form:not([hidden])'), 'no visible no-JS score submission');
           }
         } else {
           for (const input of d.querySelectorAll('main input:not([type="hidden"])')) {

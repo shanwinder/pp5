@@ -19,6 +19,8 @@ $assets = [
     '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
     '/browser-tests.js' => '/tests/Browser/gradebook-autosave.js',
     '/paste-tests.js' => '/tests/Browser/gradebook-paste.js',
+    '/fill-tests.js' => '/tests/Browser/gradebook-fill.js',
+    '/fill-limit-tests.js' => '/tests/Browser/gradebook-fill-limit.js',
     '/readonly-tests.js' => '/tests/Browser/gradebook-range-readonly.js',
 ];
 if (isset($assets[$path])) {
@@ -86,7 +88,7 @@ if ($path === '/matrix') {
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','active','error','empty','nojs'], true);
+$canScore = in_array($mode, ['editable','active','error','empty','nojs','large'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
     3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
@@ -95,6 +97,15 @@ foreach ([1, 2, 3, 4] as $id) {
     $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => $long.' '.$id,
         'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 ? 'HISTORICAL' : 'CURRENT', 'scores' => $fixtureScores[$id],
         'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 1, 'active_component_count' => 2, 'complete' => false];
+}
+if ($mode === 'large') {
+    $rows = [];
+    for ($id = 1; $id <= 2001; $id++) {
+        $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => 'นักเรียนทดสอบ ' . $id,
+            'enrollment_status' => 'ACTIVE', 'row_type' => 'CURRENT', 'scores' => [10 => null, 11 => null],
+            'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 0,
+            'active_component_count' => 2, 'complete' => false];
+    }
 }
 $offering = ['id' => 1, 'year_be' => 2569, 'academic_year_status' => $mode === 'closed-setup' ? 'CLOSED' : 'ACTIVE',
     'classroom_code' => 'ROOM', 'classroom_name' => 'ห้องทดสอบ', 'subject_code' => 'SUBJECT', 'subject_name' => 'วิชาทดสอบ', 'term_no' => 1, 'status' => 'ACTIVE'];
@@ -116,6 +127,6 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
 ], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
-    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'paste' ? '/paste-tests.js' : ($canScore ? '/browser-tests.js' : '/readonly-tests.js')).'" defer></script>' : '',
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'paste' ? '/paste-tests.js' : (($_GET['tests'] ?? '') === 'fill' ? '/fill-tests.js' : (($_GET['tests'] ?? '') === 'fill-limit' ? '/fill-limit-tests.js' : ($canScore ? '/browser-tests.js' : '/readonly-tests.js')))).'" defer></script>' : '',
 ]);
 echo $html;

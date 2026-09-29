@@ -26,6 +26,7 @@
     scoreCells.set(`${cell.dataset.gridRow}:${cell.dataset.gridColumn}`, cell);
   }
   const rowCount = grid.querySelectorAll('tbody tr[data-enrollment-id]').length;
+  const scoreHeaders = [...grid.querySelectorAll('thead th[data-component-id]')];
   const at = (row, column) => scoreCells.get(`${row}:${column}`);
   const coordinate = cell => ({ row: Number(cell.dataset.gridRow), column: Number(cell.dataset.gridColumn) });
   const rectangle = (anchor, extent) => ({
@@ -35,6 +36,13 @@
     columnEnd: anchor.column > extent.column ? anchor.column : extent.column,
   });
   const rangeStatus = document.getElementById('gradebook-range-status');
+  const rangeActions = document.getElementById('gradebook-range-actions');
+  const rangeSummary = document.getElementById('gradebook-range-summary');
+  const fillValue = document.getElementById('gradebook-fill-value');
+  const fillButton = document.getElementById('gradebook-fill-submit');
+  const clearButton = document.getElementById('gradebook-clear-submit');
+  const batchLimit = Number(grid.dataset.batchLimit);
+  let batchPending = false;
   let selectionAnchor = null;
   let selectionExtent = null;
   let dragging = null;
@@ -50,6 +58,28 @@
   };
   const includes = (rect, row, column) => rect && row >= rect.rowStart && row <= rect.rowEnd
     && column >= rect.columnStart && column <= rect.columnEnd;
+  const currentRectangle = () => selectionAnchor && selectionExtent ? rectangle(selectionAnchor, selectionExtent) : null;
+  const updateRangeControls = () => {
+    if (!rangeActions) return;
+    const rect = currentRectangle();
+    let writable = false;
+    if (!rect) rangeSummary.textContent = 'ยังไม่ได้เลือกช่วงคะแนน';
+    else {
+      const rows = rect.rowEnd - rect.rowStart + 1, columns = rect.columnEnd - rect.columnStart + 1;
+      const count = rows * columns;
+      let reason = '';
+      if (count > batchLimit) reason = `เลือกได้สูงสุด ${batchLimit} ช่องต่อครั้ง`;
+      else if (!dragging && !batchPending) {
+        try { resolveEditableRectangle(rect); writable = true; }
+        catch (error) { reason = error.message; }
+      }
+      rangeSummary.textContent = `เลือก ${rows} แถว × ${columns} หัวข้อคะแนน — ${count} ช่อง`
+        + (reason ? ` · ${reason}` : '');
+      clearButton.textContent = `ล้างคะแนน ${count} ช่องที่เลือก`;
+    }
+    fillButton.disabled = !writable || batchPending;
+    clearButton.disabled = !writable || batchPending;
+  };
   const setRange = (anchor, extent, announce = false) => {
     const old = selectionAnchor && rectangle(selectionAnchor, selectionExtent);
     const next = anchor && rectangle(anchor, extent);
@@ -67,6 +97,7 @@
     if (announce && rangeStatus) rangeStatus.textContent = next
       ? `เลือก ${next.rowEnd - next.rowStart + 1} แถว × ${next.columnEnd - next.columnStart + 1} หัวข้อคะแนน`
       : 'ล้างช่วงคะแนนที่เลือกแล้ว';
+    updateRangeControls();
   };
   const scoreTd = target => target instanceof Element ? target.closest('td[data-grid-score-cell]') : null;
   const displayedValue = cell => {
@@ -88,6 +119,7 @@
   };
 
   document.addEventListener('pointerdown', event => {
+    if (batchPending) return;
     if (event.pointerType === 'touch' || !event.isPrimary || event.button !== 0) return;
     const cell = scoreTd(event.target);
     if (!cell || !grid.contains(cell)) return;
@@ -174,10 +206,42 @@
   const editable = input => isScore(input) && grid.contains(input) && !input.readOnly && !input.disabled
     && input.closest('tr')?.classList.contains('pp5-current');
 
+  // Geometry is only a locator. Recheck every live cell and stable ID before any write.
+  const resolveEditableRectangle = (rect, offeringId = null) => {
+    const enrollmentIds = [], componentIds = [], targets = new Map();
+    const invalid = () => { throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่'); };
+    for (let row = rect.rowStart; row <= rect.rowEnd; row++) {
+      for (let column = rect.columnStart; column <= rect.columnEnd; column++) {
+        const td = at(row, column), target = td?.querySelector(selector);
+        if (!td || !td.isConnected || !grid.contains(td) || !target || !editable(target)
+          || td.dataset.gridEditable !== 'true') {
+          throw new Error('ช่วงนี้มีข้อมูลประวัติหรือช่องอ่านอย่างเดียว จึงแก้ไขพร้อมกันไม่ได้');
+        }
+        const enrollment = Number(td.dataset.enrollmentId), component = Number(td.dataset.componentId);
+        if (!Number.isSafeInteger(enrollment) || enrollment <= 0 || !Number.isSafeInteger(component) || component <= 0
+          || Number(td.dataset.gridRow) !== row || Number(td.dataset.gridColumn) !== column
+          || td.closest('tr')?.dataset.enrollmentId !== td.dataset.enrollmentId
+          || target.dataset.enrollmentId !== td.dataset.enrollmentId || target.dataset.componentId !== td.dataset.componentId
+          || !Number.isSafeInteger(Number(target.dataset.offeringId)) || Number(target.dataset.offeringId) <= 0
+          || target.dataset.offeringId !== grid.dataset.offeringId
+          || (offeringId !== null && Number(target.dataset.offeringId) !== offeringId)) invalid();
+        if (offeringId === null) offeringId = Number(target.dataset.offeringId);
+        const header = scoreHeaders[column];
+        if (!header || !header.isConnected || header.dataset.componentId !== td.dataset.componentId) invalid();
+        const rowIndex = row - rect.rowStart, columnIndex = column - rect.columnStart;
+        if (columnIndex === 0) enrollmentIds.push(enrollment);
+        if (rowIndex === 0) componentIds.push(component);
+        if (enrollmentIds[rowIndex] !== enrollment || componentIds[columnIndex] !== component
+          || targets.has(`${enrollment}:${component}`)) invalid();
+        targets.set(`${enrollment}:${component}`, target);
+      }
+    }
+    if (new Set(enrollmentIds).size !== enrollmentIds.length || new Set(componentIds).size !== componentIds.length) invalid();
+    return { enrollmentIds, componentIds, targets, offeringId };
+  };
+
   const batchStatus = document.getElementById('gradebook-batch-status');
   const batchUrl = grid.dataset.batchUrl;
-  const batchLimit = Number(grid.dataset.batchLimit);
-  let batchPending = false;
   // A confirmed batch already saved these exact input values. A later blur must not post them again.
   const batchValues = new WeakMap();
   const batchMessage = (message, state) => {
@@ -229,51 +293,19 @@
     }
     return { cells, rows };
   };
-  document.addEventListener('paste', async event => {
-    const input = event.target;
-    if (!batchUrl || !isScore(input) || !grid.contains(input) || document.activeElement !== input
-      || composing || !event.clipboardData) return;
-    // Once this is a Gradebook paste, never allow native insertion to escape an atomic failure.
-    event.preventDefault();
-    if (batchPending) { batchMessage('กำลังบันทึกตารางคะแนน กรุณารอสักครู่', 'saving'); return; }
+  const batchReady = (source = 'paste') => {
+    if (batchPending) { batchMessage('กำลังบันทึกตารางคะแนน กรุณารอสักครู่', 'saving'); return false; }
     if ([...phases.values()].includes('SAVING')) {
-      batchMessage('รอการบันทึกช่องปัจจุบันให้เสร็จก่อน แล้ววางอีกครั้ง', 'error'); return;
+      batchMessage(source === 'paste' ? 'รอการบันทึกช่องปัจจุบันให้เสร็จก่อน แล้ววางอีกครั้ง'
+        : 'รอการบันทึกช่องปัจจุบันให้เสร็จก่อน แล้วลองอีกครั้ง', 'error'); return false;
     }
-    if (!editable(input)) { batchMessage('ช่องนี้ไม่สามารถวางคะแนนได้', 'error'); return; }
-    const text = event.clipboardData.getData('text/plain');
-    // A clipboard without plain text is unsupported; an explicitly empty field is a 1×1 clear.
-    if (!Array.from(event.clipboardData.types).includes('text/plain')) return;
-    let matrix, targets, start, end;
-    try {
-      const values = parseTsv(text);
-      start = coordinate(scoreTd(input));
-      end = { row: start.row + values.length - 1, column: start.column + values[0].length - 1 };
-      const enrollmentIds = [], componentIds = [];
-      targets = new Map();
-      for (let r = 0; r < values.length; r++) {
-        for (let c = 0; c < values[r].length; c++) {
-          const td = at(start.row + r, start.column + c);
-          const target = td?.querySelector(selector);
-          if (!td || !td.isConnected || !editable(target) || td.dataset.gridEditable !== 'true') {
-            throw new Error('วางไม่ได้: ตารางเกินช่องคะแนนที่แก้ไขได้ หรือมีแถวประวัติ กรุณาเลือกช่วงใหม่');
-          }
-          const enrollment = Number(td.dataset.enrollmentId), component = Number(td.dataset.componentId);
-          if (!Number.isSafeInteger(enrollment) || enrollment <= 0 || !Number.isSafeInteger(component) || component <= 0
-            || target.dataset.enrollmentId !== td.dataset.enrollmentId || target.dataset.componentId !== td.dataset.componentId
-            || target.dataset.offeringId !== input.dataset.offeringId) throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
-          if (c === 0) enrollmentIds.push(enrollment);
-          if (r === 0) componentIds.push(component);
-          if (enrollmentIds[r] !== enrollment || componentIds[c] !== component || targets.has(`${enrollment}:${component}`)) {
-            throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
-          }
-          targets.set(`${enrollment}:${component}`, target);
-        }
-      }
-      matrix = { enrollment_ids: enrollmentIds, component_ids: componentIds, values };
-    } catch (error) { batchMessage(error.message, 'error'); return; }
-    setRange(start, end);
+    return true;
+  };
+  // Paste and explicit range actions share ownership, transport, validation and DOM reconciliation.
+  const submitBatch = async ({ matrix, targets, offeringId, source = 'paste' }) => {
     batchPending = true;
     grid.setAttribute('aria-busy', 'true');
+    updateRangeControls();
     const frozen = [...grid.querySelectorAll(selector)].map(node => ({ node, readOnly: node.readOnly }));
     for (const { node } of frozen) node.readOnly = true;
     batchMessage(`กำลังบันทึกคะแนน ${targets.size} ช่อง`, 'saving');
@@ -301,17 +333,18 @@
           }
           throw new Error(data.message);
         }
-        throw new Error(response.status === 419 ? 'เซสชันหมดอายุ กรุณาโหลดหน้าใหม่ก่อนวางคะแนน'
+        throw new Error(response.status === 419 ? `เซสชันหมดอายุ กรุณาโหลดหน้าใหม่ก่อน${source === 'paste' ? 'วางคะแนน' : source === 'clear' ? 'ล้างคะแนนช่วงที่เลือก' : 'ใส่คะแนนช่วงที่เลือก'}`
           : 'ยืนยันผลการบันทึกไม่ได้ กรุณาโหลดหน้าใหม่เพื่อตรวจสอบคะแนนและสิทธิ์ก่อนลองอีกครั้ง');
       }
       // Validate every identity, field and DOM destination before changing any visible value.
-      const updates = responseUpdates(data, matrix, targets, Number(input.dataset.offeringId));
+      const updates = responseUpdates(data, matrix, targets, offeringId);
       for (const { input: target, score } of updates.cells) {
         target.value = score; target.defaultValue = score; batchValues.set(target, score);
         status(target, 'ACTIVE', 'saved', ''); // One batch announcement instead of one per cell.
       }
       for (const { node, value } of updates.rows) node.textContent = value;
-      batchMessage(`บันทึกคะแนน ${data.targeted_count} ช่องแล้ว (เปลี่ยนแปลง ${data.changed_count} ช่อง)`, 'saved');
+      const action = source === 'clear' ? 'ล้างคะแนน' : source === 'fill' ? 'ใส่คะแนน' : 'บันทึกคะแนน';
+      batchMessage(`${action} ${data.targeted_count} ช่องแล้ว (เปลี่ยนแปลง ${data.changed_count} ช่อง)`, 'saved');
     } catch (error) {
       // Suppress an unchanged stale blur after any unconfirmed command; explicit typing still saves normally.
       for (const target of targets.values()) batchValues.set(target, target.value);
@@ -326,8 +359,66 @@
       for (const { node, readOnly } of frozen) if (node.isConnected) node.readOnly = readOnly;
       batchPending = false;
       grid.removeAttribute('aria-busy');
+      updateRangeControls();
+    }
+  };
+
+  document.addEventListener('paste', event => {
+    const input = event.target;
+    if (!batchUrl || !isScore(input) || !grid.contains(input) || document.activeElement !== input
+      || composing || !event.clipboardData) return;
+    // Once this is a Gradebook paste, never allow native insertion to escape an atomic failure.
+    event.preventDefault();
+    if (!batchReady()) return;
+    if (!editable(input)) { batchMessage('ช่องนี้ไม่สามารถวางคะแนนได้', 'error'); return; }
+    const text = event.clipboardData.getData('text/plain');
+    // A clipboard without plain text is unsupported; an explicitly empty field is a 1×1 clear.
+    if (!Array.from(event.clipboardData.types).includes('text/plain')) return;
+    try {
+      const values = parseTsv(text), start = coordinate(scoreTd(input));
+      const end = { row: start.row + values.length - 1, column: start.column + values[0].length - 1 };
+      const resolved = resolveEditableRectangle(rectangle(start, end), Number(input.dataset.offeringId));
+      const matrix = { enrollment_ids: resolved.enrollmentIds, component_ids: resolved.componentIds, values };
+      setRange(start, end);
+      submitBatch({ matrix, targets: resolved.targets, offeringId: resolved.offeringId });
+    } catch (error) {
+      batchMessage(error.message === 'ช่วงนี้มีข้อมูลประวัติหรือช่องอ่านอย่างเดียว จึงแก้ไขพร้อมกันไม่ได้'
+        ? 'วางไม่ได้: ตารางเกินช่องคะแนนที่แก้ไขได้ หรือมีแถวประวัติ กรุณาเลือกช่วงใหม่' : error.message, 'error');
     }
   });
+
+  let fillComposing = false;
+  if (rangeActions) {
+    rangeActions.hidden = false;
+    fillValue.addEventListener('compositionstart', () => { fillComposing = true; });
+    fillValue.addEventListener('compositionend', () => { fillComposing = false; });
+    fillValue.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && (fillComposing || event.isComposing)) event.preventDefault();
+    });
+    const runRangeAction = (scalar, source) => {
+      if (!batchReady(source)) return;
+      const rect = currentRectangle();
+      if (!rect) { batchMessage('กรุณาเลือกช่วงคะแนนก่อน', 'error'); return; }
+      const count = (rect.rowEnd - rect.rowStart + 1) * (rect.columnEnd - rect.columnStart + 1);
+      if (count > batchLimit) { batchMessage(`เลือกได้สูงสุด ${batchLimit} ช่องต่อครั้ง`, 'error'); return; }
+      try {
+        const resolved = resolveEditableRectangle(rect);
+        const values = resolved.enrollmentIds.map(() => resolved.componentIds.map(() => scalar));
+        const matrix = { enrollment_ids: resolved.enrollmentIds, component_ids: resolved.componentIds, values };
+        submitBatch({ matrix, targets: resolved.targets, offeringId: resolved.offeringId, source });
+      } catch (error) { batchMessage(error.message, 'error'); updateRangeControls(); }
+    };
+    rangeActions.addEventListener('submit', event => {
+      event.preventDefault();
+      if (fillComposing || event.isComposing) return;
+      if (fillValue.value === '') {
+        batchMessage('กรุณากรอกคะแนน หรือใช้ปุ่ม “ล้างคะแนนในช่วงที่เลือก”', 'error'); return;
+      }
+      runRangeAction(fillValue.value, 'fill');
+    });
+    clearButton.addEventListener('click', () => runRangeAction('', 'clear'));
+    updateRangeControls();
+  }
 
   const neighbor = (input, direction) => {
     const position = positions.get(keyOf(input));
@@ -350,7 +441,7 @@
 
   document.addEventListener('focusin', event => {
     ++focusRevision;
-    if (!grid.contains(event.target)) setRange(null, null);
+    if (!grid.contains(event.target) && !rangeActions?.contains(event.target)) setRange(null, null);
     if (editable(event.target)) setActive(keyOf(event.target));
     else if (isScore(event.target)) setActive(keyOf(event.target)); // A frozen in-flight cell can still receive focus.
     else setActive(null);
@@ -370,6 +461,10 @@
     const input = event.target;
     if (!isScore(input)) return;
     composing = false;
+    // Moving an unchanged cell into range controls is navigation, not a new score edit.
+    // Dirty or failed cells still use Task 6 blur save and block the batch until it settles.
+    if (rangeActions?.contains(event.relatedTarget) && input.value === input.defaultValue
+      && phases.get(keyOf(input)) !== 'ERROR') { event.stopImmediatePropagation(); return; }
     // Freeze at the blur boundary, including time in HTMX's queue. Repeated blur cannot queue a duplicate.
     if (batchPending || input.readOnly || (batchValues.has(input) && batchValues.get(input) === input.value)) { event.stopImmediatePropagation(); return; }
     input.readOnly = true;
@@ -378,7 +473,7 @@
 
   document.addEventListener('keydown', event => {
     const input = event.target;
-    if (event.key === 'Escape' && selectionAnchor && !composing && !event.isComposing) {
+    if (event.key === 'Escape' && selectionAnchor && !composing && !fillComposing && !event.isComposing) {
       event.preventDefault();
       setRange(null, null, true);
       return;

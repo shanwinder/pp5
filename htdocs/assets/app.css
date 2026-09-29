@@ -335,6 +335,12 @@ a:hover { color: var(--pp5-primary-hover); }
 /* Gradebook keeps a wide grid; only its own region scrolls. */
 .pp5-gradebook-page { min-width: 0; overflow-wrap: anywhere; }
 .pp5-gradebook-page > .pp5-actions { margin-block-end: var(--pp5-space-4); }
+.pp5-gradebook-range-actions { margin-block: var(--pp5-space-3); padding: var(--pp5-space-3); border: 1px solid var(--pp5-border); border-radius: var(--pp5-radius-md); background: var(--pp5-surface-muted); }
+.pp5-gradebook-range-actions p { margin-block-end: var(--pp5-space-2); }
+.pp5-gradebook-range-actions label { display: block; margin-block-end: var(--pp5-space-2); }
+.pp5-gradebook-range-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pp5-space-2); }
+.pp5-gradebook-range-controls input { width: min(100%, 10rem); }
+.pp5-gradebook-range-controls .btn { white-space: normal; }
 .pp5-gradebook-metadata { display: flex; flex-wrap: wrap; gap: var(--pp5-space-3) var(--pp5-space-6); margin-block: var(--pp5-space-4); }
 .pp5-gradebook-metadata > div { flex: 1 1 10rem; min-width: 0; }
 .pp5-gradebook-metadata dd { margin: 0; }

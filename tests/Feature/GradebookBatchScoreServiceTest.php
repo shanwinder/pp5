@@ -62,6 +62,42 @@ final class GradebookBatchScoreServiceTest extends TestCase
         $r = $this->batch($this->matrix([['1','2'],['3','4'],['','0']],['zero','null','complete']));
         self::assertSame(6,$r['targeted_count']); self::assertSame(4,$r['changed_count']); self::assertCount(6,$this->scoreAudits());
     }
+    public function testExplicitFourCellBlankMatrixClearsOnlyStoredValues(): void
+    {
+        $zeroId = $this->cellRows('zero')[0]['id'];
+        $nullId = $this->cellRows('null')[0]['id'];
+        $completeId = $this->cellRows('complete')[0]['id'];
+        $result = $this->batch($this->matrix([[''],[''],[''],['']],['current','zero','null','complete'],['componentA']));
+        self::assertSame(4,$result['targeted_count']); self::assertSame(2,$result['changed_count']);
+        self::assertSame([null,null,null,null],array_column($result['cells'],'score'));
+        self::assertSame([],$this->cellRows('current'));
+        self::assertSame($zeroId,$this->cellRows('zero')[0]['id']); self::assertNull($this->cellRows('zero')[0]['score']);
+        self::assertSame($nullId,$this->cellRows('null')[0]['id']); self::assertNull($this->cellRows('null')[0]['score']);
+        self::assertSame($completeId,$this->cellRows('complete')[0]['id']); self::assertNull($this->cellRows('complete')[0]['score']);
+        self::assertCount(2,$this->scoreAudits());
+        $before = $this->readSnapshot();
+        self::assertSame(0,$this->batch($this->matrix([[''],[''],[''],['']],['current','zero','null','complete'],['componentA']))['changed_count']);
+        self::assertSame($before,$this->readSnapshot());
+    }
+    public function testRepeatedScalarNoopAndMixedMaximumAreAtomic(): void
+    {
+        $matrix = $this->matrix([['5','5'],['5','5']]);
+        self::assertSame(4,$this->batch($matrix)['changed_count']);
+        $before = $this->readSnapshot();
+        $result = $this->batch($matrix);
+        self::assertSame(4,$result['targeted_count']); self::assertSame(0,$result['changed_count']);
+        self::assertSame($before,$this->readSnapshot());
+        // Two selected columns: first max 10, second max 20. The first invalid target rejects both.
+        $this->pdo->prepare('UPDATE gradebook_components SET max_score=? WHERE id=?')->execute(['10.00',$this->f['componentSecond']]);
+        $before = $this->readSnapshot();
+        $invalid = $this->matrix([['15','15'],['15','15']],['current','zero'],['componentSecond','componentA']);
+        try { $this->batch($invalid); self::fail('Expected lower maximum to reject the whole fill'); }
+        catch (App\Services\GradebookBatchException $error) {
+            self::assertSame($invalid['component_ids'][0],$error->location['component_id']);
+            self::assertStringContainsString('10.00',$error->getMessage());
+        }
+        self::assertSame($before,$this->readSnapshot());
+    }
     public static function invalidValues(): array
     {
         return array_map(fn ($v)=>[$v], ['20.01','-1','+1','1e2','1,5','1,000','1.234','NaN','Infinity',' ','=SUM(A1:B1)','๑','50%','$5','<img src=x onerror=alert(1)>']);
