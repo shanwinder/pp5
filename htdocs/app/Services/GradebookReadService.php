@@ -91,6 +91,30 @@ final class GradebookReadService
         return $accessible;
     }
 
+    /** Presentation capabilities for offerings already filtered by GRADEBOOK_VIEW. Never authorizes a destination route. */
+    public function teachingWork(int $userId, string $contextType, int $schoolId, array $accessible): array
+    {
+        $canSetup = $this->authorization->hasPermission($userId, $contextType, $schoolId, 'GRADEBOOK_COMPONENT_MANAGE');
+        $work = [];
+        foreach ($accessible as $offering) {
+            $historical = $offering['academic_year_status'] === 'CLOSED' || $offering['status'] !== 'ACTIVE';
+            $work[] = $offering + [
+                'isHistorical' => $historical,
+                'canScore' => $this->canEnterScores($userId, $contextType, $schoolId, $offering),
+                'canSetupScoreStructure' => $canSetup,
+            ];
+        }
+        return $work;
+    }
+
+    public function canEnterScores(int $userId, string $contextType, int $schoolId, array $offering): bool
+    {
+        return $offering['status'] === 'ACTIVE'
+            && in_array($offering['academic_year_status'], ['DRAFT', 'ACTIVE'], true)
+            && $this->authorization->hasSubjectOfferingPermission($userId, $contextType, $schoolId,
+                (int) $offering['id'], 'GRADEBOOK_SCORE_ENTER');
+    }
+
     /** Resolve Gradebook links for one already validated classroom without reading other rooms. */
     public function listAccessibleOfferingsForClassroom(int $userId, string $contextType, int $schoolId, int $academicYearId, int $classroomId): array
     {

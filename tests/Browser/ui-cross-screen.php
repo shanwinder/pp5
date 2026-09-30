@@ -36,6 +36,7 @@ $cases = [
     'students'=>['student','students/index'], 'student detail'=>['student','students/show'],
     'enrollment edit'=>['student','academic/enrollments/edit'], 'import preview'=>['student','academic/student-import/preview'],
     'gradebook landing'=>['entry','gradebooks'], 'gradebook'=>['gradebook','editable'], 'gradebook setup'=>['gradebook','setup'],
+    'teaching multiple'=>['entry','multiple'], 'teaching readonly'=>['entry','readonly'], 'teaching historical'=>['entry','historical'], 'teaching empty'=>['entry','empty'],
     'gradebook setup empty'=>['gradebook','empty-setup'], 'gradebook setup inactive'=>['gradebook','inactive-setup'],
     'gradebook setup error'=>['gradebook','error-setup'], 'gradebook setup closed'=>['gradebook','closed-setup'],
     '403'=>['entry','403'], '404'=>['entry','404'],

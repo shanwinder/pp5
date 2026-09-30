@@ -8,7 +8,7 @@
       if (!frame) return;
       results.set(frame.title, event.data.result);
       document.getElementById('browser-results').textContent = Array.from(results, ([key, value]) => `${key}: ${value}`).join('\n');
-      if (results.size === 24) document.title = Array.from(results.values()).every(value => value.startsWith('PASS')) ? 'PASS — PP5 entry surfaces' : 'FAIL — PP5 entry surfaces';
+      if (results.size === 36) document.title = Array.from(results.values()).every(value => value.startsWith('PASS')) ? 'PASS — PP5 entry surfaces' : 'FAIL — PP5 entry surfaces';
     });
     return;
   }
@@ -40,7 +40,18 @@
       action.focus();
       assert(document.activeElement === action, 'open action reachable');
     }
-    if (page === 'empty') assert(document.querySelector('main').textContent.includes('ยังไม่มีสมุดคะแนนที่เข้าถึงได้'), 'empty state');
+    if (page === 'empty') assert(document.querySelector('main').textContent.includes('ยังไม่มีรายวิชาที่เข้าถึงได้ในขณะนี้'), 'empty state');
+    if (['gradebooks','multiple','readonly','historical'].includes(page)) {
+      const main = document.querySelector('main');
+      assert(main.querySelector('h1').textContent === 'งานสอนของฉัน', 'task heading');
+      assert(main.querySelectorAll('.pp5-teaching-item').length === (page === 'multiple' ? 5 : page === 'historical' ? 1 : 3), 'offering count');
+      assert([...main.querySelectorAll('.pp5-teaching-actions a')].every(a => a.getAttribute('href') && a.textContent.includes('ภาคเรียน')), 'contextual native links');
+      if (page === 'readonly' || page === 'historical') assert(!main.textContent.includes('กรอกคะแนน'), 'read-only action');
+      for (const action of main.querySelectorAll('.pp5-teaching-actions a')) {
+        action.focus(); assert(document.activeElement === action && getComputedStyle(action).outlineStyle !== 'none', 'visible action focus');
+        assert(action.getBoundingClientRect().right <= innerWidth + 1, 'action contained');
+      }
+    }
     if (page === '403' || page === '404') assert(document.querySelector('a').getAttribute('href') === '/login', 'safe error destination');
     window.parent.postMessage({type:'pp5-entry-check', result:`PASS ${checks.length} checks`}, location.origin);
   } catch (error) {

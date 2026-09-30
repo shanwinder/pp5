@@ -81,7 +81,7 @@ final class AppUiContextService
             } else {
                 $hasGradebooks = $this->gradebooks->hasAccessibleOffering($userId, $context, $schoolId);
             }
-            if ($hasGradebooks) { $items[] = $this->item('gradebooks', 'สมุดคะแนน', '/gradebooks'); }
+            if ($hasGradebooks) { $items[] = $this->item('gradebooks', 'งานสอนของฉัน', '/gradebooks'); }
             $this->section($sections, 'teaching', 'การเรียนการสอน', $items);
             $this->section($sections, 'management', 'การจัดการ', $permissions['SCHOOL_USER_VIEW']
                 ? [$this->item('users', 'ผู้ใช้งาน', '/admin/users')] : []);

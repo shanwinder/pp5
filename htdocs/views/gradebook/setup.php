@@ -9,7 +9,7 @@ $inactive = array_values(array_filter($components, static fn (array $item): bool
       <?php if ($workspace !== null && ($workspace['capabilities']['subjects'] || $workspace['capabilities']['teaching'] || $workspace['capabilities']['scores'])): ?>
         <a class="btn btn-outline-secondary" href="/workspaces/classrooms/<?= $escape($offering['classroom_id']) ?>/subjects">กลับรายวิชาและครูในห้องนี้</a>
       <?php endif; ?>
-      <a href="/gradebooks">รายการสมุดคะแนน</a>
+      <a href="/gradebooks">กลับงานสอนของฉัน</a>
     </nav>
     <p class="pp5-workspace-context"><strong>การเก็บคะแนน &gt; <?= $escape($offering['subject_name']) ?></strong><br><?= $escape($offering['classroom_name']) ?> · ปีการศึกษา <?= $escape($offering['year_be']) ?> · ภาคเรียนที่ <?= $escape($offering['term_no']) ?></p>
     <?php if ($error !== null): ?><p class="pp5-alert pp5-alert--danger" role="alert"><?= $escape($error) ?></p><?php endif; ?>

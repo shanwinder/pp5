@@ -24,8 +24,10 @@ final class GradebookController
     public function index(): Response
     {
         $ui = $this->ui->build('gradebooks', true);
-        return new Response(View::page('gradebook/index', ['offerings' => $ui['gradebooks']], [
-            'documentTitle' => 'สมุดคะแนน — ระบบ ปพ.5', 'pageTitle' => 'สมุดคะแนน', 'ui' => $ui,
+        $work = $this->gradebooks->teachingWork((int) $this->session->get('user_id'), (string) $this->session->get('context_type'),
+            (int) $this->session->get('school_id'), $ui['gradebooks']);
+        return new Response(View::page('gradebook/index', ['offerings' => $work], [
+            'documentTitle' => 'งานสอนของฉัน — ระบบ ปพ.5', 'pageTitle' => 'งานสอนของฉัน', 'ui' => $ui,
         ]));
     }
 
@@ -36,9 +38,8 @@ final class GradebookController
         if ($gradebook === null) { return new Response(View::error(404), 404); }
 
         $offering = $gradebook['offering'];
-        $canScore = $offering['status'] === 'ACTIVE' && in_array($offering['academic_year_status'], ['DRAFT', 'ACTIVE'], true)
-            && $this->authorization->hasSubjectOfferingPermission($this->session->get('user_id'), $this->session->get('context_type'),
-                $this->session->get('school_id'), $offeringId, 'GRADEBOOK_SCORE_ENTER');
+        $canScore = $this->gradebooks->canEnterScores((int) $this->session->get('user_id'),
+            (string) $this->session->get('context_type'), (int) $this->session->get('school_id'), $offering);
 
         return new Response(View::page('gradebook/view', [
             'gradebook' => $gradebook, 'canScore' => $canScore,

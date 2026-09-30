@@ -305,6 +305,15 @@ a:hover { color: var(--pp5-primary-hover); }
 /* Contain absolutely positioned accessible link labels inside the scroll region. */
 .pp5-offering-table .btn { position: relative; }
 
+.pp5-teaching-section { margin-block: var(--pp5-space-4); }
+.pp5-teaching-section h3 { margin-block: var(--pp5-space-4) var(--pp5-space-2); }
+.pp5-teaching-room { margin-block-end: var(--pp5-space-4); }
+.pp5-teaching-room h4 { overflow-wrap: anywhere; }
+.pp5-teaching-list { list-style: none; padding: 0; margin: 0; }
+.pp5-teaching-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--pp5-space-3); padding: var(--pp5-space-3); border-block-start: 1px solid var(--pp5-border); }
+.pp5-teaching-detail { display: grid; gap: .2rem; min-width: 0; overflow-wrap: anywhere; }
+.pp5-teaching-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pp5-space-2); }
+
 /* Administration forms and tables share the shell without changing legacy grids. */
 .pp5-admin-page { min-width: 0; overflow-wrap: anywhere; }
 .pp5-admin-page .pp5-form { margin-block-end: var(--pp5-space-6); }

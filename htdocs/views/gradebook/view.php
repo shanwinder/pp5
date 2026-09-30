@@ -4,7 +4,7 @@ $offering = $gradebook['offering'];
 ?>
 <div class="pp5-gradebook-page">
   <div class="pp5-actions">
-    <a class="btn btn-outline-secondary" href="/gradebooks">กลับรายการสมุดคะแนน</a>
+    <a class="btn btn-outline-secondary" href="/gradebooks">กลับงานสอนของฉัน</a>
     <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
