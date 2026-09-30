@@ -1,0 +1,36 @@
+:root{font-family:system-ui,-apple-system,"Noto Sans Thai",Tahoma,sans-serif;color:#203044;background:#f7f9fc;font-size:14px}
+*{box-sizing:border-box}
+body{margin:0}
+h1,h2,p{margin-top:0}
+h1{font-size:1.5rem;line-height:1.3;margin-bottom:.35rem}
+h1 small{font-size:.75rem;font-weight:500;color:#64748b}
+a{color:#175aa5}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid #145fc4;outline-offset:2px}
+.eyebrow{font-size:.75rem;letter-spacing:.06em;color:#546a86;text-transform:uppercase;font-weight:700;margin:0 0 .35rem}
+.workbench{width:100%;max-width:100%;padding:16px 18px;overflow:hidden}
+.top{display:flex;align-items:end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.top p{margin-bottom:.3rem}
+.controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;color:#52647c;font-size:.85rem}
+.controls select{font:inherit;background:#fff;border:1px solid #b7c5d4;border-radius:5px;padding:6px}
+.notice{background:#edf4fd;color:#314967;border:1px solid #d1e0f4;padding:8px 10px;border-radius:5px;margin:12px 0;font-size:.85rem}
+#grid{width:100%;max-width:100%;min-width:0}
+.below{display:flex;flex-wrap:wrap;align-items:start;gap:12px;margin-top:12px;color:#53657b;font-size:.85rem}
+.below>div,.below details{background:#fff;border:1px solid #d7e0ea;border-radius:5px;padding:8px 10px}
+.below p{margin-bottom:7px}
+.below input{font:inherit;padding:5px;border:1px solid #aebdd0;border-radius:4px}
+.below summary{cursor:pointer}
+.checklist{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:4px;max-width:690px;padding-top:8px}
+.checklist label{white-space:nowrap}
+.below pre{max-width:min(85vw,600px);max-height:160px;overflow:auto;font-size:.75rem}
+.landing{max-width:850px;margin:4vw auto;padding:20px}
+.landing>p{line-height:1.7}
+.choice{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:15px;margin:22px 0}
+.choice section{background:#fff;border:1px solid #d7e0ea;border-radius:8px;padding:20px;min-height:190px}
+.choice section p{line-height:1.55;color:#53657b}
+.choice section a{margin-right:14px}
+.button{display:inline-block;background:#175aa5;color:#fff;border-radius:5px;text-decoration:none;padding:9px 12px}
+.muted{font-size:.8rem;color:#697b90}
+@media(max-width:600px){.workbench{padding:10px}
+.top{align-items:start}
+.notice{line-height:1.5}
+}

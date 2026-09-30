@@ -1,0 +1,2 @@
+# Preserve official distribution bytes; upstream bundles contain trailing whitespace.
+vendor/** -text -diff whitespace=-blank-at-eol,-blank-at-eof
