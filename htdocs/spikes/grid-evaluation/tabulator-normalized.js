@@ -2,7 +2,8 @@
   'use strict';
   const fixture = GridSpike.setup(), started = performance.now(), host = document.getElementById('grid');
   const fields = fixture.components.map(c => c.field), scoreFields = new Set(fields);
-  let active = null, editing = null, composing = false, pending = null;
+  const rowIndex = new Map(fixture.rows.map((row, index) => [row.enrollmentId, index]));
+  let active = null, editing = null, composing = false, pending = null, programmatic = false;
   const log = (state, action) => GridSpike.log(state, action);
   const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const eligible = cell => cell && scoreFields.has(cell.getField()) && !cell.getRow().getData().historical;
@@ -63,7 +64,12 @@
       const forbidden = offset < 0 || targets.length !== rowData.length || targets.some((row,i) =>
         row.getData().historical || Object.keys(rowData[i]).some(field => !scoreFields.has(field)));
       if (forbidden) { log('ACTIVE', 'paste blocked · history/summary/identity'); return []; }
-      targets.forEach((row,i) => row.update(rowData[i]));
+      targets.forEach((row,i) => {
+        const next = { ...row.getData(), ...rowData[i] };
+        const summary = GridSpike.mockSummary(next, fixture.components);
+        Object.assign(fixture.rows[rowIndex.get(next.enrollmentId)], rowData[i], summary);
+        row.update({ ...rowData[i], ...summary });
+      });
       log('ACTIVE', 'paste commit · ' + rowData.length + ' rows');
       return targets;
     },
@@ -87,6 +93,65 @@
     table.addRange(cell, cell); active = cell; cell.getElement().focus();
     log('ACTIVE', cell.getField() + ' · ' + cell.getRow().getData().enrollmentId);
   }
+  function refreshRow(row) {
+    const data = row.getData(), summary = GridSpike.mockSummary(data, fixture.components);
+    Object.assign(fixture.rows[rowIndex.get(data.enrollmentId)], summary);
+    row.update(summary);
+  }
+  function selectedRectangle() {
+    const range = table.getRanges()[0], matrix = range?.getStructuredCells();
+    if (!matrix?.length || !matrix[0]?.length) return null;
+    const first = matrix[0][0], last = matrix.at(-1).at(-1);
+    const rectangle = {
+      x1:fields.indexOf(first.getField()) + 1, y1:rowIndex.get(first.getRow().getData().enrollmentId),
+      x2:fields.indexOf(last.getField()) + 1, y2:rowIndex.get(last.getRow().getData().enrollmentId)
+    };
+    // Identity and summary fields are not in `fields`; use the full column order.
+    const allFields = ['student', ...fields, 'sum', 'max', 'count', 'complete'];
+    rectangle.x1 = allFields.indexOf(first.getField());
+    rectangle.x2 = allFields.indexOf(last.getField());
+    return { range, matrix, rectangle };
+  }
+  function clearSelection(key) {
+    const selected = selectedRectangle();
+    if (!selected) return;
+    const plan = GridSpike.planClear(fixture, selected.rectangle);
+    const actual = selected.matrix.flat();
+    if (plan.ok && (actual.length !== plan.cells.length || actual.some((cell,i) =>
+      cell.getField() !== plan.cells[i].field || cell.getRow().getData().enrollmentId !== plan.cells[i].enrollmentId))) {
+      plan.ok = false; plan.reason = 'invalid rectangle';
+    }
+    const size = `${selected.matrix.length} × ${selected.matrix[0].length}`;
+    if (!plan.ok) { log('ACTIVE', `clear ${key} · ${size} · blocked ${plan.reason} · 0 changed · selection preserved`); return; }
+    const startedClear = performance.now(), affected = new Set();
+    let changed = 0;
+    programmatic = true;
+    try {
+      plan.cells.forEach((target,i) => {
+        const cell = actual[i], before = cell.getValue();
+        if (before !== '' && before !== null && before !== undefined) { cell.setValue(''); changed++; }
+        target.row[target.field] = '';
+        affected.add(target.y);
+      });
+    } finally { programmatic = false; }
+    const clearMs = performance.now() - startedClear, startedSummary = performance.now();
+    if (changed) affected.forEach(y => refreshRow(table.getRows('active')[y]));
+    const summaryMs = performance.now() - startedSummary;
+    const preserved = table.getRanges()[0] === selected.range;
+    active = actual[0]; // A clear leaves the top-left score as the predictable typing anchor.
+    active?.getElement()?.focus();
+    log('ACTIVE', `clear ${key} · ${size} · ${plan.cells.length} targets · ${changed} changed · ${affected.size} summary rows · selection ${preserved ? 'preserved' : 'changed'} · ${clearMs.toFixed(1)} + ${summaryMs.toFixed(1)} ms`);
+  }
+  function delayedSummary() {
+    const row = active?.getRow(); if (!row) return;
+    const before = selectedRectangle(), scroller = host.querySelector('.tabulator-tableholder');
+    const scroll = [scroller?.scrollLeft, scroller?.scrollTop], focus = document.activeElement;
+    setTimeout(() => {
+      refreshRow(row);
+      log('ACTIVE', `async summary · range ${before?.range === table.getRanges()[0] ? 'preserved' : 'changed'} · focus ${focus === document.activeElement ? 'preserved' : 'changed'} · scroll ${scroll[0] === scroller?.scrollLeft && scroll[1] === scroller?.scrollTop ? 'preserved' : 'changed'}`);
+    }, 180);
+  }
+  document.getElementById('simulate-summary').addEventListener('click', delayedSummary);
   table.on('tableBuilt', () => GridSpike.ready(performance.now()-started,host.querySelectorAll('.tabulator-cell').length));
   table.on('rangeAdded', range => {
     const cells = range.getStructuredCells();
@@ -103,13 +168,24 @@
     setTimeout(() => { active = cell; if (!editing) cell.getElement().focus(); }, 0);
   });
   table.on('cellEditing', cell => { editing = cell; log('EDITING', cell.getField() + ' · ' + cell.getRow().getData().enrollmentId); });
-  table.on('cellEdited', cell => { editing = null; log('ACTIVE', 'edit commit · ' + cell.getField() + ' = ' + cell.getValue()); });
+  table.on('cellEdited', cell => {
+    if (programmatic) return;
+    editing = null;
+    const data = cell.getRow().getData();
+    fixture.rows[rowIndex.get(data.enrollmentId)][cell.getField()] = cell.getValue();
+    refreshRow(cell.getRow());
+    log('ACTIVE', 'edit commit · ' + cell.getField() + ' = ' + cell.getValue() + ' · summary refreshed');
+  });
   table.on('cellEditCancelled', () => { editing = null; log('ACTIVE', 'edit cancel'); });
   table.on('clipboardPasted', () => log('ACTIVE', 'paste event'));
   host.addEventListener('compositionstart', () => { composing = true; log('COMPOSING', 'start'); }, true);
   host.addEventListener('compositionend', () => { composing = false; log(editing ? 'EDITING' : 'ACTIVE', 'end'); }, true);
   host.addEventListener('keydown', e => {
     if (composing || e.isComposing || editing) return;
+    if (e.key === 'F8' && e.shiftKey) { e.preventDefault(); e.stopPropagation(); delayedSummary(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && table.getRanges().length) {
+      e.preventDefault(); e.stopPropagation(); clearSelection(e.key); return;
+    }
     log('ACTIVE', 'keydown · ' + e.key + ' · ' + (active?.getField() || 'none') + ' · eligible=' + !!eligible(active));
     if (printable(e) && eligible(active)) {
       e.preventDefault(); e.stopPropagation(); pending = e.key; log('EDITING', 'printable starts edit · ' + e.key); active.edit(); return;

@@ -12,7 +12,9 @@
     {type:'text',title:'บันทึกแล้ว / ทั้งหมด',width:125,readOnly:true},
     {type:'text',title:'ความครบถ้วน',width:115,readOnly:true}
   ];
-  let active = null, editing = null, composing = false;
+  let active = null, selection = null, editing = null, composing = false, gridOwned = false;
+  let suppressChanges = false, batching = false, summaryQueued = false;
+  const dirtyRows = new Set();
   const log = (state, action) => GridSpike.log(state, action);
   const exitFocus = direction => document.querySelector(direction === 'right' ? '#ime' : 'a[href="index.html"]').focus();
   const eligible = (x,y) => x >= 1 && x <= scoreEnd && y >= 0 && y < fixture.currentCount;
@@ -25,8 +27,74 @@
     if (!coords) return;
     grid.updateSelectionFromCoords(coords[0],coords[1],coords[0],coords[1]);
     active = coords;
+    gridOwned = true;
     log('ACTIVE', coords.join(','));
   }
+  function refreshSummaries(rows) {
+    const startedSummary = performance.now();
+    suppressChanges = true;
+    try {
+      rows.forEach(y => {
+        const summary = GridSpike.mockSummary(fixture.rows[y], fixture.components);
+        Object.assign(fixture.rows[y], summary);
+        ['sum','max','count','complete'].forEach((field,i) =>
+          grid.setValueFromCoords(scoreEnd + 1 + i, y, summary[field], true));
+      });
+    } finally { suppressChanges = false; }
+    return performance.now() - startedSummary;
+  }
+  function queueSummary(y) {
+    dirtyRows.add(y);
+    if (batching || summaryQueued) return;
+    summaryQueued = true;
+    queueMicrotask(() => {
+      summaryQueued = false;
+      const rows = [...dirtyRows]; dirtyRows.clear();
+      refreshSummaries(rows);
+      log('ACTIVE', `summary refreshed · ${rows.length} rows`);
+    });
+  }
+  function clearSelection(key) {
+    if (!selection) return;
+    const saved = { ...selection }, plan = GridSpike.planClear(fixture, saved);
+    const size = `${Math.abs(saved.y2-saved.y1)+1} × ${Math.abs(saved.x2-saved.x1)+1}`;
+    if (!plan.ok) { log('ACTIVE', `clear ${key} · ${size} · blocked ${plan.reason} · 0 changed · selection preserved`); return; }
+    const startedClear = performance.now(), affected = new Set();
+    let changed = 0;
+    batching = true;
+    try {
+      plan.cells.forEach(target => {
+        const before = grid.getValueFromCoords(target.x,target.y);
+        if (before !== '' && before !== null && before !== undefined) {
+          grid.setValueFromCoords(target.x,target.y,''); changed++;
+        }
+        target.row[target.field] = '';
+        affected.add(target.y);
+      });
+    } finally { batching = false; }
+    const clearMs = performance.now() - startedClear;
+    dirtyRows.clear();
+    const summaryMs = changed ? refreshSummaries(affected) : 0;
+    const left = Math.min(saved.x1,saved.x2), right = Math.max(saved.x1,saved.x2);
+    const top = Math.min(saved.y1,saved.y2), bottom = Math.max(saved.y1,saved.y2);
+    grid.updateSelectionFromCoords(left,top,right,bottom);
+    active = [left,top]; // CE's native type-to-edit uses this selection anchor.
+    const preserved = selection && Math.min(selection.x1,selection.x2) === left &&
+      Math.max(selection.x1,selection.x2) === right && Math.min(selection.y1,selection.y2) === top &&
+      Math.max(selection.y1,selection.y2) === bottom;
+    log('ACTIVE', `clear ${key} · ${size} · ${plan.cells.length} targets · ${changed} changed · ${affected.size} summary rows · selection ${preserved ? 'preserved' : 'changed'} · ${clearMs.toFixed(1)} + ${summaryMs.toFixed(1)} ms`);
+  }
+  function delayedSummary() {
+    if (!active) return;
+    const y = active[1], saved = selection && { ...selection }, scrollHost = host.querySelector('.jexcel_content');
+    const scroll = [scrollHost?.scrollLeft, scrollHost?.scrollTop], focus = document.activeElement;
+    setTimeout(() => {
+      refreshSummaries(new Set([y]));
+      const preserved = saved && selection && Object.keys(saved).every(key => saved[key] === selection[key]);
+      log('ACTIVE', `async summary · range ${preserved ? 'preserved' : 'changed'} · focus ${focus === document.activeElement ? 'preserved' : 'changed'} · scroll ${scroll[0] === scrollHost?.scrollLeft && scroll[1] === scrollHost?.scrollTop ? 'preserved' : 'changed'}`);
+    }, 180);
+  }
+  document.getElementById('simulate-summary').addEventListener('click', delayedSummary);
   const grid = jexcel(host, {
     data,columns,tableOverflow:true,tableWidth:'100%',tableHeight:'min(64vh, 560px)',freezeColumns:1,
     parseFormulas:false,autoIncrement:false,autoCasting:false,
@@ -38,7 +106,9 @@
       if (x > scoreEnd) cell.classList.add('summary');
     },
     onselection:(_instance,x1,y1,x2,y2) => {
+      selection = { x1:Number(x1), y1:Number(y1), x2:Number(x2), y2:Number(y2) };
       active = [Number(x2),Number(y2)];
+      gridOwned = true;
       log('ACTIVE', 'range ' + x1 + ',' + y1 + ' → ' + x2 + ',' + y2);
     },
     oneditionstart:(_instance,cell,x,y) => {
@@ -47,7 +117,15 @@
     oneditionend:(_instance,cell,x,y,_value,save) => {
       editing = null; log('ACTIVE', (save ? 'edit commit · ' : 'edit cancel · ') + x + ',' + y);
     },
-    onchange:(_instance,_cell,x,y,value) => log('ACTIVE', 'change · ' + x + ',' + y + ' = ' + value),
+    onchange:(_instance,_cell,x,y,value) => {
+      if (suppressChanges) return;
+      const column = Number(x), row = Number(y);
+      if (column >= 1 && column <= scoreEnd && fixture.rows[row]) {
+        fixture.rows[row][fields[column]] = value == null ? '' : String(value);
+        queueSummary(row);
+      }
+      log('ACTIVE', 'change · ' + x + ',' + y + ' = ' + value);
+    },
     oncopy:(_instance,copy) => log('ACTIVE', 'copy · ' + JSON.stringify(String(copy).slice(0,80))),
     onbeforepaste:(_instance,raw,x,y) => {
       const matrix = String(raw).replace(/\r\n?/g,'\n').replace(/\n$/,'').split('\n').map(line=>line.split('\t'));
@@ -60,6 +138,20 @@
   GridSpike.ready(performance.now()-started,host.querySelectorAll('td[data-x]').length);
   host.addEventListener('compositionstart', () => { composing = true; log('COMPOSING', 'start'); }, true);
   host.addEventListener('compositionend', () => { composing = false; log(editing ? 'EDITING' : 'ACTIVE', 'composition end'); }, true);
+  document.addEventListener('pointerdown', e => { if (!host.contains(e.target)) gridOwned = false; }, true);
+  document.addEventListener('focusin', e => {
+    if (!host.contains(e.target) && e.target !== document.body) gridOwned = false;
+  }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F8' && e.shiftKey && gridOwned && !editing && !composing && !e.isComposing) {
+      e.preventDefault(); e.stopPropagation(); delayedSummary(); return;
+    }
+    if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+    if (!gridOwned || !selection || editing || composing || e.isComposing) return;
+    if (!host.contains(e.target) && e.target !== document.body && e.target !== document.documentElement) return;
+    if (e.target.closest?.('input, textarea, [contenteditable="true"]')) return;
+    e.preventDefault(); e.stopPropagation(); clearSelection(e.key);
+  }, true);
   host.addEventListener('keydown', e => {
     if (composing || e.isComposing) {
       // Keep CE's document-level Enter/arrow handler away from an active IME, without cancelling browser composition.
