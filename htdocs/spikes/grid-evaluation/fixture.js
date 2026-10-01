@@ -50,10 +50,11 @@ window.GridSpike = (() => {
     return { mode, rows, components, summaryTitles, currentCount: count - 5, historicalCount: 5 };
   }
   const checklist = [
-    'หน้าตาเหมือน spreadsheet', 'หัวตารางอ่านง่าย', 'ชื่อนักเรียนค้างด้านซ้าย',
-    'เลื่อนแนวนอนลื่น', 'Active cell ชัด', 'เลือกช่วงง่าย', 'พิมพ์คะแนนเร็ว',
-    'Keyboard เป็นธรรมชาติ', 'Copy/Paste เป็นธรรมชาติ', 'Historical/read-only ชัด',
-    'เหมาะกับหน้าจอเล็ก'
+    'คลิกหนึ่งครั้งแล้วพิมพ์ 5', 'พิมพ์ 5 ↓ 6 ↓ 7 ↓ ต่อเนื่อง', 'ดับเบิลคลิกแก้ค่าเดิม',
+    '← → เลื่อน caret', 'Enter/Shift+Enter ลง/ขึ้น', 'Tab/Shift+Tab ขวา/ซ้าย',
+    'ลากช่วง 3×3', 'Shift+Arrow ขยายช่วง', 'Cmd/Ctrl+C ได้ TSV',
+    'Paste 2×2 ช่องว่าง ≠ 0', 'ประวัติแก้ไม่ได้แต่ copy ได้',
+    'ชื่อนักเรียนค้างซ้าย', 'Focus ชัดเมื่อเลื่อน', 'พิมพ์ไทย/IME ไม่ย้ายก่อนจบ'
   ];
   function setup() {
     const params = new URLSearchParams(location.search);
