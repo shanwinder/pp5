@@ -18,6 +18,17 @@ final class UiGradebookTest extends TestCase
         foreach (['/assets/vendor/htmx-2.0.8.min.js','/assets/gradebook.js'] as $src) {
             self::assertSame($src === '/assets/gradebook.js' ? 1 : ($score ? 1 : 0),$x->query('//script[@src="'.$src.'" and @defer]')->length);
         }
+        self::assertSame(1,$x->query('//script[@src="/assets/vendor/tabulator/tabulator.min.js" and @defer]')->length);
+        self::assertSame(1,$x->query('//link[@href="/assets/vendor/tabulator/tabulator.min.css"]')->length);
+        self::assertSame(1,$x->query('//link[@href="/assets/gradebook-grid.css"]')->length);
+        self::assertSame(1,$x->query('//*[@id="gradebook-tabulator" and @hidden]')->length);
+        $bootstrap=$x->evaluate('string(//script[@id="gradebook-grid-data" and @type="application/json"])');
+        $data=json_decode($bootstrap,true,16,JSON_THROW_ON_ERROR);
+        self::assertSame($score,$data['canScore']);
+        self::assertSame($this->f['offeringA'],$data['offeringId']);
+        self::assertNotEmpty($data['components']); self::assertNotEmpty($data['rows']);
+        self::assertArrayHasKey('enrollmentId',$data['rows'][0]); self::assertArrayHasKey('id',$data['components'][0]);
+        self::assertStringNotContainsString('national_id',$bootstrap);
         self::assertSame($score?1:0,$x->query('//meta[@name="htmx-config"]')->length);
         self::assertSame($setup?1:0,$x->query('//main//a[@href="'.$this->path().'"]')->length);
         self::assertStringContainsString($score?'แก้ไขคะแนนได้':'อ่านอย่างเดียว',$r->body());
@@ -46,7 +57,7 @@ final class UiGradebookTest extends TestCase
             self::assertSame(1,$x->query('//button[@id="gradebook-fill-submit" and @type="submit" and @disabled]')->length);
             self::assertSame(1,$x->query('//button[@id="gradebook-clear-submit" and @type="button" and @disabled]')->length);
             self::assertStringContainsString('ล้างคะแนนในช่วงที่เลือก',$r->body());
-            self::assertStringContainsString('Shift+Tab ย้อนกลับไปยังแผงใส่คะแนนช่วงที่เลือก',$r->body());
+            self::assertStringContainsString('Delete/Backspace เพื่อล้างช่วงที่เลือก',$r->body());
             self::assertSame('/hx'.$this->readPath().'/scores/batch',$x->evaluate('string(//*[@data-batch-url]/@data-batch-url)'));
         } else {
             self::assertSame(0,$x->query('//main//input|//main//*[@hx-post]|//form[@id="gradebook-range-actions"]')->length);
@@ -137,14 +148,17 @@ final class UiGradebookTest extends TestCase
     public function testSaveLoopRemainsPresentationOnlyWithVerticalNavigation(): void
     {
         $js=file_get_contents(dirname(__DIR__,2).'/htdocs/assets/gradebook.js');
-        foreach (["event.key === 'Enter'", "event.key === 'ArrowUp'", "event.key === 'ArrowDown'", "xhr?.status === 200", "getResponseHeader('X-Gradebook-Saved') === '1'",'event.detail.shouldSwap = false',"status(input, 'ERROR', 'error', message)",'target.focus({ preventScroll: true });','input.blur();'] as $contract) { self::assertStringContainsString($contract,$js); }
-        self::assertStringNotContainsString("event.key === 'Tab'",$js);
-        self::assertStringNotContainsString("event.key === 'ArrowLeft'",$js);
-        self::assertStringNotContainsString("event.key === 'ArrowRight'",$js);
-        // Task 8 adds one fetch for transactional paste. Copy and single-cell autosave keep their boundaries.
+        foreach (['new Tabulator(', "response.headers.get('X-Gradebook-Saved') !== '1'",
+            "response.headers.get('X-Gradebook-Batch-Saved') !== '1'", 'state.pendingSingles.size',
+            'state.uncertain', 'state.applying', 'cell.setValue(value)', 'table.getRanges()',
+            "event.key === 'Delete'", "event.key === 'Backspace'", "event.key === 'Tab'",
+            "event.key === 'Enter'", "event.key === 'Escape'", 'event.isComposing'] as $contract) {
+            self::assertStringContainsString($contract,$js);
+        }
+        self::assertStringContainsString("if (state.composing || event.isComposing) return",$js);
+        self::assertStringContainsString('clipboardPasteAction: () => []',$js);
+        // One shared fetch transport serves the existing single-cell and batch endpoints.
         self::assertSame(1, preg_match_all('/fetch\s*\(/', $js));
-        $copy = substr($js, strpos($js, "document.addEventListener('copy'"), strpos($js, 'const phases') - strpos($js, "document.addEventListener('copy'"));
-        self::assertStringNotContainsString('fetch(', $copy);
         self::assertDoesNotMatchRegularExpression('/XMLHttpRequest|parseFloat|parseInt|\.reduce\s*\(|GRADEBOOK_|school_id|Math\./',$js);
     }
 
@@ -161,7 +175,7 @@ final class UiGradebookTest extends TestCase
         $x=$this->xpath($html);
         foreach (['//html','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//script[@src="/assets/app.js"]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
         self::assertSame(1,substr_count($html,'<!doctype html>'));
-        self::assertSame(0,$x->query('//*[@style or @onclick]|//script[not(@src)]|//script[starts-with(@src,"http")]')->length);
+        self::assertSame(0,$x->query('//*[@style or @onclick]|//script[not(@src) and not(@type="application/json")]|//script[starts-with(@src,"http")]')->length);
         return $x;
     }
 }

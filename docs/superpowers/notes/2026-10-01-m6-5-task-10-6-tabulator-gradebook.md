@@ -1,0 +1,44 @@
+# M6.5 Task 10.6 — Production Tabulator Gradebook
+
+## Baseline and scope
+
+- Production branch: `milestone/6-5-classroom-workspace`; starting SHA `2611e6085bcdcf71fb4d93908feb3371c7372049`, fetched origin identical, clean tree, ahead/behind `0 0`.
+- The accepted [spreadsheet-grid addendum](../plans/2026-10-01-pp5-m6-5-spreadsheet-grid-addendum.md) selects Tabulator 6.6.0. The evaluation branch was inspected as evidence, never merged or cherry-picked.
+- This task changes the Gradebook renderer, first-party adapter, theme, browser tests and UI shape assertions. Existing read/write services, routes, permissions, audit, schema, seed and transaction boundaries remain unchanged.
+
+## Vendor provenance and deployment
+
+The exact three files were extracted with `git show` from evaluated spike SHA `f329e2e8800f0e2607d7d98d638aeec56f6452f2`, paths `htdocs/spikes/grid-evaluation/vendor/tabulator/{tabulator.min.js,tabulator.min.css,LICENSE}`. The JS header identifies **Tabulator v6.6.0**. The spike note records the official [6.6.0 release](https://github.com/tabulator-tables/tabulator/releases/tag/6.6.0) and [npm distribution](https://registry.npmjs.org/tabulator-tables/-/tabulator-tables-6.6.0.tgz). The retained license is MIT, copyright 2015–2026 Oli Folkerd. Production files:
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `htdocs/assets/vendor/tabulator/tabulator.min.js` | 453,888 | `b8c69d7e6b82b01979a6630fad847c3a303b6a59b74bfd04c27fa644c4721332` |
+| `htdocs/assets/vendor/tabulator/tabulator.min.css` | 28,383 | `ff598d8e961398e09a8e52ab21740e5ed952c84feebbdacec8f8a362dd3f73db` |
+| `htdocs/assets/vendor/tabulator/LICENSE` | 1,082 | `191a2ee554684e1064c897b432f0e1bc6dfa714ca045d3f6ea2cf692cbd398b7` |
+
+All production scripts and styles are local `/assets/` files. There is no CDN, remote font/import, frontend build, `node_modules`, npm runtime or package tarball. Vendor minified files were not edited. Jspreadsheet and jSuites remain spike-only.
+
+## Bootstrap and progressive rendering
+
+`GradebookController::show()` still obtains one authorized `GradebookReadService` model. `view.php` serializes only already authorized Gradebook presentation fields into a `type="application/json"` script using JSON hex escaping: offering ID, `canScore`, active component IDs/titles/maxima, enrollment IDs, student code/name, current/history status, nullable scores, and authoritative row summaries. It contains no national ID. No executable inline initialization is added. `gradebook.js` maps `enrollmentId` to Tabulator row `id`, and each score column to `score_<componentId>`. Visual coordinates locate cells only; each command re-resolves stable IDs. Sorting, filtering and column reordering are disabled.
+
+The original semantic table and score/summary fragments remain. It is a readable fallback if Tabulator or initialization fails. While Tabulator builds, the fallback stays visible and the initializing grid stays visually hidden. Only after `tableBuilt` does the adapter disable fallback score inputs and hide the fallback, leaving one writable engine. The original HTMX single-cell fallback remains for an initialized page where Tabulator itself fails. A no-JS page retains the table and states that automatic saving requires JavaScript.
+
+## Adapter state and write contracts
+
+The adapter keeps explicit active cell, anchor/range, editor, composition, pending single/batch, revision, authoritative score, row revision, error, permission loss and uncertainty state. Tabulator's public row/cell/range APIs provide rendering and selection. Its native drag fill, range clear and clipboard paste mutation are disabled. The PP5 paste capture handler parses plain TSV, validates complete geometry, resolves stable IDs and submits one Task 8 batch command. The public `clipboardPasteAction` hook returns no native mutation. Delete and Backspace on a selected score rectangle, including **1×1**, use the same batch endpoint with explicit `""` fields. Ordinary editor commits use the existing single-cell endpoint. This avoids a blur-triggered duplicate and gives every selected clear the same atomic response contract. Explicit Task 9 fill uses the selected rectangle and a literal nonempty scalar through the batch endpoint; empty fill is refused in favor of clear.
+
+The custom editor supports printable type-to-replace, Enter/F2 caret editing, ArrowUp/Down and Enter/Shift+Enter vertical commit/navigation, Tab/Shift+Tab horizontal commit/navigation and boundary exit, Left/Right caret movement, and Escape cancel without a write. Composition events and `isComposing` prevent premature keyboard commands. A single-cell response is confirmed only by HTTP 200 **and** `X-Gradebook-Saved: 1`; the adapter parses the existing score-cell and OOB row-summary fragments. A rejected value remains visible with error styling and `aria-invalid`; summaries retain prior authority. Batch confirmation requires HTTP 200 **and** `X-Gradebook-Batch-Saved: 1`, valid JSON, complete stable IDs and authoritative cells/rows. No client summary calculation is performed. Blank remains NULL at the server; `0`/`0.00` remain real scores.
+
+Single requests are serialized in entry order, while rapid typing/navigation can continue across different cells. Operation revisions prevent older row summaries from overwriting newer ones. Programmatic cell/row application suppresses write handlers and retains scroll/selection where Tabulator permits. Paste, fill and clear reject while an editor or any single save is pending; a rejected range command is never queued or auto-retried. Transport loss, HTTP 200 without the marker, malformed confirmed response, HTTP 409 and server 5xx result in reload guidance and block further commands because commit status can be uncertain. A known validation rejection keeps values untouched and allows correction. Live permission revocation makes subsequent client editing ineligible; server authorization remains final.
+
+Historical and read-only rows initialize in Tabulator for selection/copy but have no editor, paste, fill or clear authority. Mixed history, identity and summary rectangles reject the entire write at the UI boundary; Task 8 independently validates every target. Copy uses the selected visible rectangle as exact plain TSV, preserving empty fields and zero. Dynamic student/component text is escaped before Tabulator HTML formatting; server errors use text content.
+
+## Verification and remaining work
+
+- Synthetic browser suites were ported from old table/input selectors to Tabulator behavior: writable, read-only, failure matrix, pending/race/keyboard and 2,001-cell limit. The legacy selector-only browser scripts were replaced, while Gradebook responsive and full cross-screen matrices were updated. Browser tests cover server-owned summaries, copy geometry, clear/fill/paste, success markers, invalid text, uncertainty, no retry, live denial and fast vertical entry. Pointer drag and reverse drag were also exercised directly in the browser.
+- Final focused PHPUnit filter `Gradebook|ClassroomWorkspace|Teaching`: **872 tests / 19,862 assertions**, pass. Full PHPUnit: **3,063 tests / 69,864 assertions**, pass. First-party PHP syntax: **217 files**, 0 failures. First-party JavaScript syntax: **14 files**, 0 failures. Vendor JS syntax smoke and `git diff --check` pass.
+- Synthetic browser: **39** writable checks, **11** read-only checks, **19** race/keyboard checks, **4** limit checks, and **16 failure scenarios / 131 checks**, all pass. The four-width Gradebook matrix passes **48 cases / 804 checks** at 390/768/1024/1440 px, including empty roster and zero active score components, with no document overflow. The cross-screen matrix passes **139 cases / 6,386 checks**. Representative **35×20** and **100×40** browser workloads pass **12** and **8** checks respectively; the 35×20 case includes atomic 3×3 paste and clear. Direct pointer drag and reverse drag selected the same 3×2 rectangle. These are checks, not a formal performance or accessibility benchmark.
+- Database-backed feature/service tests retain authorization, tenant, lifecycle, CSRF, score validation, atomic rollback and audit coverage. No migration or new endpoint was introduced.
+- MAMP `/gradebooks` redirects to login without an available authenticated disposable session. MAMP serves the four local Gradebook assets with HTTP 200. Authenticated real-data editing was not performed; Task 12 retains the real-persona workflow.
+- Task 11 should harden virtualized grid accessibility, screen-reader behavior, reduced motion, Thai IME manual entry, cross-browser parity, frozen-column/range interaction and long-name focus visibility. Synthetic IME guards are covered; real Thai IME, Safari, Firefox, Edge and screen-reader certification were **not** performed here.

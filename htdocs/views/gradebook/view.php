@@ -8,11 +8,11 @@ $offering = $gradebook['offering'];
     <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
-  <p id="gradebook-guidance"><?= $canScore ? 'พิมพ์คะแนนแล้วออกจากช่องเพื่อบันทึก · Enter/Shift+Enter ไปยังนักเรียนถัดไป/ก่อนหน้าในหัวข้อเดิม · ↑/↓ ย้ายแถว · ←/→ แก้ไขตำแหน่งข้อความ · Tab/Shift+Tab ใช้งานตามปกติ' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากจากพื้นที่ว่างในช่องคะแนนเพื่อเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอกคะแนน<?= $canScore ? ' · Shift+↑/↓ ขยายช่วงจากช่องที่กำลังแก้ไข · Shift+Tab ย้อนกลับไปยังแผงใส่คะแนนช่วงที่เลือก' : '' ?> · Escape ล้างช่วงที่เลือก</p>
+  <p id="gradebook-guidance"><?= $canScore ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า · ดับเบิลคลิกหรือ Enter เพื่อแก้ไขค่าเดิม · Enter/Shift+Enter ย้ายขึ้นลง · Tab/Shift+Tab ย้ายซ้ายขวาและออกจากตารางได้ · ลูกศรซ้ายขวาขณะพิมพ์ย้ายเคอร์เซอร์' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอก<?= $canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้แผงด้านล่างเพื่อใส่คะแนนช่วง' : '' ?> · Escape ล้างช่วงที่เลือก</p>
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>
-    <p id="gradebook-batch-status" role="status" aria-live="polite" aria-atomic="true">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากช่องที่กำลังแก้ไข · ช่องว่างในตารางที่วางจะล้างคะแนน</p>
+    <p id="gradebook-batch-status" role="status" aria-live="polite" aria-atomic="true">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากช่องคะแนนที่เลือก · ช่องว่างในตารางที่วางจะล้างคะแนน</p>
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
     <noscript><p>ต้องเปิดใช้งาน JavaScript เพื่อบันทึกคะแนนอัตโนมัติ</p></noscript>
   <?php endif; ?>
@@ -31,6 +31,24 @@ $offering = $gradebook['offering'];
       </div>
     </form>
   <?php endif; ?>
+  <?php
+    $gridBootstrap = [
+      'offeringId' => (int) $offering['id'], 'canScore' => (bool) $canScore,
+      'batchLimit' => \App\Services\GradebookScoreService::MAX_BATCH_CELLS,
+      'components' => array_map(static fn (array $component): array => [
+        'id' => (int) $component['id'], 'name' => $component['name_th'], 'max' => $component['max_score'],
+      ], $gradebook['components']),
+      'rows' => array_map(static fn (array $row): array => [
+        'enrollmentId' => (int) $row['enrollment_id'], 'studentCode' => $row['student_code'],
+        'name' => $row['display_name'], 'rowType' => $row['row_type'], 'status' => $row['enrollment_status'],
+        'scores' => $row['scores'], 'total' => $row['entered_score_total'],
+        'max' => $row['configured_max_total'], 'entered' => $row['entered_component_count'],
+        'componentCount' => $row['active_component_count'], 'complete' => (bool) $row['complete'],
+      ], $gradebook['rows']),
+    ];
+  ?>
+  <script id="gradebook-grid-data" type="application/json"><?= json_encode($gridBootstrap, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE | JSON_THROW_ON_ERROR) ?></script>
+  <div id="gradebook-tabulator" class="pp5-gradebook-tabulator" role="region" aria-label="ตารางคะแนน" aria-describedby="gradebook-guidance" tabindex="0" hidden></div>
   <div class="pp5-table-scroll pp5-gradebook" data-offering-id="<?= $escape($offering['id']) ?>"<?php if ($canScore): ?> data-batch-url="/hx/gradebook/<?= $escape($offering['id']) ?>/scores/batch" data-batch-limit="<?= \App\Services\GradebookScoreService::MAX_BATCH_CELLS ?>"<?php endif; ?> role="region" aria-label="คะแนนรายองค์ประกอบ" aria-describedby="gradebook-guidance" tabindex="0">
     <table class="table pp5-table">
       <caption>คะแนนของรายชื่อปัจจุบันและประวัติการลงทะเบียน</caption>

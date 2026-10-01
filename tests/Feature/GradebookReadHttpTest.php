@@ -41,7 +41,10 @@ final class GradebookReadHttpTest extends TestCase
         self::assertStringContainsString('2 / 2',$this->rowText($x,'complete'));
         self::assertSame($role === 'EXECUTIVE' ? 0 : 8,$x->query('//input[@hx-post]')->length);
         self::assertSame($role === 'EXECUTIVE' ? 0 : 1,$x->query('//form[@id="gradebook-range-actions" and @hidden and not(@action)]')->length);
-        self::assertSame(0,$x->query('//form[not(@action="/logout") and @id!="gradebook-range-actions"]|//textarea|//select|//script[not(@src)]|//*[@contenteditable]')->length);
+        self::assertSame(0,$x->query('//form[not(@action="/logout") and @id!="gradebook-range-actions"]|//textarea|//select|//script[not(@src) and not(@type="application/json")]|//*[@contenteditable]')->length);
+        $bootstrap=json_decode($x->evaluate('string(//script[@id="gradebook-grid-data"])'),true,16,JSON_THROW_ON_ERROR);
+        self::assertSame((int)$this->f['offeringA'],$bootstrap['offeringId']);
+        self::assertCount(8,$bootstrap['rows']);
         self::assertSame($before,$this->readSnapshot());
     }
     public static function revocations(): iterable { foreach (['scope','assignment','role','membership','permission','school'] as $kind) { yield [$kind]; } }
@@ -101,7 +104,7 @@ final class GradebookReadHttpTest extends TestCase
         foreach ([$this->readPath(),'/dashboard'] as $path) {
             $r=$this->request('GET',$path); self::assertSame(200,$r->status());
             self::assertStringContainsString(htmlspecialchars($hostile,ENT_QUOTES,'UTF-8'),$r->body()); self::assertStringNotContainsString($hostile,$r->body());
-            self::assertSame(0,$this->xpath($r->body())->query('//script[not(@src)]')->length); $this->assertReadSafe($r->body());
+            self::assertSame(0,$this->xpath($r->body())->query('//script[not(@src) and not(@type="application/json")]')->length); $this->assertReadSafe($r->body());
         }
     }
     public function testOnlyDedicatedCsrfProtectedEndpointCanMutateAndReadsHaveNoSideEffects(): void

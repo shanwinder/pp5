@@ -71,7 +71,11 @@ final class UiCrossScreenContractTest extends TestCase
         }
         self::assertSame('th', $x->evaluate('string(/html/@lang)'));
         self::assertSame(1, $x->query('//head/meta[@name="viewport" and @content="width=device-width, initial-scale=1"]')->length);
-        self::assertSame(['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css'],
+        $expectedStyles=['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css'];
+        if ($x->query('//script[@id="gradebook-grid-data" and @type="application/json"]')->length === 1) {
+            array_push($expectedStyles, '/assets/vendor/tabulator/tabulator.min.css', '/assets/gradebook-grid.css');
+        }
+        self::assertSame($expectedStyles,
             array_map(static fn($n)=>$n->nodeValue, iterator_to_array($x->query('//link[@rel="stylesheet"]/@href'))));
         self::assertSame($active === null ? 0 : 1, $x->query('//script[@src="/assets/app.js" and @defer]')->length);
 
@@ -106,7 +110,7 @@ final class UiCrossScreenContractTest extends TestCase
                     && preg_match('/^javascript:/i', preg_replace('/[\x00-\x20]/', '', $attr->value))) { $issues[] = 'script URL'; }
             }
         }
-        foreach ($x->query('//script|//link[@rel="stylesheet" or @rel="preconnect" or @rel="preload"]') as $asset) {
+        foreach ($x->query('//script[@src]|//link[@rel="stylesheet" or @rel="preconnect" or @rel="preload"]') as $asset) {
             $url = $asset->getAttribute($asset->tagName === 'script' ? 'src' : 'href');
             if (!str_starts_with($url, '/assets/') || str_starts_with($url, '//')) { $issues[] = 'non-local asset: '.$url; }
         }
@@ -153,7 +157,7 @@ final class UiCrossScreenContractTest extends TestCase
         $safe = $x->document->saveHTML();
         foreach ([self::NATIONAL_MARKER, 'SQLSTATE', 'Stack trace:', '/Applications/', '/private/', 'password_hash', '$_SESSION'] as $secret) { self::assertStringNotContainsString($secret, $safe); }
         self::assertDoesNotMatchRegularExpression('~\$2[ayb]\$\d{2}\$[./A-Za-z0-9]{53}~', $safe);
-        self::assertSame(0, $x->query('//img|//script[not(@src)]|//*[@style]')->length);
+        self::assertSame(0, $x->query('//img|//script[not(@src) and not(@type="application/json")]|//*[@style]')->length);
     }
 
     public static function requiredStatusForms(): array
@@ -186,7 +190,7 @@ final class UiCrossScreenContractTest extends TestCase
         $html = View::render('gradebook/view', ['gradebook'=>$model, 'canScore'=>false, 'canManageComponents'=>false]);
         self::assertStringContainsString('&lt;img onerror=&quot;bad&quot;&gt;', $html);
         self::assertStringContainsString('&lt;script&gt;bad&lt;/script&gt;', $html);
-        self::assertSame(0, $this->xpath($html)->query('//img|//script')->length);
+        self::assertSame(0, $this->xpath($html)->query('//img|//script[not(@type="application/json")]')->length);
     }
 
     public function testUnexpectedErrorKeepsExistingGenericNonDocumentContract(): void

@@ -64,7 +64,7 @@ final class GradebookScoreUxTest extends TestCase
         }
         if ($count > 0) {
             self::assertSame($this->token(), $x->evaluate('string(//input[@id="gradebook-csrf"]/@value)'));
-            self::assertSame(3, $x->query('//script[@src and @defer]')->length);
+            self::assertSame(4, $x->query('//script[@src and @defer]')->length);
         }
     }
 
@@ -102,6 +102,7 @@ final class GradebookScoreUxTest extends TestCase
         self::assertSame([
             '/assets/app.js',
             '/assets/vendor/htmx-2.0.8.min.js',
+            '/assets/vendor/tabulator/tabulator.min.js',
             '/assets/gradebook.js',
         ], $sources);
 
@@ -119,21 +120,21 @@ final class GradebookScoreUxTest extends TestCase
             "event.key === 'Enter'",
             "event.key === 'ArrowUp'",
             "event.key === 'ArrowDown'",
-            'const positions = new Map();',
-            'let activeKey = null;',
-            'focusRevision',
+            'new Tabulator(',
+            'const componentByField = new Map(',
+            'const authoritative = new Map(',
+            'state.pendingSingles',
+            'state.singleQueue',
             'event.isComposing',
             'event.preventDefault();',
-            'target.focus({ preventScroll: true });',
-            'input.blur();',
-            "getResponseHeader('X-Gradebook-Saved') === '1'",
-            "input.readOnly = true;",
-            "input.readOnly = false;",
+            'element.focus({ preventScroll: true });',
+            "response.headers.get('X-Gradebook-Saved') !== '1'",
+            "response.headers.get('X-Gradebook-Batch-Saved') !== '1'",
+            'clipboardPasteAction: () => []',
         ] as $contract) {
             self::assertStringContainsString($contract, $js);
         }
-
-        self::assertStringNotContainsString("event.key === 'Tab'", $js);
+        self::assertStringContainsString("event.key === 'Tab'", $js);
         self::assertStringNotContainsString("event.key === 'ArrowLeft'", $js);
         self::assertStringNotContainsString("event.key === 'ArrowRight'", $js);
     }

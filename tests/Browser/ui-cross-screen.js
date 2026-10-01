@@ -96,7 +96,7 @@
       check(nameColumn.getBoundingClientRect().width >= 12 * parseFloat(w.getComputedStyle(d.documentElement).fontSize), 'Thai name column remains readable');
     }
     // Check actual occlusion, not only the presence of an outline declaration.
-    const controls = d.querySelectorAll('main a,main summary,main button,main input:not([type="hidden"]),main select,main textarea,main .pp5-table-scroll');
+    const controls = d.querySelectorAll('main a,main summary,main button,main input:not([type="hidden"]):not(:disabled),main select,main textarea,main .pp5-table-scroll:not([hidden]),main .pp5-gradebook-tabulator');
     for (const control of controls) {
       if (control.disabled) continue;
       control.focus({preventScroll:true});
@@ -114,6 +114,17 @@
         const grid = control.closest('.pp5-gradebook'), identity = control.closest('tr').querySelector('th');
         check(rect.left >= identity.getBoundingClientRect().right + 3 && rect.right <= grid.getBoundingClientRect().right - 3, 'score outline clear of sticky identity');
         check(rect.top >= d.querySelector('thead').getBoundingClientRect().bottom + 3, 'score outline clear of sticky header');
+      }
+    }
+    if (/^gradebook \d/.test(frame.title)) {
+      const host = d.getElementById('gradebook-tabulator');
+      check(host && !host.hidden && d.querySelector('.pp5-gradebook').hidden, 'Tabulator Gradebook initialized');
+      const score = host?.querySelector('.tabulator-row [tabulator-field="score_10"]');
+      if (score) {
+        score.focus({preventScroll:true}); score.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
+        const identity = score.closest('.tabulator-row').querySelector('.pp5-grid-identity');
+        check(score.getBoundingClientRect().left >= identity.getBoundingClientRect().right - 1, 'score focus clear of frozen identity');
+        check(w.getComputedStyle(score).outlineStyle !== 'none', 'Tabulator score focus visible');
       }
     }
     check(d.documentElement.scrollWidth <= w.innerWidth + 1, 'no overflow after focus');

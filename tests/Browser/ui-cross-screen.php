@@ -8,6 +8,9 @@ $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $root = dirname(__DIR__, 2);
 $assets = ['/assets/app.css'=>'htdocs/assets/app.css', '/assets/app.js'=>'htdocs/assets/app.js',
     '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
+    '/assets/gradebook-grid.css'=>'htdocs/assets/gradebook-grid.css',
+    '/assets/vendor/tabulator/tabulator.min.js'=>'htdocs/assets/vendor/tabulator/tabulator.min.js',
+    '/assets/vendor/tabulator/tabulator.min.css'=>'htdocs/assets/vendor/tabulator/tabulator.min.css',
     '/assets/vendor/htmx-2.0.8.min.js'=>'htdocs/assets/vendor/htmx-2.0.8.min.js', '/matrix.js'=>'tests/Browser/ui-cross-screen.js'];
 if (isset($assets[$path])) {
     header('Content-Type: '.(str_ends_with($path, '.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8');

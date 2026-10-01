@@ -1,0 +1,28 @@
+/* PP5 Gradebook presentation; Tabulator vendor CSS is kept unmodified. */
+.pp5-gradebook-tabulator { width: 100%; min-width: 0; max-width: 100%; overflow: hidden; margin-block: var(--pp5-space-3); font-variant-numeric: tabular-nums; }
+.pp5-gradebook-tabulator.pp5-grid-initializing { visibility: hidden; }
+.pp5-gradebook-tabulator.tabulator { border: 1px solid var(--pp5-border); background: var(--pp5-surface); font-family: inherit; font-size: .875rem; }
+.pp5-gradebook-tabulator .tabulator-header { background: var(--pp5-surface-muted); color: var(--pp5-text); border-bottom: 1px solid var(--pp5-border); }
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col { background: var(--pp5-surface-muted); border-right: 1px solid var(--pp5-border); }
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col-title { white-space: normal; line-height: 1.15; }
+.pp5-gradebook-tabulator .tabulator-header small { color: var(--pp5-text-muted); font-weight: normal; }
+.pp5-gradebook-tabulator .tabulator-row { background: var(--pp5-surface); min-height: 2rem; }
+.pp5-gradebook-tabulator .tabulator-row.tabulator-row-even { background: var(--pp5-surface); }
+.pp5-gradebook-tabulator .tabulator-row.pp5-grid-historical,
+.pp5-gradebook-tabulator .tabulator-row.pp5-grid-historical .tabulator-cell { background: var(--pp5-surface-muted); }
+.pp5-gradebook-tabulator .tabulator-cell { border-right: 1px solid var(--pp5-border); border-bottom: 1px solid var(--pp5-border); padding: .35rem .45rem; }
+.pp5-gradebook-tabulator .pp5-grid-identity { white-space: normal; line-height: 1.1; background: var(--pp5-surface); font-weight: 600; }
+.pp5-gradebook-tabulator .pp5-grid-historical .pp5-grid-identity { background: var(--pp5-surface-muted); }
+.pp5-gradebook-tabulator .pp5-grid-readonly { color: var(--pp5-text-muted); }
+.pp5-gradebook-tabulator .pp5-grid-summary { border-left: 1px solid var(--pp5-border); }
+.pp5-gradebook-tabulator .tabulator-cell[data-pp5-active="true"] { outline: 2px solid var(--pp5-focus); outline-offset: -2px; z-index: 2; }
+.pp5-gradebook-tabulator .tabulator-range-selected { background: rgba(36, 102, 173, .12); box-shadow: inset 0 0 0 1px var(--pp5-focus); }
+.pp5-gradebook-tabulator .tabulator-cell[data-pp5-error="true"] { box-shadow: inset 0 0 0 2px var(--pp5-danger); }
+.pp5-gradebook-tabulator .tabulator-cell[data-pp5-saving="true"] { background: var(--pp5-surface-muted); }
+.pp5-gradebook-tabulator .tabulator-cell input { display: block; width: 100%; min-height: 1.75rem; margin: -.3rem -.4rem; padding: .2rem .35rem; border: 2px solid var(--pp5-focus); border-radius: 0; background: var(--pp5-surface); color: var(--pp5-text); text-align: right; font: inherit; }
+.pp5-gradebook-tabulator .tabulator-tableholder { max-width: 100%; overscroll-behavior-inline: contain; }
+.pp5-gradebook[hidden], .pp5-gradebook-tabulator[hidden] { display: none !important; }
+@media (max-width: 600px) {
+  .pp5-gradebook-tabulator .pp5-grid-identity { white-space: normal; }
+  .pp5-gradebook-tabulator .tabulator-cell { padding-inline: .3rem; }
+}
