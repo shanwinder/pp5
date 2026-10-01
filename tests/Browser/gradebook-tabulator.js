@@ -18,7 +18,14 @@
     const event = new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true, ...options });
     target.dispatchEvent(event); return event;
   };
-  const choose = target => { target.click(); target.focus(); };
+  const choose = async target => {
+    const box = target.getBoundingClientRect();
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true,
+      clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 }));
+    await until(() => document.activeElement === target);
+    assert(document.activeElement === target && grid.querySelectorAll('.tabulator-cell[tabindex="0"]').length === 1,
+      'Click event without manual focus establishes one active grid cell');
+  };
   const geometry = target => {
     const holder = grid.querySelector('.tabulator-tableholder');
     return { height: target.closest('.tabulator-row').getBoundingClientRect().height,
@@ -60,7 +67,7 @@
     assert(cell(0, 'total').textContent === '0.00', 'Initial summary comes from read model');
     if (!document.getElementById('gradebook-csrf')) {
       assert(!document.querySelector('#gradebook-tabulator .tabulator-editable'), 'Read-only page has no score editor');
-      choose(cell(0, 'score_10'));
+      await choose(cell(0, 'score_10'));
       assert(!key(cell(0, 'score_10'), '5').defaultPrevented && !grid.querySelector('input'), 'Read-only cell rejects type to edit');
       clipboard(cell(0, 'score_10'), 'paste', '5'); key(cell(0, 'score_10'), 'Delete');
       assert(requests.length === 0, 'Read-only paste and clear make no request');
@@ -70,7 +77,7 @@
     }
     assert(document.querySelectorAll('#gradebook-tabulator .tabulator-editable').length >= 6, 'Current score cells are editable');
     assert(!cell(3, 'score_10').classList.contains('tabulator-editable'), 'Historical score is not editable');
-    choose(cell(0, 'score_10'));
+    await choose(cell(0, 'score_10'));
     const blankGeometry = geometry(cell(0, 'score_10'));
     assert(key(cell(0, 'score_10'), '5').defaultPrevented, 'Printable key starts replace edit');
     const editor = grid.querySelector('input');
@@ -88,7 +95,7 @@
     await until(() => cell(0, 'score_10').textContent === '5.00');
     assert(requests.length === 1 && requests[0].url.endsWith('/components/10/enrollments/1/score'), 'Single edit uses stable component and enrollment IDs');
     assert(cell(0, 'total').textContent === '19.25', 'Single summary uses authoritative response');
-    choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
+    await choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
     const caret = grid.querySelector('input');
     assert(caret.value === '1.50', 'Enter opens the existing score for caret editing');
     assert(editorPresentation(cell(1, 'score_10')), 'Existing-value editor has the same single-cell presentation');
@@ -97,24 +104,24 @@
     assert(fallback.hidden, 'Escape does not reveal the fallback');
     const afterCancel = requests.length;
     await sleep(180); assert(requests.length === afterCancel, 'Escape sends no write');
-    choose(cell(0, 'score_10')); key(cell(0, 'score_10'), 'x'); key(grid.querySelector('input'), 'Enter');
+    await choose(cell(0, 'score_10')); key(cell(0, 'score_10'), 'x'); key(grid.querySelector('input'), 'Enter');
     await until(() => cell(0, 'score_10').dataset.pp5Error === 'true');
     assert(cell(0, 'score_10').textContent === 'x', 'Invalid typed text remains visible');
     assert(!grid.querySelector('.tabulator-cell input') && fallback.hidden
       && getComputedStyle(cell(0, 'score_10')).boxShadow.includes('2px inset'), 'Rejected value has a visible error boundary and no stale editor');
-    choose(cell(0, 'score_10'));
+    await choose(cell(0, 'score_10'));
     assert(getComputedStyle(cell(0, 'score_10')).outlineStyle === 'dashed'
       && getComputedStyle(cell(0, 'score_10')).boxShadow === 'none', 'Active rejected cell has one dashed error boundary');
     assert(cell(0, 'total').textContent === '19.25', 'Invalid score does not change authoritative summary');
     assert(status.textContent.includes('คะแนนไม่ถูกต้อง'), 'Validation error is announced');
-    choose(cell(0, 'score_10')); key(cell(0, 'score_10'), '0'); key(grid.querySelector('input'), 'Enter');
+    await choose(cell(0, 'score_10')); key(cell(0, 'score_10'), '0'); key(grid.querySelector('input'), 'Enter');
     await until(() => cell(0, 'score_10').textContent === '0.00' && !cell(0, 'score_10').dataset.pp5Saving);
     assert(cell(0, 'score_10').textContent === '0.00', 'Saved zero is a real score');
-    choose(cell(0, 'score_10')); key(cell(0, 'score_10'), 'Enter');
+    await choose(cell(0, 'score_10')); key(cell(0, 'score_10'), 'Enter');
     const blankEditor = grid.querySelector('input'); blankEditor.value = ''; key(blankEditor, 'Enter');
     await until(() => cell(0, 'score_10').textContent === '' && !cell(0, 'score_10').dataset.pp5Saving);
     assert(cell(0, 'score_10').textContent === '', 'Blank single-cell request reconciles to NULL display');
-    choose(cell(0, 'score_10'));
+    await choose(cell(0, 'score_10'));
     const batchStart = requests.length;
     const paste = clipboard(cell(0, 'score_10'), 'paste', '5\t0\n\t12.5');
     assert(paste.event.defaultPrevented, 'Native paste is intercepted before mutation');
@@ -141,7 +148,7 @@
     const emptyStart = requests.length; fill.value = '';
     document.getElementById('gradebook-range-actions').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     assert(requests.length === emptyStart && status.textContent.includes('ปุ่มล้างคะแนน'), 'Empty fill cannot implicitly clear');
-    choose(cell(3, 'score_10')); const historyStart = requests.length;
+    await choose(cell(3, 'score_10')); const historyStart = requests.length;
     key(cell(3, 'score_10'), '5'); key(cell(3, 'score_10'), 'Delete'); clipboard(cell(3, 'score_10'), 'paste', '5');
     assert(requests.length === historyStart, 'Historical edit, clear and paste do not write');
     output.textContent = `PASS: ${checks.length} Tabulator checks\n` + checks.join('\n');

@@ -26,7 +26,11 @@
       window.fetch = (...args) => { requests.push({ url: String(args[0]), body: args[1]?.body }); return originalFetch(...args); };
       try {
         const first = host.querySelector('.tabulator-row [tabulator-field="score_1000"]');
-        first.click(); first.focus();
+        const nextBox = first.getBoundingClientRect();
+        first.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true,
+          clientX: nextBox.left + nextBox.width / 2, clientY: nextBox.top + nextBox.height / 2 }));
+        await until(() => document.activeElement === first);
+        assert(document.activeElement === first, 'Click event without manual focus focuses workload score cell');
         const data = new DataTransfer(); data.setData('text/plain', '1\t2\t3\n4\t5\t6\n7\t8\t9');
         const paste = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true });
         first.dispatchEvent(paste);
@@ -45,7 +49,10 @@
         assert(remove.defaultPrevented && clear.values.length === 3
           && clear.values.every(row => row.length === 3 && row.every(value => value === '')),
           'Three by three clear uses one blank batch');
-        first.click(); first.focus();
+        const box = first.getBoundingClientRect();
+        first.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true,
+          clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 }));
+        await until(() => document.activeElement === first);
         first.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true, cancelable: true }));
         const editor = first.querySelector('input');
         assert(editor?.value === '5' && host.querySelectorAll('.tabulator-cell input').length === 1

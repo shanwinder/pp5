@@ -15,7 +15,12 @@
 .pp5-gradebook-tabulator .pp5-grid-historical .pp5-grid-identity { background: var(--pp5-surface-muted); }
 .pp5-gradebook-tabulator .pp5-grid-readonly { color: var(--pp5-text-muted); }
 .pp5-gradebook-tabulator .pp5-grid-summary { border-left: 1px solid var(--pp5-border); }
-.pp5-gradebook-tabulator .tabulator-cell[data-pp5-active="true"] { outline: 2px solid var(--pp5-focus); outline-offset: -2px; z-index: 2; }
+.pp5-gradebook-tabulator .tabulator-cell[data-pp5-active="true"] { outline: 2px solid var(--pp5-focus); outline-offset: -2px; box-shadow: none; z-index: 2; }
+.pp5-gradebook-tabulator .tabulator-cell[data-pp5-active="true"]:focus-visible {
+  outline: 2px solid var(--pp5-focus) !important;
+  outline-offset: -2px;
+  box-shadow: none;
+}
 .pp5-gradebook-tabulator .tabulator-range-selected { background: rgba(36, 102, 173, .12); box-shadow: inset 0 0 0 1px var(--pp5-focus); }
 .pp5-gradebook-tabulator .tabulator-cell[data-pp5-error="true"] { box-shadow: inset 0 0 0 2px var(--pp5-danger); }
 .pp5-gradebook-tabulator .tabulator-cell[data-pp5-saving="true"] { background: var(--pp5-surface-muted); }

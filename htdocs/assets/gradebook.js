@@ -64,14 +64,38 @@
   const cellAt = (y, x) => rows()[y]?.getCell(allFields[x]) ?? null;
   const indices = cell => ({ y: rows().findIndex(row => row.getData().enrollmentId === cell.getRow().getData().enrollmentId),
     x: allFields.indexOf(cell.getField()) });
-  const visible = cell => { cell?.getElement()?.scrollIntoView({ block: 'nearest', inline: 'nearest' }); };
-  const clearActive = () => host.querySelectorAll('[data-pp5-active]').forEach(node => node.removeAttribute('data-pp5-active'));
+  const cellFromElement = element => {
+    const cellElement = element.closest('.tabulator-cell'), rowElement = cellElement?.closest('.tabulator-row');
+    const row = rowElement && table.getRow(rowElement);
+    return row?.getCell(cellElement.getAttribute('tabulator-field')) || null;
+  };
+  const liveCell = cell => {
+    if (!cell || !table) return null;
+    return table.getRow(cell.getRow().getData().enrollmentId)?.getCell(cell.getField()) || null;
+  };
+  const visible = cell => {
+    const element = cell?.getElement(), holder = host.querySelector('.tabulator-tableholder');
+    if (!element?.isConnected || !holder) return;
+    const rect = element.getBoundingClientRect(), bounds = holder.getBoundingClientRect();
+    if (rect.left < bounds.left || rect.right > bounds.right || rect.top < bounds.top || rect.bottom > bounds.bottom)
+      element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  };
+  const syncTabStops = activeElement => {
+    for (const element of host.querySelectorAll('.tabulator-cell[tabindex="0"]'))
+      if (element !== activeElement) element.tabIndex = -1;
+    if (activeElement) activeElement.tabIndex = 0;
+  };
   const activate = (cell, focus = true) => {
     if (!cell) return;
-    clearActive(); state.active = cell;
-    const element = cell.getElement();
-    if (element) { element.dataset.pp5Active = 'true'; element.tabIndex = 0;
-      if (focus) { element.focus({ preventScroll: true }); visible(cell); } }
+    const current = liveCell(cell) || cell;
+    for (const node of host.querySelectorAll('[data-pp5-active]')) node.removeAttribute('data-pp5-active');
+    state.active = current;
+    const element = current.getElement();
+    syncTabStops(element?.isConnected ? element : null);
+    if (element?.isConnected) {
+      element.dataset.pp5Active = 'true';
+      if (focus && !state.editing && !state.composing) { element.focus({ preventScroll: true }); visible(current); }
+    }
   };
   const currentRange = () => table.getRanges()[0] ?? null;
   const selected = () => {
@@ -195,6 +219,7 @@
   const apply = async (cells, summaries, revision) => {
     const scroller = host.querySelector('.tabulator-tableholder');
     const scroll = { left: scroller?.scrollLeft, top: scroller?.scrollTop };
+    const restoreFocus = host.contains(document.activeElement);
     state.applying = true;
     try {
       for (const { cell, value } of cells) {
@@ -212,7 +237,13 @@
     } finally {
       state.applying = false;
       if (scroller) { scroller.scrollLeft = scroll.left; scroller.scrollTop = scroll.top; }
-      if (state.active?.getElement()) state.active.getElement().dataset.pp5Active = 'true';
+      if (state.active) {
+        const active = liveCell(state.active);
+        if (active) activate(active, false);
+        if (restoreFocus && !state.editing && !state.composing
+          && (host.contains(document.activeElement) || document.activeElement === document.body))
+          activate(active, true);
+      }
     }
   };
   const request = async (url, body) => {
@@ -384,7 +415,12 @@
       clipboard: true, clipboardCopyStyled: false, clipboardPasteParser: 'range',
       // Capture handler owns PP5's atomic request. This public action hook forbids native mutations.
       clipboardPasteAction: () => [],
-      rowFormatter: row => { if (row.getData().historical) row.getElement().classList.add('pp5-grid-historical'); },
+      rowFormatter: row => {
+        if (row.getData().historical) row.getElement().classList.add('pp5-grid-historical');
+        for (const element of row.getElement().querySelectorAll('.tabulator-cell'))
+          element.tabIndex = state.active && row.getData().enrollmentId === state.active.getRow().getData().enrollmentId
+            && element.getAttribute('tabulator-field') === state.active.getField() ? 0 : -1;
+      },
     });
   } catch (_) { host.hidden = true; host.classList.remove('pp5-grid-initializing'); return; }
   table.on('tableBuilt', () => {
@@ -392,11 +428,25 @@
     fallback.hidden = true;
     host.classList.remove('pp5-grid-initializing');
     if (actions) { actions.hidden = false; updateControls(); }
+    syncTabStops(null);
   });
-  table.on('cellClick', (_event, cell) => activate(cell, false));
+  table.on('renderComplete', () => syncTabStops(state.active ? liveCell(state.active)?.getElement() : null));
+  table.on('cellClick', (_event, cell) => {
+    activate(cell, false);
+    // Tabulator completes its pointer selection after the click callback.
+    setTimeout(() => {
+      if (state.editing || !cell.getElement()?.isConnected
+        || !(host.contains(document.activeElement) || document.activeElement === document.body)) return;
+      const choice = selected();
+      if (!choice?.matrix.some(line => line.includes(cell))) select(cell);
+      else activate(cell);
+    }, 0);
+  });
+  let pointerAnchor = null;
   table.on('rangeAdded', range => {
     const cells = range.getStructuredCells();
-    if (!state.anchor) state.anchor = cells[0]?.[0] ?? null;
+    if (pointerAnchor && cells.some(line => line.includes(pointerAnchor))) state.anchor = pointerAnchor;
+    else if (!state.anchor) state.anchor = cells[0]?.[0] ?? null;
     activate(cells.at(-1)?.at(-1), false); updateControls();
   });
   table.on('rangeChanged', range => {
@@ -412,6 +462,22 @@
     if (value === prior && !state.errors.has(key)) return;
     rowById.get(cell.getRow().getData().enrollmentId)[cell.getField()] = value;
     submitSingle(cell, value, prior);
+  });
+  host.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch') pointerAnchor = cellFromElement(event.target);
+  }, true);
+  host.addEventListener('pointerup', event => {
+    if (event.pointerType === 'touch') return;
+    const extent = cellFromElement(event.target), anchor = pointerAnchor;
+    pointerAnchor = null;
+    // Range extent is final only after pointerup; focusing during rangeChanged interrupts dragging.
+    setTimeout(() => {
+      const choice = selected();
+      if (anchor && choice?.matrix.some(line => line.includes(anchor))) state.anchor = anchor;
+      const target = extent && choice?.matrix.some(line => line.includes(extent)) ? extent : state.active;
+      if (target && !state.editing
+        && (host.contains(document.activeElement) || document.activeElement === document.body)) activate(target);
+    }, 0);
   });
   host.addEventListener('compositionstart', () => { state.composing = true; }, true);
   host.addEventListener('compositionend', () => { state.composing = false; }, true);

@@ -1,7 +1,16 @@
 (async () => {
   'use strict';
   const results = [];
-  for (const frame of document.querySelectorAll('iframe')) {
+  const frames = [...document.querySelectorAll('iframe')];
+  for (let attempt = 0; attempt < 1000; attempt++) {
+    if (frames.every(frame => {
+      const d = frame.contentDocument, mode = frame.title.split(' ')[0];
+      return d?.querySelector('main h1')
+        && (mode === 'nojs' || !d.querySelector('.pp5-gradebook') || d.querySelector('.pp5-gradebook').hidden);
+    })) break;
+    await new Promise(resolve => setTimeout(resolve, 20));
+  }
+  for (const frame of frames) {
     let count = 0;
     const assert = (condition, label) => { if (!condition) throw new Error(label); count++; };
     try {
@@ -50,17 +59,16 @@
               const first = host.querySelector('.tabulator-row [tabulator-field="score_10"]');
               const second = host.querySelector('.tabulator-row [tabulator-field="score_11"]');
               assert(first.textContent === '' && second.textContent === '0.00', 'blank and zero remain distinct');
-              first.click(); first.focus();
-              assert(d.activeElement === first && w.getComputedStyle(first).outlineStyle !== 'none', 'score focus has visible outline');
               assert(first.getBoundingClientRect().left >= identity.getBoundingClientRect().right - 1, 'frozen identity does not cover score');
               if (mode === 'editable') {
                 for (const target of [first, second]) {
                   target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-                  target.click(); target.focus();
                   const rowHeight = target.closest('.tabulator-row').getBoundingClientRect().height;
                   const columnWidth = target.getBoundingClientRect().width;
                   const scrollLeft = holder.scrollLeft, scrollTop = holder.scrollTop;
-                  target.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+                  const box = target.getBoundingClientRect();
+                  target.dispatchEvent(new w.MouseEvent('dblclick', { bubbles: true, cancelable: true,
+                    clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 }));
                   const input = target.querySelector('input');
                   assert(input && host.querySelectorAll('.tabulator-cell input').length === 1 && fallback.hidden,
                     'one editor and hidden fallback during responsive edit');

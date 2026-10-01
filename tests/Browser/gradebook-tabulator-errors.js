@@ -12,6 +12,9 @@
   const grid = document.getElementById('gradebook-tabulator');
   const cell = () => grid.querySelector('.tabulator-row [tabulator-field="score_10"]');
   const status = document.getElementById('gradebook-batch-status');
+  const syntheticClick = target => { const box = target.getBoundingClientRect();
+    target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true,
+      clientX: box.left + box.width / 2, clientY: box.top + box.height / 2 })); };
   const key = (target, value) => target.dispatchEvent(new KeyboardEvent('keydown', { key: value, bubbles: true, cancelable: true }));
   const paste = value => {
     const data = new DataTransfer(); data.setData('text/plain', value);
@@ -34,7 +37,9 @@
       'batch-500':'failure', 'batch-revoked':'revoked', 'batch-csrf':'csrf', 'batch-network':'5' };
     const value = values[scenario];
     assert(value !== undefined, 'Known error scenario');
-    cell().click(); cell().focus();
+    syntheticClick(cell());
+    await until(() => document.activeElement === cell());
+    assert(document.activeElement === cell(), 'Click event without manual focus gives error scenario grid focus');
     const before = cell().textContent;
     if (scenario.startsWith('single-')) {
       key(cell(), '5');
@@ -64,11 +69,11 @@
       || scenario.endsWith('-409') || scenario.endsWith('-500') || scenario.endsWith('-network');
     if (uncertain) {
       assert(status.textContent.includes('ไม่แน่นอน') && status.textContent.includes('โหลดหน้าใหม่'), 'Uncertain result asks for reload');
-      cell().click(); cell().focus(); paste('5'); key(cell(), 'Delete');
+      syntheticClick(cell()); await until(() => document.activeElement === cell()); paste('5'); key(cell(), 'Delete');
       await sleep(60);
       assert(requests.length === 1, 'Uncertain write is never blindly retried');
     } else if (scenario.endsWith('-revoked')) {
-      cell().click(); cell().focus(); paste('5');
+      syntheticClick(cell()); await until(() => document.activeElement === cell()); paste('5');
       assert(requests.length === 1, 'Live permission revocation disables further write attempts');
     } else {
       assert(!status.textContent.includes('แล้ว (เปลี่ยนแปลง'), 'Known rejection never claims save');
