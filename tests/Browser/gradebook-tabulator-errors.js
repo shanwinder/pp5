@@ -26,7 +26,8 @@
   };
   try {
     await until(() => document.querySelector('.pp5-gradebook').hidden);
-    const values = { 'single-invalid':'20.01', 'single-unmarked':'unmarked', 'single-login':'login',
+    const values = { 'single-invalid':'20.01', 'single-over-max':'999', 'single-nonnumeric':'abc',
+      'single-unmarked':'unmarked', 'single-login':'login',
       'single-malformed':'malformed', 'single-409':'refresh', 'single-500':'failure',
       'single-revoked':'revoked', 'single-network':'5', 'batch-invalid':'21',
       'batch-unmarked':'unmarked', 'batch-login':'login', 'batch-409':'refresh',
@@ -39,6 +40,8 @@
       key(cell(), '5');
       const editor = grid.querySelector('input');
       assert(Boolean(editor), 'Score editor opens');
+      assert(grid.querySelectorAll('.tabulator-cell input').length === 1 && document.querySelector('.pp5-gradebook').hidden
+        && getComputedStyle(editor).outlineStyle === 'none', 'Rejected-value editor has one borderless input and hidden fallback');
       editor.value = value; key(editor, 'Enter');
     } else {
       assert(paste(value).defaultPrevented, 'Batch paste is intercepted');
@@ -50,6 +53,8 @@
     if (scenario.startsWith('single-')) {
       assert(cell().textContent === value, 'Rejected or unconfirmed typed text remains visible');
       assert(cell().dataset.pp5Error === 'true', 'Cell is marked as an error');
+      assert(!grid.querySelector('.tabulator-cell input') && document.querySelector('.pp5-gradebook').hidden,
+        'Rejected value leaves no editor or visible fallback');
       assert(cell().closest('.tabulator-row').querySelector('[tabulator-field="total"]').textContent === '0.00', 'No false summary reconciliation');
     } else {
       assert(cell().textContent === before, 'Batch failure does not speculatively mutate cell');

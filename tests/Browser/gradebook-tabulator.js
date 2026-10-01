@@ -19,6 +19,27 @@
     target.dispatchEvent(event); return event;
   };
   const choose = target => { target.click(); target.focus(); };
+  const geometry = target => {
+    const holder = grid.querySelector('.tabulator-tableholder');
+    return { height: target.closest('.tabulator-row').getBoundingClientRect().height,
+      width: target.getBoundingClientRect().width, left: holder.scrollLeft, top: holder.scrollTop };
+  };
+  const stableGeometry = (before, target) => {
+    const after = geometry(target);
+    return Math.abs(after.height - before.height) <= 0.5 && Math.abs(after.width - before.width) <= 0.5
+      && Math.abs(after.left - before.left) <= 0.5 && Math.abs(after.top - before.top) <= 0.5;
+  };
+  const editorPresentation = target => {
+    const input = target.querySelector('input'), cellBox = target.getBoundingClientRect();
+    if (!input) return false;
+    const inputBox = input.getBoundingClientRect(), inputStyle = getComputedStyle(input), cellStyle = getComputedStyle(target);
+    return grid.querySelectorAll('.tabulator-cell input').length === 1 && fallback.hidden && !grid.hidden
+      && inputBox.left >= cellBox.left - 0.5 && inputBox.right <= cellBox.right + 0.5
+      && inputBox.top >= cellBox.top - 0.5 && inputBox.bottom <= cellBox.bottom + 0.5
+      && inputStyle.borderTopWidth === '0px' && inputStyle.outlineStyle === 'none'
+      && inputStyle.marginLeft === '0px' && inputStyle.boxSizing === 'border-box'
+      && cellStyle.outlineStyle !== 'none' && cellStyle.boxShadow === 'none';
+  };
   const clipboard = (target, type, value = '') => {
     const data = new DataTransfer();
     if (type === 'paste') data.setData('text/plain', value);
@@ -50,15 +71,19 @@
     assert(document.querySelectorAll('#gradebook-tabulator .tabulator-editable').length >= 6, 'Current score cells are editable');
     assert(!cell(3, 'score_10').classList.contains('tabulator-editable'), 'Historical score is not editable');
     choose(cell(0, 'score_10'));
+    const blankGeometry = geometry(cell(0, 'score_10'));
     assert(key(cell(0, 'score_10'), '5').defaultPrevented, 'Printable key starts replace edit');
     const editor = grid.querySelector('input');
     assert(editor?.value === '5', 'Type to edit starts with only the typed value');
+    assert(editorPresentation(cell(0, 'score_10')), 'Editor fills one cell without a nested border or duplicate focus boundary');
+    assert(stableGeometry(blankGeometry, cell(0, 'score_10')), 'Blank editor preserves row, column, and internal scroll geometry');
     assert(!key(editor, 'ArrowLeft').defaultPrevented && !key(editor, 'ArrowRight').defaultPrevented, 'Left and Right remain caret keys');
     editor.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
     assert(!key(editor, 'Enter').defaultPrevented && grid.querySelector('input') === editor, 'IME Enter does not commit');
     editor.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
     assert(key(editor, 'Enter').defaultPrevented, 'Enter commits and moves down');
     await until(() => document.activeElement === cell(1, 'score_10'));
+    assert(!grid.querySelector('.tabulator-cell input') && fallback.hidden, 'Commit removes editor and leaves fallback hidden');
     assert(document.activeElement === cell(1, 'score_10'), 'Enter focuses next enrollment in same component');
     await until(() => cell(0, 'score_10').textContent === '5.00');
     assert(requests.length === 1 && requests[0].url.endsWith('/components/10/enrollments/1/score'), 'Single edit uses stable component and enrollment IDs');
@@ -66,13 +91,20 @@
     choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
     const caret = grid.querySelector('input');
     assert(caret.value === '1.50', 'Enter opens the existing score for caret editing');
+    assert(editorPresentation(cell(1, 'score_10')), 'Existing-value editor has the same single-cell presentation');
     key(caret, 'Escape');
     assert(!grid.querySelector('input') && cell(1, 'score_10').textContent === '1.50', 'Escape cancels edit without changing value');
+    assert(fallback.hidden, 'Escape does not reveal the fallback');
     const afterCancel = requests.length;
     await sleep(180); assert(requests.length === afterCancel, 'Escape sends no write');
     choose(cell(0, 'score_10')); key(cell(0, 'score_10'), 'x'); key(grid.querySelector('input'), 'Enter');
     await until(() => cell(0, 'score_10').dataset.pp5Error === 'true');
     assert(cell(0, 'score_10').textContent === 'x', 'Invalid typed text remains visible');
+    assert(!grid.querySelector('.tabulator-cell input') && fallback.hidden
+      && getComputedStyle(cell(0, 'score_10')).boxShadow.includes('2px inset'), 'Rejected value has a visible error boundary and no stale editor');
+    choose(cell(0, 'score_10'));
+    assert(getComputedStyle(cell(0, 'score_10')).outlineStyle === 'dashed'
+      && getComputedStyle(cell(0, 'score_10')).boxShadow === 'none', 'Active rejected cell has one dashed error boundary');
     assert(cell(0, 'total').textContent === '19.25', 'Invalid score does not change authoritative summary');
     assert(status.textContent.includes('คะแนนไม่ถูกต้อง'), 'Validation error is announced');
     choose(cell(0, 'score_10')); key(cell(0, 'score_10'), '0'); key(grid.querySelector('input'), 'Enter');

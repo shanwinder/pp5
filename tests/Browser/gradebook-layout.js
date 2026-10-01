@@ -53,6 +53,30 @@
               first.click(); first.focus();
               assert(d.activeElement === first && w.getComputedStyle(first).outlineStyle !== 'none', 'score focus has visible outline');
               assert(first.getBoundingClientRect().left >= identity.getBoundingClientRect().right - 1, 'frozen identity does not cover score');
+              if (mode === 'editable') {
+                for (const target of [first, second]) {
+                  target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+                  target.click(); target.focus();
+                  const rowHeight = target.closest('.tabulator-row').getBoundingClientRect().height;
+                  const columnWidth = target.getBoundingClientRect().width;
+                  const scrollLeft = holder.scrollLeft, scrollTop = holder.scrollTop;
+                  target.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+                  const input = target.querySelector('input');
+                  assert(input && host.querySelectorAll('.tabulator-cell input').length === 1 && fallback.hidden,
+                    'one editor and hidden fallback during responsive edit');
+                  const cellBox = target.getBoundingClientRect(), inputBox = input.getBoundingClientRect();
+                  assert(inputBox.left >= cellBox.left - 0.5 && inputBox.right <= cellBox.right + 0.5
+                    && inputBox.top >= cellBox.top - 0.5 && inputBox.bottom <= cellBox.bottom + 0.5
+                    && w.getComputedStyle(input).outlineStyle === 'none', 'editor stays inside score cell without a second outline');
+                  assert(Math.abs(target.closest('.tabulator-row').getBoundingClientRect().height - rowHeight) <= 0.5
+                    && Math.abs(target.getBoundingClientRect().width - columnWidth) <= 0.5,
+                    'responsive edit preserves row height and column width');
+                  assert(Math.abs(holder.scrollLeft - scrollLeft) <= 0.5 && Math.abs(holder.scrollTop - scrollTop) <= 0.5
+                    && d.documentElement.scrollWidth <= width + 1, 'responsive edit preserves grid scroll and document width');
+                  input.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+                  assert(!host.querySelector('.tabulator-cell input') && fallback.hidden, 'cancel removes editor without revealing fallback');
+                }
+              }
             }
           }
           if (mode === 'readonly') {

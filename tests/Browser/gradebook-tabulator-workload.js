@@ -45,6 +45,13 @@
         assert(remove.defaultPrevented && clear.values.length === 3
           && clear.values.every(row => row.length === 3 && row.every(value => value === '')),
           'Three by three clear uses one blank batch');
+        first.click(); first.focus();
+        first.dispatchEvent(new KeyboardEvent('keydown', { key: '5', bubbles: true, cancelable: true }));
+        const editor = first.querySelector('input');
+        assert(editor?.value === '5' && host.querySelectorAll('.tabulator-cell input').length === 1
+          && document.querySelector('.pp5-gradebook').hidden, 'Top-left cell edits immediately after 3x3 clear');
+        editor.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+        assert(!host.querySelector('.tabulator-cell input') && first.textContent === '', 'Cancel after range clear removes editor');
       } finally { window.fetch = originalFetch; }
     }
     const before = host.querySelectorAll('.tabulator-cell').length;
