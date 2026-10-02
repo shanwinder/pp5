@@ -1,7 +1,7 @@
 # PP5 Gradebook spreadsheet interaction contract
 
 **Date:** 2026-10-02
-**Status:** Task 10.6c implementation contract; product-owner manual acceptance remains separate.
+**Status:** Task 10.6d clarified interaction contract; product-owner manual acceptance remains separate.
 
 This specification is mandatory for later Gradebook work, including Task 11. The principle is **Online first, Excel familiar**. The grid handles interaction and display. The PP5 server remains authoritative for permission, tenancy, lifecycle, score validation, NULL versus zero, transactions, audit, and summaries.
 
@@ -17,9 +17,13 @@ One click on a score cell selects and focuses it without opening an editor. Drag
 
 ## Keyboard and editor
 
-Outside the editor, unmodified Arrow keys move one navigable score cell in the requested direction and stop at score boundaries. Navigation works in read-only and historical rows. Tab and Shift+Tab move horizontally among score components; at the horizontal boundary they exit the grid. Printable typing on a writable active cell opens an editor containing only the new character. It works after one click, including rapid `5 → Down → 6 → Down → 7`, subject to serialized save safety. Double-click, Enter and F2 open the existing value with the caret at its end.
+Outside the editor, unmodified Arrow keys move one navigable score cell in the requested direction and stop at score boundaries. Navigation works in read-only and historical rows. Tab and Shift+Tab move horizontally among score components; at the horizontal boundary they exit the grid.
 
-Inside the editor, Left/Right move the caret; Up/Down commit and move vertically; Enter/Shift+Enter commit and move down/up; Tab/Shift+Tab commit and move horizontally or exit at the boundary. Escape cancels without a request, restores the prior value, and focuses the cell so Arrow works immediately. Backspace/Delete are native text editing. Text selection copy and paste are native editor operations. Grid clipboard handlers never intercept an open editor. Composition is protected from premature command handling.
+**Direct entry** starts when printable typing on a selected writable score cell opens a replacement editor containing only the typed character. Further printable characters remain in the same input until a commit or cancel boundary. In direct entry, Left, Right, Up and Down **commit and move** to the next writable score cell in that direction. Up and Down skip read-only or historical rows. At an Arrow boundary, the commit completes and focus stays on the current score cell; Arrows never enter summary columns. Enter/Shift+Enter commit and move down/up. Tab/Shift+Tab commit and move right/left, exiting the grid at a horizontal boundary. Rapid `5 → Right → 6 → Right → 7` and `5 → Down → 6 → Down → 7` must not wait for each serialized server response or lose keys.
+
+**Explicit edit** starts when double-click, F2, or Enter on a selected writable score cell opens its existing value with the caret at its end. In explicit edit, Left and Right move the **caret** and do not save or navigate. Up and Down commit and move vertically. Enter/Shift+Enter commit and move down/up. Tab/Shift+Tab commit and move right/left, exiting the grid at a horizontal boundary. Post-edit movement targets writable score cells.
+
+In either editor mode, Escape cancels without a request, restores the prior value, and focuses the cell so ordinary Arrow navigation works immediately. Backspace/Delete are native text editing. Text selection copy and paste are native editor operations. Grid clipboard handlers never intercept an open editor. Composition is protected from premature command handling. Normal blur retains the single-cell save behavior with no duplicate commit after a key-driven finish.
 
 Writing requires a current enrollment, score permission, writable lifecycle, and no permission-loss or uncertain lock. Selection and navigation do not imply permission to write. A pending single save makes a range write wait or reject visibly; it must never race or silently disappear. A rejected single score leaves attempted text and its error visible, with old server summary intact and immediate correction possible.
 

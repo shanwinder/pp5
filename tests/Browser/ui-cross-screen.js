@@ -102,7 +102,12 @@
       control.focus({preventScroll:true});
       control.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
       const rect = control.getBoundingClientRect();
-      check(d.activeElement === control && w.getComputedStyle(control).outlineStyle !== 'none', 'visible focus '+(control.id || control.tagName));
+      const focusTarget = control.id === 'gradebook-tabulator' ? d.activeElement : control;
+      const focusOwned = control.id === 'gradebook-tabulator'
+        ? focusTarget?.matches('.tabulator-cell.pp5-grid-score') && control.contains(focusTarget)
+        : d.activeElement === control;
+      check(focusOwned && w.getComputedStyle(focusTarget).outlineStyle !== 'none',
+        'visible focus '+(control.id || control.tagName));
       if (!control.closest('.pp5-table-scroll') || control.classList.contains('pp5-table-scroll')) {
         check(rect.left >= -1 && rect.right <= w.innerWidth + 1, 'control contained '+control.id);
       }

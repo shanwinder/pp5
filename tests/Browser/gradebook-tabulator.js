@@ -84,7 +84,6 @@
     assert(editor?.value === '5', 'Type to edit starts with only the typed value');
     assert(editorPresentation(cell(0, 'score_10')), 'Editor fills one cell without a nested border or duplicate focus boundary');
     assert(stableGeometry(blankGeometry, cell(0, 'score_10')), 'Blank editor preserves row, column, and internal scroll geometry');
-    assert(!key(editor, 'ArrowLeft').defaultPrevented && !key(editor, 'ArrowRight').defaultPrevented, 'Left and Right remain caret keys');
     editor.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
     assert(!key(editor, 'Enter').defaultPrevented && grid.querySelector('input') === editor, 'IME Enter does not commit');
     editor.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
@@ -98,6 +97,8 @@
     await choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
     const caret = grid.querySelector('input');
     assert(caret.value === '1.50', 'Enter opens the existing score for caret editing');
+    assert(!key(caret, 'ArrowLeft').defaultPrevented && !key(caret, 'ArrowRight').defaultPrevented,
+      'Explicit-edit Left and Right remain caret keys');
     assert(editorPresentation(cell(1, 'score_10')), 'Existing-value editor has the same single-cell presentation');
     key(caret, 'Escape');
     assert(!grid.querySelector('input') && cell(1, 'score_10').textContent === '1.50', 'Escape cancels edit without changing value');

@@ -8,7 +8,7 @@ $offering = $gradebook['offering'];
     <?php if ($canManageComponents): ?><a class="btn btn-outline-secondary" href="/gradebook/<?= $escape($offering['id']) ?>/setup">ตั้งค่าการเก็บคะแนน</a><?php endif; ?>
     <span class="pp5-badge"><?= $canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว' ?></span>
   </div>
-  <p id="gradebook-guidance"><?= $canScore ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า · ดับเบิลคลิกหรือ Enter เพื่อแก้ไขค่าเดิม · Enter/Shift+Enter ย้ายขึ้นลง · Tab/Shift+Tab ย้ายซ้ายขวาและออกจากตารางได้ · ลูกศรซ้ายขวาขณะพิมพ์ย้ายเคอร์เซอร์' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอก<?= $canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้แผงด้านล่างเพื่อใส่คะแนนช่วง' : '' ?> · Escape ล้างช่วงที่เลือก</p>
+  <p id="gradebook-guidance"><?= $canScore ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า จากนั้นกดลูกศรเพื่อบันทึกและย้ายช่อง · ดับเบิลคลิก, Enter หรือ F2 เพื่อแก้ไขค่าเดิม โดยลูกศรซ้ายขวาจะย้ายเคอร์เซอร์ · Enter/Shift+Enter ย้ายขึ้นลง · Tab/Shift+Tab ย้ายซ้ายขวาและออกจากตารางได้' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอก<?= $canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้แผงด้านล่างเพื่อใส่คะแนนช่วง' : '' ?> · Escape ล้างช่วงที่เลือก</p>
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>

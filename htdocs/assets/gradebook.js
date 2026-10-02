@@ -49,7 +49,8 @@
     element?.removeAttribute('aria-invalid');
     if (element?.getAttribute('aria-describedby') === status?.id) element.removeAttribute('aria-describedby');
   };
-  const state = { active: null, anchor: null, extent: null, editing: null, composing: false, fillComposing: false,
+  const state = { active: null, anchor: null, extent: null, editing: null, editIntent: null,
+    composing: false, fillComposing: false,
     pendingCharacter: null, pendingSingles: new Map(), pendingBatch: false, uncertain: false,
     permissionLost: false, applying: false, revision: 0, rowApplied: new Map(), errors: new Map(),
     singleQueue: Promise.resolve(), focusOwner: 'external' };
@@ -385,18 +386,21 @@
     const input = document.createElement('input');
     input.type = 'text'; input.inputMode = 'decimal'; input.autocomplete = 'off';
     input.setAttribute('aria-label', `คะแนน ${cell.getRow().getData().identity.replace('\n', ' ')} ${componentByField.get(cell.getField()).name}`);
-    const replace = state.pendingCharacter !== null;
+    // Tabulator's native double-click opens the existing value; keyboard openings set intent first.
+    const intent = state.editIntent || 'explicit';
+    state.editIntent = intent;
+    const replace = intent === 'direct';
     input.value = replace ? state.pendingCharacter : text(cell.getValue());
     state.pendingCharacter = null;
     let done = false;
-    const finish = (commit, direction = null) => {
+    const finish = (commit, direction = null, tabBoundary = false) => {
       if (done) return;
-      done = true; state.editing = null;
+      done = true; state.editing = null; state.editIntent = null;
       if (commit) success(input.value); else cancel();
       if (direction) queueMicrotask(() => {
         const target = neighbor(cell, direction, true);
         if (target) select(target);
-        else if (direction === 'left' || direction === 'right') leaveGrid(direction);
+        else if (tabBoundary) leaveGrid(direction);
         else activate(cell);
       });
     };
@@ -410,7 +414,9 @@
       else if (event.key === 'Tab') direction = event.shiftKey ? 'left' : 'right';
       else if (event.key === 'ArrowUp') direction = 'up';
       else if (event.key === 'ArrowDown') direction = 'down';
-      if (direction) { event.preventDefault(); event.stopPropagation(); finish(true, direction); }
+      else if (intent === 'direct' && event.key === 'ArrowLeft') direction = 'left';
+      else if (intent === 'direct' && event.key === 'ArrowRight') direction = 'right';
+      if (direction) { event.preventDefault(); event.stopPropagation(); finish(true, direction, event.key === 'Tab'); }
     });
     input.addEventListener('blur', () => { if (!state.composing) finish(true); });
     onRendered(() => { input.focus(); if (!replace) input.setSelectionRange(input.value.length, input.value.length); });
@@ -469,10 +475,10 @@
   });
   let pointerAnchor = null, pointerExtent = null;
   table.on('cellEditing', cell => { state.editing = cell; activate(cell, false); });
-  table.on('cellEditCancelled', () => { state.editing = null; });
+  table.on('cellEditCancelled', () => { state.editing = null; state.editIntent = null; });
   table.on('cellEdited', cell => {
     if (state.applying) return;
-    state.editing = null;
+    state.editing = null; state.editIntent = null;
     const key = cellKey(cell), value = text(cell.getValue());
     const prior = authoritative.get(key) ?? '';
     if (value === prior && !state.errors.has(key)) return;
@@ -560,10 +566,18 @@
       return;
     }
     if (event.key.length === 1 && !event.shiftKey && isWritableScoreCell(active) && !state.pendingSingles.has(cellKey(active))) {
-      event.preventDefault(); event.stopPropagation(); state.pendingCharacter = event.key; active.edit(); return;
+      event.preventDefault(); event.stopPropagation();
+      state.pendingCharacter = event.key; state.editIntent = 'direct';
+      active.edit();
+      if (!state.editing) { state.pendingCharacter = null; state.editIntent = null; }
+      return;
     }
     if ((event.key === 'Enter' || event.key === 'F2') && isWritableScoreCell(active)) {
-      event.preventDefault(); event.stopPropagation(); state.pendingCharacter = null; active.edit(); return;
+      event.preventDefault(); event.stopPropagation();
+      state.pendingCharacter = null; state.editIntent = 'explicit';
+      active.edit();
+      if (!state.editing) state.editIntent = null;
+      return;
     }
     if (event.key === 'Tab' || event.key.startsWith('Arrow')) {
       const direction = event.key === 'Tab' ? (event.shiftKey ? 'left' : 'right') : event.key.slice(5).toLowerCase();

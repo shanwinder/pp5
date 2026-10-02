@@ -135,7 +135,9 @@ final class GradebookScoreUxTest extends TestCase
             self::assertStringContainsString($contract, $js);
         }
         self::assertStringContainsString("event.key === 'Tab'", $js);
-        self::assertStringNotContainsString("event.key === 'ArrowLeft'", $js);
-        self::assertStringNotContainsString("event.key === 'ArrowRight'", $js);
+        self::assertStringContainsString("state.editIntent = 'direct'", $js);
+        self::assertStringContainsString("state.editIntent = 'explicit'", $js);
+        self::assertStringContainsString("intent === 'direct' && event.key === 'ArrowLeft'", $js);
+        self::assertStringContainsString("intent === 'direct' && event.key === 'ArrowRight'", $js);
     }
 }

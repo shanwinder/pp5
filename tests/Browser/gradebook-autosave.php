@@ -25,6 +25,7 @@ $assets = [
     '/grid-race-tests.js' => '/tests/Browser/gradebook-tabulator-races.js',
     '/grid-workload-tests.js' => '/tests/Browser/gradebook-tabulator-workload.js',
     '/grid-parity-tests.js' => '/tests/Browser/gradebook-spreadsheet-parity.js',
+    '/grid-direct-tests.js' => '/tests/Browser/gradebook-direct-entry.js',
 ];
 if (isset($assets[$path])) {
     header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
@@ -66,7 +67,7 @@ if ($path === '/hx/gradebook/1/scores/batch') {
     echo json_encode(['committed'=>true,'offering_id'=>1,'targeted_count'=>count($cells),'changed_count'=>count($cells),
         'row_count'=>count($rows),'column_count'=>count($matrix['component_ids']),'cells'=>$cells,'rows'=>$rows]); exit;
 }
-if (preg_match('~^/hx/gradebook/1/components/(10|11)/enrollments/(1|2|3)/score$~', $path, $ids)) {
+if (preg_match('~^/hx/gradebook/1/components/(10|11|12)/enrollments/(1|2|3)/score$~', $path, $ids)) {
     usleep(150000); // Make focus changes and queued requests observable.
     $score = $_POST['score'] ?? '';
     if ($score === 'login') { echo '<!doctype html><html><body>Login page</body></html>'; exit; }
@@ -102,10 +103,15 @@ if ($path === '/matrix') {
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','active','error','empty','no-components','nojs','large','workload','stress'], true);
+$canScore = in_array($mode, ['editable','direct','active','error','empty','no-components','nojs','large','workload','stress'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
     3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
+if ($mode === 'direct') {
+    $fixtureScores[2][10] = '12.50';
+    foreach ($fixtureScores as &$scores) { $scores[12] = null; }
+    unset($scores);
+}
 $rows = [];
 foreach ([1, 2, 3, 4] as $id) {
     $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => $long.' '.$id,
@@ -125,6 +131,7 @@ $offering = ['id' => 1, 'year_be' => 2569, 'academic_year_status' => $mode === '
     'classroom_code' => 'ROOM', 'classroom_name' => 'ห้องทดสอบ', 'subject_code' => 'SUBJECT', 'subject_name' => 'วิชาทดสอบ', 'term_no' => 1, 'status' => 'ACTIVE'];
 $components = [['id' => 10, 'code' => 'WORK', 'name_th' => $path === '/frame' ? str_repeat('หัวข้อคะแนนภาษาไทย',4) : 'งาน', 'max_score' => '15.50', 'sort_order'=>0, 'status'=>'ACTIVE'],
     ['id' => 11, 'code' => 'EXAM', 'name_th' => 'สอบ', 'max_score' => '20.00', 'sort_order'=>1, 'status'=>'ACTIVE']];
+if ($mode === 'direct') $components[] = ['id'=>12,'code'=>'THIRD','name_th'=>'หัวข้อที่สาม','max_score'=>'20.00','sort_order'=>2,'status'=>'ACTIVE'];
 if ($mode === 'no-components') {
     $components = [];
     foreach ($rows as &$row) {
@@ -172,6 +179,6 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
 ], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
-    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'errors' ? '/grid-error-tests.js' : (($_GET['tests'] ?? '') === 'races' ? '/grid-race-tests.js' : (($_GET['tests'] ?? '') === 'workload' ? '/grid-workload-tests.js' : (($_GET['tests'] ?? '') === 'parity' ? '/grid-parity-tests.js' : '/grid-tests.js')))).'" defer></script>' : '',
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'errors' ? '/grid-error-tests.js' : (($_GET['tests'] ?? '') === 'races' ? '/grid-race-tests.js' : (($_GET['tests'] ?? '') === 'workload' ? '/grid-workload-tests.js' : (($_GET['tests'] ?? '') === 'parity' ? '/grid-parity-tests.js' : (($_GET['tests'] ?? '') === 'direct' ? '/grid-direct-tests.js' : '/grid-tests.js'))))).'" defer></script>' : '',
 ]);
 echo $html;
