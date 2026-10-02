@@ -12,7 +12,7 @@ $offering = $gradebook['offering'];
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <p>ช่องว่างหมายถึงยังไม่มีคะแนน ส่วน 0.00 คือคะแนนศูนย์ที่บันทึกแล้ว</p>
   <?php if ($canScore): ?>
-    <p id="gradebook-batch-status" role="status" aria-live="polite" aria-atomic="true">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากช่องคะแนนที่เลือก · ช่องว่างในตารางที่วางจะล้างคะแนน</p>
+    <p id="gradebook-batch-status" role="status" aria-live="polite" aria-atomic="true">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากมุมซ้ายบนของช่วงที่เลือก · ช่องว่างในตารางที่วางจะล้างคะแนน</p>
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
     <noscript><p>ต้องเปิดใช้งาน JavaScript เพื่อบันทึกคะแนนอัตโนมัติ</p></noscript>
   <?php endif; ?>

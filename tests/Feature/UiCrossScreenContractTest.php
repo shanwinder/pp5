@@ -73,7 +73,8 @@ final class UiCrossScreenContractTest extends TestCase
         self::assertSame(1, $x->query('//head/meta[@name="viewport" and @content="width=device-width, initial-scale=1"]')->length);
         $expectedStyles=['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css'];
         if ($x->query('//script[@id="gradebook-grid-data" and @type="application/json"]')->length === 1) {
-            array_push($expectedStyles, '/assets/vendor/tabulator/tabulator.min.css', '/assets/gradebook-grid.css');
+            array_push($expectedStyles, '/assets/vendor/tabulator/tabulator.min.css',
+                '/assets/gradebook-grid.css?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook-grid.css'));
         }
         self::assertSame($expectedStyles,
             array_map(static fn($n)=>$n->nodeValue, iterator_to_array($x->query('//link[@rel="stylesheet"]/@href'))));

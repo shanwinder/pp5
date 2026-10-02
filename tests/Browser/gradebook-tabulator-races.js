@@ -67,7 +67,7 @@
     const editor = grid.querySelector('input'), editorStart = requests.length;
     assert(editor?.value === '6.00', 'Explicit edit preserves existing value');
     assert(!key(editor, 'Backspace').defaultPrevented && requests.length === editorStart, 'Editor Backspace remains text editing');
-    assert(paste(editor, '5').defaultPrevented && requests.length === editorStart, 'Paste while editor active cannot start batch');
+    assert(!paste(editor, '5').defaultPrevented && requests.length === editorStart, 'Paste while editor active remains native text input');
     key(editor, 'Escape');
     assert(requests.length === editorStart && cell(1, 'score_10').textContent === '6.00', 'Escape after editor paste sends no write');
     key(cell(1, 'score_10'), 'ArrowUp');

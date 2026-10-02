@@ -18,7 +18,6 @@
 
   const fields = config.components.map(item => `score_${item.id}`);
   const componentByField = new Map(config.components.map(item => [`score_${item.id}`, item]));
-  const allFields = ['identity', 'rowType', ...fields, 'total', 'max', 'count', 'complete'];
   const rowData = config.rows.map(row => {
     const mapped = { id: row.enrollmentId, enrollmentId: row.enrollmentId,
       identity: `${row.studentCode}\n${row.name}`, rowType: row.rowType === 'CURRENT' ? 'รายชื่อปัจจุบัน' : 'ประวัติ — อ่านอย่างเดียว',
@@ -50,22 +49,24 @@
     element?.removeAttribute('aria-invalid');
     if (element?.getAttribute('aria-describedby') === status?.id) element.removeAttribute('aria-describedby');
   };
-  const state = { active: null, anchor: null, editing: null, composing: false, fillComposing: false,
+  const state = { active: null, anchor: null, extent: null, editing: null, composing: false, fillComposing: false,
     pendingCharacter: null, pendingSingles: new Map(), pendingBatch: false, uncertain: false,
     permissionLost: false, applying: false, revision: 0, rowApplied: new Map(), errors: new Map(),
-    singleQueue: Promise.resolve() };
+    singleQueue: Promise.resolve(), focusOwner: 'external' };
   let table;
   const token = () => document.getElementById('gradebook-csrf')?.value;
-  const scoreCell = cell => Boolean(cell && componentByField.has(cell.getField()));
-  const eligible = cell => Boolean(config.canScore && !state.permissionLost && !state.uncertain
-    && scoreCell(cell) && !cell.getRow().getData().historical);
+  const isScoreCell = cell => Boolean(cell && componentByField.has(cell.getField()));
+  const isNavigableScoreCell = cell => Boolean(isScoreCell(cell) && cell.getRow().getData());
+  const isWritableScoreCell = cell => Boolean(isNavigableScoreCell(cell) && config.canScore
+    && !state.permissionLost && !state.uncertain && !cell.getRow().getData().historical);
   const cellKey = cell => `${cell.getRow().getData().enrollmentId}:${componentByField.get(cell.getField())?.id}`;
   const rows = () => table.getRows('active');
-  const cellAt = (y, x) => rows()[y]?.getCell(allFields[x]) ?? null;
+  const cellAt = (y, x) => rows()[y]?.getCell(fields[x]) ?? null;
   const indices = cell => ({ y: rows().findIndex(row => row.getData().enrollmentId === cell.getRow().getData().enrollmentId),
-    x: allFields.indexOf(cell.getField()) });
+    x: fields.indexOf(cell.getField()) });
   const cellFromElement = element => {
-    const cellElement = element.closest('.tabulator-cell'), rowElement = cellElement?.closest('.tabulator-row');
+    const cellElement = element instanceof Element ? element.closest('.tabulator-cell') : null;
+    const rowElement = cellElement?.closest('.tabulator-row');
     const row = rowElement && table.getRow(rowElement);
     return row?.getCell(cellElement.getAttribute('tabulator-field')) || null;
   };
@@ -81,12 +82,16 @@
       element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   };
   const syncTabStops = activeElement => {
+    const liveActive = activeElement?.isConnected ? activeElement : null;
+    const holder = host.querySelector('.tabulator-tableholder');
+    if (holder) holder.tabIndex = -1;
     for (const element of host.querySelectorAll('.tabulator-cell[tabindex="0"]'))
-      if (element !== activeElement) element.tabIndex = -1;
-    if (activeElement) activeElement.tabIndex = 0;
+      if (element !== liveActive) element.tabIndex = -1;
+    if (liveActive && componentByField.has(liveActive.getAttribute('tabulator-field'))) liveActive.tabIndex = 0;
+    host.tabIndex = liveActive ? -1 : 0;
   };
   const activate = (cell, focus = true) => {
-    if (!cell) return;
+    if (!isNavigableScoreCell(cell)) return;
     const current = liveCell(cell) || cell;
     for (const node of host.querySelectorAll('[data-pp5-active]')) node.removeAttribute('data-pp5-active');
     state.active = current;
@@ -97,16 +102,36 @@
       if (focus && !state.editing && !state.composing) { element.focus({ preventScroll: true }); visible(current); }
     }
   };
-  const currentRange = () => table.getRanges()[0] ?? null;
+  const paintSelection = () => {
+    const anchor = state.anchor, extent = state.extent;
+    const a = anchor && indices(anchor), b = extent && indices(extent);
+    const top = a && b ? Math.min(a.y, b.y) : -1, bottom = a && b ? Math.max(a.y, b.y) : -1;
+    const left = a && b ? Math.min(a.x, b.x) : -1, right = a && b ? Math.max(a.x, b.x) : -1;
+    const rowIndex = new Map(rows().map((row, index) => [row.getData().enrollmentId, index]));
+    for (const element of host.querySelectorAll('.tabulator-row .tabulator-cell')) {
+      const row = element.closest('.tabulator-row'), component = row && table.getRow(row);
+      const y = component ? rowIndex.get(component.getData().enrollmentId) ?? -1 : -1;
+      const x = fields.indexOf(element.getAttribute('tabulator-field'));
+      element.classList.toggle('tabulator-range-selected', y >= top && y <= bottom && x >= left && x <= right && x >= 0);
+    }
+  };
   const selected = () => {
-    const range = currentRange();
-    const matrix = range?.getStructuredCells();
-    return matrix?.length && matrix[0]?.length ? { range, matrix } : null;
+    if (!isNavigableScoreCell(state.anchor) || !isNavigableScoreCell(state.extent)) return null;
+    const a = indices(state.anchor), b = indices(state.extent);
+    if (a.x < 0 || b.x < 0 || a.y < 0 || b.y < 0) return null;
+    const matrix = [];
+    for (let y = Math.min(a.y, b.y); y <= Math.max(a.y, b.y); y++) {
+      const line = [];
+      for (let x = Math.min(a.x, b.x); x <= Math.max(a.x, b.x); x++) line.push(cellAt(y, x));
+      matrix.push(line);
+    }
+    return matrix.every(line => line.every(isScoreCell)) ? { matrix } : null;
   };
   const select = (anchor, extent = anchor, focus = true) => {
-    for (const range of table.getRanges()) range.remove();
+    if (!isNavigableScoreCell(anchor) || !isNavigableScoreCell(extent)) return;
     state.anchor = anchor;
-    if (anchor && extent) table.addRange(anchor, extent);
+    state.extent = extent;
+    paintSelection();
     activate(extent, focus);
     updateControls();
   };
@@ -123,7 +148,7 @@
       if (matrix[y].length !== width) throw new Error('ช่วงคะแนนไม่เป็นรูปสี่เหลี่ยม');
       for (let x = 0; x < width; x++) {
         const cell = matrix[y][x];
-        if (!eligible(cell)) throw new Error('ช่วงนี้มีแถวประวัติหรือช่องอ่านอย่างเดียว จึงแก้ไขพร้อมกันไม่ได้');
+        if (!isWritableScoreCell(cell)) throw new Error('ช่วงนี้มีแถวประวัติหรือช่องอ่านอย่างเดียว จึงแก้ไขพร้อมกันไม่ได้');
         const rowId = cell.getRow().getData().enrollmentId, componentId = componentByField.get(cell.getField())?.id;
         if (!integer(rowId) || !integer(componentId) || rowId === 0 || componentId === 0) throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
         if (x === 0) enrollmentIds.push(rowId);
@@ -175,7 +200,7 @@
     for (let row = 0; row < values.length; row++) {
       for (let column = 0; column < values[0].length; column++) {
         const cell = cellAt(y + row, x + column);
-        if (!eligible(cell)) throw new Error('วางไม่ได้: ตารางเกินช่องคะแนนที่แก้ไขได้หรือมีแถวประวัติ');
+        if (!isWritableScoreCell(cell)) throw new Error('วางไม่ได้: ตารางเกินช่องคะแนนที่แก้ไขได้หรือมีแถวประวัติ');
         const rowId = cell.getRow().getData().enrollmentId, componentId = componentByField.get(cell.getField()).id;
         if (!integer(rowId) || !integer(componentId) || rowId === 0 || componentId === 0)
           throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
@@ -186,8 +211,7 @@
         targets.set(`${rowId}:${componentId}`, cell);
       }
     }
-    select(start, end, false);
-    return { enrollmentIds, componentIds, targets, height: values.length, width: values[0].length };
+    return { enrollmentIds, componentIds, targets, start, end, height: values.length, width: values[0].length };
   };
   const validateBatch = (data, matrix, plan) => {
     const bad = () => { throw new Error('บันทึกแล้ว แต่แสดงผลล่าสุดไม่สำเร็จ กรุณาโหลดหน้าใหม่เพื่อตรวจสอบคะแนน'); };
@@ -252,8 +276,9 @@
       headers: { Accept: 'application/json' }, body: new URLSearchParams(body) }); }
     finally { clearTimeout(timeout); }
   };
-  const submitBatch = async (matrix, plan, sourceName) => {
+  const submitBatch = async (matrix, plan, sourceName, completion = null) => {
     const revision = ++state.revision;
+    const commandOwner = state.focusOwner;
     state.pendingBatch = true; host.setAttribute('aria-busy', 'true'); updateControls();
     message(`กำลังบันทึกคะแนน ${plan.targets.size} ช่อง`, 'saving');
     let committed = false;
@@ -274,6 +299,7 @@
       }
       const updates = validateBatch(data, matrix, plan);
       await apply(updates.cells, updates.summaries, revision);
+      if (completion) completion(commandOwner !== 'external' && state.focusOwner !== 'external');
       message(`${sourceName} ${data.targeted_count} ช่องแล้ว (เปลี่ยนแปลง ${data.changed_count} ช่อง)`, 'saved');
     } catch (error) {
       if (committed || error.name === 'AbortError' || error instanceof TypeError || error instanceof SyntaxError) state.uncertain = true;
@@ -338,13 +364,13 @@
       cell.getElement()?.removeAttribute('data-pp5-saving'); updateControls();
     }
   };
-  const neighbor = (cell, direction) => {
+  const neighbor = (cell, direction, writableOnly = false) => {
     const { x, y } = indices(cell), dx = direction === 'right' ? 1 : direction === 'left' ? -1 : 0;
     const dy = direction === 'down' ? 1 : direction === 'up' ? -1 : 0;
-    if (dx) { const target = cellAt(y, x + dx); return scoreCell(target) ? target : null; }
+    if (dx) { const target = cellAt(y, x + dx); return (writableOnly ? isWritableScoreCell(target) : isNavigableScoreCell(target)) ? target : null; }
     for (let next = y + dy; next >= 0 && next < rows().length; next += dy) {
       const target = cellAt(next, x);
-      if (eligible(target)) return target;
+      if (writableOnly ? isWritableScoreCell(target) : isNavigableScoreCell(target)) return target;
     }
     return null;
   };
@@ -368,7 +394,7 @@
       done = true; state.editing = null;
       if (commit) success(input.value); else cancel();
       if (direction) queueMicrotask(() => {
-        const target = neighbor(cell, direction);
+        const target = neighbor(cell, direction, true);
         if (target) select(target);
         else if (direction === 'left' || direction === 'right') leaveGrid(direction);
         else activate(cell);
@@ -397,7 +423,7 @@
     ...config.components.map(component => ({
       title: `${escapeHtml(component.name)}<br><small>เต็ม ${escapeHtml(component.max)}</small>`,
       field: `score_${component.id}`, width: 92, hozAlign: 'right', editor,
-      editable: cell => eligible(cell) && !state.pendingBatch && !state.pendingSingles.has(cellKey(cell)),
+      editable: cell => isWritableScoreCell(cell) && !state.pendingBatch && !state.pendingSingles.has(cellKey(cell)),
       formatter: cell => escapeHtml(cell.getValue()), cssClass: 'pp5-grid-score',
     })),
     ...[['total', 'คะแนนที่บันทึกรวม', 112], ['max', 'คะแนนเต็มรวม', 105],
@@ -410,15 +436,12 @@
     table = new Tabulator(host, {
       data: rowData, index: 'id', columns, layout: 'fitData', height: 'min(64vh, 560px)',
       renderVertical: 'virtual', columnDefaults: { headerSort: false, resizable: false },
-      selectableRange: 1, selectableRangeColumns: false, selectableRangeRows: false,
-      selectableRangeFill: false, selectableRangeClearCells: false, editTriggerEvent: 'dblclick',
-      clipboard: true, clipboardCopyStyled: false, clipboardPasteParser: 'range',
-      // Capture handler owns PP5's atomic request. This public action hook forbids native mutations.
-      clipboardPasteAction: () => [],
+      selectableRange: false, editTriggerEvent: 'dblclick', clipboard: false,
       rowFormatter: row => {
         if (row.getData().historical) row.getElement().classList.add('pp5-grid-historical');
         for (const element of row.getElement().querySelectorAll('.tabulator-cell'))
-          element.tabIndex = state.active && row.getData().enrollmentId === state.active.getRow().getData().enrollmentId
+          element.tabIndex = componentByField.has(element.getAttribute('tabulator-field'))
+            && state.active && row.getData().enrollmentId === state.active.getRow().getData().enrollmentId
             && element.getAttribute('tabulator-field') === state.active.getField() ? 0 : -1;
       },
     });
@@ -430,28 +453,21 @@
     if (actions) { actions.hidden = false; updateControls(); }
     syncTabStops(null);
   });
-  table.on('renderComplete', () => syncTabStops(state.active ? liveCell(state.active)?.getElement() : null));
+  table.on('renderComplete', () => {
+    syncTabStops(state.active ? liveCell(state.active)?.getElement() : null);
+    paintSelection();
+  });
+  let pointerDrag = false;
   table.on('cellClick', (_event, cell) => {
+    if (!isNavigableScoreCell(cell) || pointerDrag) return;
     activate(cell, false);
     // Tabulator completes its pointer selection after the click callback.
     setTimeout(() => {
-      if (state.editing || !cell.getElement()?.isConnected
-        || !(host.contains(document.activeElement) || document.activeElement === document.body)) return;
-      const choice = selected();
-      if (!choice?.matrix.some(line => line.includes(cell))) select(cell);
-      else activate(cell);
+      if (state.editing || !cell.getElement()?.isConnected) return;
+      if (!pointerDrag) select(cell);
     }, 0);
   });
-  let pointerAnchor = null;
-  table.on('rangeAdded', range => {
-    const cells = range.getStructuredCells();
-    if (pointerAnchor && cells.some(line => line.includes(pointerAnchor))) state.anchor = pointerAnchor;
-    else if (!state.anchor) state.anchor = cells[0]?.[0] ?? null;
-    activate(cells.at(-1)?.at(-1), false); updateControls();
-  });
-  table.on('rangeChanged', range => {
-    const cells = range.getStructuredCells(); activate(cells.at(-1)?.at(-1), false); updateControls();
-  });
+  let pointerAnchor = null, pointerExtent = null;
   table.on('cellEditing', cell => { state.editing = cell; activate(cell, false); });
   table.on('cellEditCancelled', () => { state.editing = null; });
   table.on('cellEdited', cell => {
@@ -463,21 +479,49 @@
     rowById.get(cell.getRow().getData().enrollmentId)[cell.getField()] = value;
     submitSingle(cell, value, prior);
   });
-  host.addEventListener('pointerdown', event => {
-    if (event.pointerType !== 'touch') pointerAnchor = cellFromElement(event.target);
-  }, true);
-  host.addEventListener('pointerup', event => {
-    if (event.pointerType === 'touch') return;
-    const extent = cellFromElement(event.target), anchor = pointerAnchor;
-    pointerAnchor = null;
+  const beginPointerSelection = event => {
+    const cell = cellFromElement(event.target);
+    pointerAnchor = isScoreCell(cell) ? cell : null;
+    pointerExtent = pointerAnchor;
+    pointerDrag = false;
+    if (pointerAnchor) select(pointerAnchor, pointerAnchor, false);
+  };
+  const movePointerSelection = event => {
+    if (!pointerAnchor) return;
+    const cell = cellFromElement(event.target);
+    if (isScoreCell(cell)) {
+      if (cell !== pointerAnchor) pointerDrag = true;
+      pointerExtent = cell;
+      if (pointerDrag) select(pointerAnchor, pointerExtent, false);
+    }
+  };
+  const endPointerSelection = event => {
+    if (!pointerAnchor) return;
+    const end = cellFromElement(event.target);
+    const anchor = pointerAnchor, extent = isScoreCell(end) ? end : pointerExtent;
+    pointerAnchor = null; pointerExtent = null;
     // Range extent is final only after pointerup; focusing during rangeChanged interrupts dragging.
     setTimeout(() => {
-      const choice = selected();
-      if (anchor && choice?.matrix.some(line => line.includes(anchor))) state.anchor = anchor;
-      const target = extent && choice?.matrix.some(line => line.includes(extent)) ? extent : state.active;
-      if (target && !state.editing
-        && (host.contains(document.activeElement) || document.activeElement === document.body)) activate(target);
+      if (!anchor || state.editing) return;
+      select(anchor, extent || anchor);
     }, 0);
+  };
+  host.addEventListener('pointerdown', event => { if (event.pointerType !== 'touch') beginPointerSelection(event); }, true);
+  host.addEventListener('mousedown', beginPointerSelection, true);
+  host.addEventListener('pointermove', event => { if (event.pointerType !== 'touch') movePointerSelection(event); }, true);
+  host.addEventListener('mousemove', movePointerSelection, true);
+  document.addEventListener('pointerup', event => { if (event.pointerType !== 'touch') endPointerSelection(event); }, true);
+  document.addEventListener('mouseup', endPointerSelection, true);
+  document.addEventListener('focusin', event => {
+    if (host.contains(event.target)) state.focusOwner = 'grid';
+    else if (actions?.contains(event.target)) state.focusOwner = 'range';
+    else state.focusOwner = 'external';
+  });
+  host.addEventListener('focusin', event => {
+    if (event.target !== host) return;
+    if (state.active) { activate(state.active); return; }
+    const first = rows().find(row => fields.length && row.getCell(fields[0]));
+    if (first) select(first.getCell(fields[0]));
   });
   host.addEventListener('compositionstart', () => { state.composing = true; }, true);
   host.addEventListener('compositionend', () => { state.composing = false; }, true);
@@ -489,7 +533,9 @@
     if (shortcut || event.altKey) return;
     if (event.key === 'Escape') {
       event.preventDefault(); event.stopPropagation();
-      for (const range of table.getRanges()) range.remove(); state.anchor = null; updateControls(); return;
+      state.anchor = null; state.extent = null; paintSelection();
+      if (state.active) activate(state.active);
+      updateControls(); return;
     }
     if ((event.key === 'Delete' || event.key === 'Backspace') && selected()) {
       event.preventDefault(); event.stopPropagation();
@@ -497,7 +543,10 @@
       try { const plan = selectedPlan();
         const matrix = { enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds,
           values: plan.enrollmentIds.map(() => plan.componentIds.map(() => '')) };
-        submitBatch(matrix, plan, 'ล้างคะแนน');
+        const topLeft = selected().matrix[0][0];
+        submitBatch(matrix, plan, 'ล้างคะแนน', restore => {
+          activate(topLeft, restore);
+        });
       } catch (error) { message(error.message, 'error'); }
       return;
     }
@@ -505,15 +554,15 @@
     if (event.shiftKey && event.key.startsWith('Arrow')) {
       const direction = event.key.slice(5).toLowerCase(), choice = selected();
       const contained = choice?.matrix.some(line => line.includes(active));
-      const extent = contained ? choice.matrix.at(-1).at(-1) : active;
+      const extent = contained && isNavigableScoreCell(state.extent) ? state.extent : active;
       const target = neighbor(extent, direction);
       if (target) { event.preventDefault(); event.stopPropagation(); select(contained ? state.anchor || active : active, target); }
       return;
     }
-    if (event.key.length === 1 && !event.shiftKey && eligible(active) && !state.pendingSingles.has(cellKey(active))) {
+    if (event.key.length === 1 && !event.shiftKey && isWritableScoreCell(active) && !state.pendingSingles.has(cellKey(active))) {
       event.preventDefault(); event.stopPropagation(); state.pendingCharacter = event.key; active.edit(); return;
     }
-    if ((event.key === 'Enter' || event.key === 'F2') && eligible(active)) {
+    if ((event.key === 'Enter' || event.key === 'F2') && isWritableScoreCell(active)) {
       event.preventDefault(); event.stopPropagation(); state.pendingCharacter = null; active.edit(); return;
     }
     if (event.key === 'Tab' || event.key.startsWith('Arrow')) {
@@ -531,14 +580,20 @@
     if (rangeStatus) rangeStatus.textContent = 'คัดลอกช่วงคะแนนแล้ว';
   }, true);
   host.addEventListener('paste', event => {
+    if (state.editing || event.target instanceof HTMLInputElement) return;
     if (state.composing || !event.clipboardData || !event.clipboardData.types.includes('text/plain')) return;
     event.preventDefault(); event.stopImmediatePropagation();
     if (!readyForBatch()) return;
-    const start = state.active;
-    if (!eligible(start)) { message('ช่องนี้ไม่สามารถวางคะแนนได้', 'error'); return; }
+    const choice = selected();
+    const start = choice && choice.matrix.length * choice.matrix[0].length > 1
+      ? choice.matrix[0][0] : state.active;
+    if (!isWritableScoreCell(start)) { message('ช่องนี้ไม่สามารถวางคะแนนได้', 'error'); return; }
     try { const values = parseTsv(event.clipboardData.getData('text/plain'));
       const plan = planPaste(start, values);
-      submitBatch({ enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds, values }, plan, 'บันทึกคะแนน');
+      submitBatch({ enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds, values }, plan, 'บันทึกคะแนน', restore => {
+        select(plan.start, plan.end, restore);
+        activate(plan.start, restore);
+      });
     } catch (error) { message(error.message, 'error'); }
   }, true);
   if (actions) {
@@ -550,8 +605,10 @@
     const runRange = (value, sourceName) => {
       if (!readyForBatch()) return;
       try { const plan = selectedPlan();
+        const topLeft = selected().matrix[0][0];
         submitBatch({ enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds,
-          values: plan.enrollmentIds.map(() => plan.componentIds.map(() => value)) }, plan, sourceName);
+          values: plan.enrollmentIds.map(() => plan.componentIds.map(() => value)) }, plan, sourceName,
+        restore => activate(topLeft, restore));
       } catch (error) { message(error.message, 'error'); }
     };
     actions.addEventListener('submit', event => {

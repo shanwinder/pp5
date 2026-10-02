@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-01  
 **Milestone:** 6.5 — Classroom Workspace + Spreadsheet Workflow  
-**Status:** accepted plan addendum after Task 10; production migration not yet implemented  
+**Status:** accepted plan addendum; Task 10.6c parity restoration ready for product-owner review after failed interaction acceptance of 10.6b
 **Production branch:** `milestone/6-5-classroom-workspace`
 
 ---
@@ -41,11 +41,20 @@ Task 10
 -> Task 10.5b normalized spreadsheet interaction evaluation
 -> Task 10.5c natural spreadsheet interaction parity
 -> Task 10.6 production Gradebook migration to selected grid engine
+-> Task 10.6a editor visual correction
+-> Task 10.6b focus correction (implemented; product-owner parity acceptance failed)
+-> Task 10.6c full spreadsheet interaction audit and restoration
 -> Task 11 hardening of the actual production grid
 -> Task 12 final verification / real MAMP smoke / documentation
 ~~~
 
 Tasks 11 and 12 remain part of Milestone 6.5 and are **not cancelled**. They are deliberately postponed until the production Gradebook renderer is finalized so that hardening and final verification are not performed twice against a renderer that is about to be replaced.
+
+## Corrective production history after Task 10.6
+
+- **Task 10.6a:** the single-cell editor visual correction was accepted. Its single visible boundary and stable cell geometry remain requirements.
+- **Task 10.6b:** focus correction was implemented and isolated fixture checks passed, but product-owner real-use spreadsheet interaction acceptance failed. The fixture counts are not product acceptance. Task 10.6b is superseded by the 10.6c audit and restoration.
+- **Task 10.6c:** audits the accepted 10.5b/10.5c behavior against production and actual browser use, restores score-cell interaction parity, and strengthens regression evidence. The [pre-implementation parity audit](../notes/2026-10-02-m6-5-task-10-6c-parity-audit.md) records the gaps. The canonical behavior source is the [Gradebook spreadsheet interaction contract](../specs/2026-10-02-pp5-gradebook-spreadsheet-interaction-contract.md). Future Task 11 must use it as mandatory input. Product-owner manual acceptance remains separate from implementation and automated tests.
 
 ---
 

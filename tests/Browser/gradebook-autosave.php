@@ -24,6 +24,7 @@ $assets = [
     '/grid-error-tests.js' => '/tests/Browser/gradebook-tabulator-errors.js',
     '/grid-race-tests.js' => '/tests/Browser/gradebook-tabulator-races.js',
     '/grid-workload-tests.js' => '/tests/Browser/gradebook-tabulator-workload.js',
+    '/grid-parity-tests.js' => '/tests/Browser/gradebook-spreadsheet-parity.js',
 ];
 if (isset($assets[$path])) {
     header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
@@ -171,6 +172,6 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
 ], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
-    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'errors' ? '/grid-error-tests.js' : (($_GET['tests'] ?? '') === 'races' ? '/grid-race-tests.js' : (($_GET['tests'] ?? '') === 'workload' ? '/grid-workload-tests.js' : '/grid-tests.js'))).'" defer></script>' : '',
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'errors' ? '/grid-error-tests.js' : (($_GET['tests'] ?? '') === 'races' ? '/grid-race-tests.js' : (($_GET['tests'] ?? '') === 'workload' ? '/grid-workload-tests.js' : (($_GET['tests'] ?? '') === 'parity' ? '/grid-parity-tests.js' : '/grid-tests.js')))).'" defer></script>' : '',
 ]);
 echo $html;

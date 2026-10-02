@@ -103,7 +103,7 @@ final class GradebookScoreUxTest extends TestCase
             '/assets/app.js',
             '/assets/vendor/htmx-2.0.8.min.js',
             '/assets/vendor/tabulator/tabulator.min.js',
-            '/assets/gradebook.js',
+            '/assets/gradebook.js?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook.js'),
         ], $sources);
 
         foreach ($sources as $source) {
@@ -130,7 +130,7 @@ final class GradebookScoreUxTest extends TestCase
             'element.focus({ preventScroll: true });',
             "response.headers.get('X-Gradebook-Saved') !== '1'",
             "response.headers.get('X-Gradebook-Batch-Saved') !== '1'",
-            'clipboardPasteAction: () => []',
+            'clipboard: false',
         ] as $contract) {
             self::assertStringContainsString($contract, $js);
         }

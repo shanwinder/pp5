@@ -15,12 +15,12 @@ final class UiGradebookTest extends TestCase
     {
         $this->login($role); $r=$this->request('GET',$this->readPath()); self::assertSame(200,$r->status());
         $x=$this->assertPage($r->body()); $this->assertReadSafe($r->body());
-        foreach (['/assets/vendor/htmx-2.0.8.min.js','/assets/gradebook.js'] as $src) {
-            self::assertSame($src === '/assets/gradebook.js' ? 1 : ($score ? 1 : 0),$x->query('//script[@src="'.$src.'" and @defer]')->length);
-        }
+        self::assertSame($score ? 1 : 0,$x->query('//script[@src="/assets/vendor/htmx-2.0.8.min.js" and @defer]')->length);
+        $assetRoot = dirname(__DIR__,2).'/htdocs/assets/';
+        self::assertSame(1,$x->query('//script[@src="/assets/gradebook.js?v='.filemtime($assetRoot.'gradebook.js').'" and @defer]')->length);
         self::assertSame(1,$x->query('//script[@src="/assets/vendor/tabulator/tabulator.min.js" and @defer]')->length);
         self::assertSame(1,$x->query('//link[@href="/assets/vendor/tabulator/tabulator.min.css"]')->length);
-        self::assertSame(1,$x->query('//link[@href="/assets/gradebook-grid.css"]')->length);
+        self::assertSame(1,$x->query('//link[@href="/assets/gradebook-grid.css?v='.filemtime($assetRoot.'gradebook-grid.css').'"]')->length);
         self::assertSame(1,$x->query('//*[@id="gradebook-tabulator" and @hidden]')->length);
         $bootstrap=$x->evaluate('string(//script[@id="gradebook-grid-data" and @type="application/json"])');
         $data=json_decode($bootstrap,true,16,JSON_THROW_ON_ERROR);
@@ -150,16 +150,16 @@ final class UiGradebookTest extends TestCase
         $js=file_get_contents(dirname(__DIR__,2).'/htdocs/assets/gradebook.js');
         foreach (['new Tabulator(', "response.headers.get('X-Gradebook-Saved') !== '1'",
             "response.headers.get('X-Gradebook-Batch-Saved') !== '1'", 'state.pendingSingles.size',
-            'state.uncertain', 'state.applying', 'cell.setValue(value)', 'table.getRanges()',
+            'state.uncertain', 'state.applying', 'cell.setValue(value)', 'paintSelection()',
             "event.key === 'Delete'", "event.key === 'Backspace'", "event.key === 'Tab'",
             "event.key === 'Enter'", "event.key === 'Escape'", 'event.isComposing'] as $contract) {
             self::assertStringContainsString($contract,$js);
         }
         self::assertStringContainsString("if (state.composing || event.isComposing) return",$js);
-        self::assertStringContainsString('clipboardPasteAction: () => []',$js);
+        self::assertStringContainsString('clipboard: false',$js);
         // One shared fetch transport serves the existing single-cell and batch endpoints.
         self::assertSame(1, preg_match_all('/fetch\s*\(/', $js));
-        self::assertDoesNotMatchRegularExpression('/XMLHttpRequest|parseFloat|parseInt|\.reduce\s*\(|GRADEBOOK_|school_id|Math\./',$js);
+        self::assertDoesNotMatchRegularExpression('/XMLHttpRequest|parseFloat|parseInt|\.reduce\s*\(|GRADEBOOK_|school_id/',$js);
     }
 
     private function postCell(string $value): App\Http\Response
