@@ -36,6 +36,24 @@
   const message = (value, state = 'idle') => {
     if (status) { status.textContent = value; status.dataset.batchState = state; }
   };
+  // Keep the initial hint's space while short save messages and an empty success
+  // message replace it. Otherwise document scroll anchoring moves the page.
+  const statusHint = status?.textContent ?? '';
+  const reserveStatusHeight = () => {
+    if (!status) return;
+    const probe = status.cloneNode(false);
+    probe.removeAttribute('id');
+    probe.textContent = statusHint;
+    probe.style.position = 'absolute';
+    probe.style.visibility = 'hidden';
+    probe.style.width = `${status.getBoundingClientRect().width}px`;
+    probe.style.minHeight = '0';
+    status.after(probe);
+    status.style.minHeight = `${probe.getBoundingClientRect().height}px`;
+    probe.remove();
+  };
+  reserveStatusHeight();
+  window.addEventListener('resize', reserveStatusHeight);
   const markError = cell => {
     const element = cell.getElement();
     if (!element) return;
@@ -79,8 +97,14 @@
     const element = cell?.getElement(), holder = host.querySelector('.tabulator-tableholder');
     if (!element?.isConnected || !holder) return;
     const rect = element.getBoundingClientRect(), bounds = holder.getBoundingClientRect();
-    if (rect.left < bounds.left || rect.right > bounds.right || rect.top < bounds.top || rect.bottom > bounds.bottom)
-      element.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    let frozen = bounds.left;
+    for (const node of element.closest('.tabulator-row').querySelectorAll('.tabulator-frozen-left'))
+      frozen = Math.max(frozen, node.getBoundingClientRect().right);
+    const left = Math.max(bounds.left, frozen);
+    if (rect.left < left - 0.5) holder.scrollLeft -= left - rect.left;
+    else if (rect.right > bounds.right + 0.5) holder.scrollLeft += rect.right - bounds.right;
+    if (rect.top < bounds.top - 0.5) holder.scrollTop -= bounds.top - rect.top;
+    else if (rect.bottom > bounds.bottom + 0.5) holder.scrollTop += rect.bottom - bounds.bottom;
   };
   const syncTabStops = activeElement => {
     const liveActive = activeElement?.isConnected ? activeElement : null;
@@ -91,30 +115,38 @@
     if (liveActive && componentByField.has(liveActive.getAttribute('tabulator-field'))) liveActive.tabIndex = 0;
     host.tabIndex = liveActive ? -1 : 0;
   };
-  const activate = (cell, focus = true) => {
+  const activate = (cell, focus = true, reveal = true) => {
     if (!isNavigableScoreCell(cell)) return;
     const current = liveCell(cell) || cell;
-    for (const node of host.querySelectorAll('[data-pp5-active]')) node.removeAttribute('data-pp5-active');
-    state.active = current;
     const element = current.getElement();
+    const previous = state.active?.getElement();
+    if (previous !== element) previous?.removeAttribute('data-pp5-active');
+    state.active = current;
     syncTabStops(element?.isConnected ? element : null);
     if (element?.isConnected) {
-      element.dataset.pp5Active = 'true';
-      if (focus && !state.editing && !state.composing) { element.focus({ preventScroll: true }); visible(current); }
+      if (element.dataset.pp5Active !== 'true') element.dataset.pp5Active = 'true';
+      if (focus && !state.editing && !state.composing) {
+        if (document.activeElement !== element) element.focus({ preventScroll: true });
+        if (reveal) visible(current);
+      }
     }
   };
+  let paintedSelection = new Set();
   const paintSelection = () => {
     const anchor = state.anchor, extent = state.extent;
     const a = anchor && indices(anchor), b = extent && indices(extent);
     const top = a && b ? Math.min(a.y, b.y) : -1, bottom = a && b ? Math.max(a.y, b.y) : -1;
     const left = a && b ? Math.min(a.x, b.x) : -1, right = a && b ? Math.max(a.x, b.x) : -1;
-    const rowIndex = new Map(rows().map((row, index) => [row.getData().enrollmentId, index]));
-    for (const element of host.querySelectorAll('.tabulator-row .tabulator-cell')) {
-      const row = element.closest('.tabulator-row'), component = row && table.getRow(row);
-      const y = component ? rowIndex.get(component.getData().enrollmentId) ?? -1 : -1;
-      const x = fields.indexOf(element.getAttribute('tabulator-field'));
-      element.classList.toggle('tabulator-range-selected', y >= top && y <= bottom && x >= left && x <= right && x >= 0);
+    const next = new Set();
+    for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
+      const element = cellAt(y, x)?.getElement();
+      if (element?.isConnected) next.add(element);
     }
+    for (const element of paintedSelection)
+      if (!next.has(element)) element.classList.remove('tabulator-range-selected');
+    for (const element of next)
+      if (!paintedSelection.has(element)) element.classList.add('tabulator-range-selected');
+    paintedSelection = next;
   };
   const selected = () => {
     if (!isNavigableScoreCell(state.anchor) || !isNavigableScoreCell(state.extent)) return null;
@@ -248,7 +280,7 @@
     state.applying = true;
     try {
       for (const { cell, value } of cells) {
-        cell.setValue(value);
+        if (cell.getValue() !== value) cell.setValue(value);
         authoritative.set(cellKey(cell), value);
         state.errors.delete(cellKey(cell));
         clearError(cell);
@@ -264,10 +296,8 @@
       if (scroller) { scroller.scrollLeft = scroll.left; scroller.scrollTop = scroll.top; }
       if (state.active) {
         const active = liveCell(state.active);
-        if (active) activate(active, false);
-        if (restoreFocus && !state.editing && !state.composing
-          && (host.contains(document.activeElement) || document.activeElement === document.body))
-          activate(active, true);
+        if (active) activate(active, restoreFocus && !state.editing && !state.composing
+          && (host.contains(document.activeElement) || document.activeElement === document.body), false);
       }
     }
   };

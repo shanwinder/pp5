@@ -1,7 +1,7 @@
 # PP5 Gradebook spreadsheet interaction contract
 
 **Date:** 2026-10-02
-**Status:** Task 10.6d clarified interaction contract; product-owner manual acceptance remains separate.
+**Status:** Task 10.6d clarified interaction contract; Task 10.6e adds visual stability. Product-owner manual acceptance remains separate.
 
 This specification is mandatory for later Gradebook work, including Task 11. The principle is **Online first, Excel familiar**. The grid handles interaction and display. The PP5 server remains authoritative for permission, tenancy, lifecycle, score validation, NULL versus zero, transactions, audit, and summaries.
 
@@ -24,6 +24,12 @@ Outside the editor, unmodified Arrow keys move one navigable score cell in the r
 **Explicit edit** starts when double-click, F2, or Enter on a selected writable score cell opens its existing value with the caret at its end. In explicit edit, Left and Right move the **caret** and do not save or navigate. Up and Down commit and move vertically. Enter/Shift+Enter commit and move down/up. Tab/Shift+Tab commit and move right/left, exiting the grid at a horizontal boundary. Post-edit movement targets writable score cells.
 
 In either editor mode, Escape cancels without a request, restores the prior value, and focuses the cell so ordinary Arrow navigation works immediately. Backspace/Delete are native text editing. Text selection copy and paste are native editor operations. Grid clipboard handlers never intercept an open editor. Composition is protected from premature command handling. Normal blur retains the single-cell save behavior with no duplicate commit after a key-driven finish.
+
+## Visual stability
+
+Moving to an adjacent score cell that is already fully visible must not move the document or the Tabulator holder viewport. This applies through editor close, the first rendered frame, and authoritative server reconciliation. Row height, score-column width, host geometry, and the single visible editor boundary remain stable. A move to an offscreen score cell scrolls only the Tabulator holder by the minimum needed to expose the target, including the space occupied by the frozen identity column; it never scrolls the page or snaps the holder back after a response.
+
+The target owns focus and selection immediately after a navigation key. A delayed response for the previous score must not restore focus to that score or reclaim its viewport. Authoritative normalization (for example `5` to `5.00`) and summary updates must remain visible without a row or grid jump. Save-status text changes must not collapse the page layout around the Gradebook. No animation, debounce, or delayed save is used to conceal movement.
 
 Writing requires a current enrollment, score permission, writable lifecycle, and no permission-loss or uncertain lock. Selection and navigation do not imply permission to write. A pending single save makes a range write wait or reject visibly; it must never race or silently disappear. A rejected single score leaves attempted text and its error visible, with old server summary intact and immediate correction possible.
 

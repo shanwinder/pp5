@@ -26,6 +26,7 @@ $assets = [
     '/grid-workload-tests.js' => '/tests/Browser/gradebook-tabulator-workload.js',
     '/grid-parity-tests.js' => '/tests/Browser/gradebook-spreadsheet-parity.js',
     '/grid-direct-tests.js' => '/tests/Browser/gradebook-direct-entry.js',
+    '/grid-visual-tests.js' => '/tests/Browser/gradebook-visual-stability.js',
 ];
 if (isset($assets[$path])) {
     header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
@@ -67,7 +68,7 @@ if ($path === '/hx/gradebook/1/scores/batch') {
     echo json_encode(['committed'=>true,'offering_id'=>1,'targeted_count'=>count($cells),'changed_count'=>count($cells),
         'row_count'=>count($rows),'column_count'=>count($matrix['component_ids']),'cells'=>$cells,'rows'=>$rows]); exit;
 }
-if (preg_match('~^/hx/gradebook/1/components/(10|11|12)/enrollments/(1|2|3)/score$~', $path, $ids)) {
+if (preg_match('~^/hx/gradebook/1/components/(10|11|12|13)/enrollments/(1|2|3|4)/score$~', $path, $ids)) {
     usleep(150000); // Make focus changes and queued requests observable.
     $score = $_POST['score'] ?? '';
     if ($score === 'login') { echo '<!doctype html><html><body>Login page</body></html>'; exit; }
@@ -78,7 +79,7 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11|12)/enrollments/(1|2|3)/scor
     if ($score === 'failure') { http_response_code(500); echo 'Internal Server Error'; exit; }
     if ($score === 'refresh') { http_response_code(409); echo View::render('gradebook/score-error', ['message'=>'บันทึกแล้วแต่โหลดผลล่าสุดไม่สำเร็จ']); exit; }
     if ($score === 'malformed') { header('X-Gradebook-Saved: 1'); echo '<div>missing score and summary</div>'; exit; }
-    $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '5.00' => '5.00', '6' => '6.00', '6.00' => '6.00', '7'=>'7.00',
+    $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '5.00' => '5.00', '6' => '6.00', '6.00' => '6.00', '7'=>'7.00', '8'=>'8.00',
         '1.50' => '1.50', '0.00' => '0.00', '01.50' => '1.50', '12.5' => '12.50', '12.50' => '12.50'];
     if (!array_key_exists($score, $normalized)) {
         http_response_code(422); echo View::render('gradebook/score-error', ['message' => 'คะแนนไม่ถูกต้องหรือเกินคะแนนเต็ม']); exit;
@@ -103,19 +104,23 @@ if ($path === '/matrix') {
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','direct','active','error','empty','no-components','nojs','large','workload','stress'], true);
+$canScore = in_array($mode, ['editable','direct','visual','active','error','empty','no-components','nojs','large','workload','stress'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
     3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
-if ($mode === 'direct') {
+if (in_array($mode, ['direct', 'visual'], true)) {
     $fixtureScores[2][10] = '12.50';
     foreach ($fixtureScores as &$scores) { $scores[12] = null; }
+    unset($scores);
+}
+if ($mode === 'visual') {
+    foreach ($fixtureScores as &$scores) { $scores[13] = null; }
     unset($scores);
 }
 $rows = [];
 foreach ([1, 2, 3, 4] as $id) {
     $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => $long.' '.$id,
-        'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 ? 'HISTORICAL' : 'CURRENT', 'scores' => $fixtureScores[$id],
+        'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 && $mode !== 'visual' ? 'HISTORICAL' : 'CURRENT', 'scores' => $fixtureScores[$id],
         'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 1, 'active_component_count' => 2, 'complete' => false];
 }
 if ($mode === 'large') {
@@ -131,7 +136,8 @@ $offering = ['id' => 1, 'year_be' => 2569, 'academic_year_status' => $mode === '
     'classroom_code' => 'ROOM', 'classroom_name' => 'ห้องทดสอบ', 'subject_code' => 'SUBJECT', 'subject_name' => 'วิชาทดสอบ', 'term_no' => 1, 'status' => 'ACTIVE'];
 $components = [['id' => 10, 'code' => 'WORK', 'name_th' => $path === '/frame' ? str_repeat('หัวข้อคะแนนภาษาไทย',4) : 'งาน', 'max_score' => '15.50', 'sort_order'=>0, 'status'=>'ACTIVE'],
     ['id' => 11, 'code' => 'EXAM', 'name_th' => 'สอบ', 'max_score' => '20.00', 'sort_order'=>1, 'status'=>'ACTIVE']];
-if ($mode === 'direct') $components[] = ['id'=>12,'code'=>'THIRD','name_th'=>'หัวข้อที่สาม','max_score'=>'20.00','sort_order'=>2,'status'=>'ACTIVE'];
+if (in_array($mode, ['direct', 'visual'], true)) $components[] = ['id'=>12,'code'=>'THIRD','name_th'=>'หัวข้อที่สาม','max_score'=>'20.00','sort_order'=>2,'status'=>'ACTIVE'];
+if ($mode === 'visual') $components[] = ['id'=>13,'code'=>'FOURTH','name_th'=>'หัวข้อที่สี่','max_score'=>'20.00','sort_order'=>3,'status'=>'ACTIVE'];
 if ($mode === 'no-components') {
     $components = [];
     foreach ($rows as &$row) {
@@ -172,6 +178,11 @@ $ui = ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนข้อ�
     'currentKey'=>'gradebooks','permissions'=>[], 'sections'=>[['key'=>'teaching','label'=>'การเรียนการสอน','items'=>[
         ['key'=>'gradebooks','label'=>'สมุดคะแนน','url'=>'/gradebooks','detail'=>null]]]]];
 $isSetup = in_array($mode, ['setup','empty-setup','inactive-setup','error-setup','closed-setup'], true);
+$testScript = [
+    'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
+    'workload'=>'/grid-workload-tests.js', 'parity'=>'/grid-parity-tests.js',
+    'direct'=>'/grid-direct-tests.js', 'visual'=>'/grid-visual-tests.js',
+][$_GET['tests'] ?? ''] ?? '/grid-tests.js';
 $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'canScore'=>$canScore,'canManageComponents'=>true,'csrfToken'=>'browser-fixture-token','gradebook'=>$gradebook,
     'offering'=>$offering, 'components'=>$setupComponents, 'canMutate'=>$isSetup && $mode !== 'closed-setup',
@@ -179,6 +190,6 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
 ], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
-    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.(($_GET['tests'] ?? '') === 'errors' ? '/grid-error-tests.js' : (($_GET['tests'] ?? '') === 'races' ? '/grid-race-tests.js' : (($_GET['tests'] ?? '') === 'workload' ? '/grid-workload-tests.js' : (($_GET['tests'] ?? '') === 'parity' ? '/grid-parity-tests.js' : (($_GET['tests'] ?? '') === 'direct' ? '/grid-direct-tests.js' : '/grid-tests.js'))))).'" defer></script>' : '',
+    'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.$testScript.'" defer></script>' : '',
 ]);
 echo $html;
