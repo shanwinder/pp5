@@ -72,6 +72,8 @@
     key('Escape');
     assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 0,
       'GB-SEL-006 — Escape removes the range while keeping score focus');
+    assert(document.getElementById('gradebook-range-status').textContent === 'ยกเลิกการเลือกช่วงคะแนน',
+      'GB-SEL-006 — Escape announces that the range is no longer selected');
     await choose(at(0, 'score_10'));
     if (document.getElementById('gradebook-csrf')) {
     key('5'); assert(grid.querySelector('input')?.value === '5', 'Printable typing opens replace editor');

@@ -208,7 +208,12 @@
       : 'ยังไม่ได้เลือกช่วงคะแนน';
     clearButton.textContent = `ล้างคะแนน ${count} ช่องที่เลือก`;
     fillButton.disabled = clearButton.disabled = !okay || state.pendingBatch || state.uncertain || state.permissionLost;
-    if (rangeStatus && choice) rangeStatus.textContent = `เลือก ${choice.matrix.length} แถว × ${choice.matrix[0].length} หัวข้อคะแนน`;
+    if (rangeStatus) {
+      const announcement = choice
+        ? `เลือก ${choice.matrix.length} แถว × ${choice.matrix[0].length} หัวข้อคะแนน`
+        : (rangeStatus.textContent ? 'ยกเลิกการเลือกช่วงคะแนน' : '');
+      if (rangeStatus.textContent !== announcement) rangeStatus.textContent = announcement;
+    }
   };
   const readyForBatch = () => {
     if (state.pendingBatch) { message('กำลังบันทึกตารางคะแนน กรุณารอสักครู่', 'saving'); return false; }

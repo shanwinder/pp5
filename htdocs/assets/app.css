@@ -55,7 +55,9 @@ a { color: var(--pp5-primary); text-underline-offset: 0.2em; }
 a:hover { color: var(--pp5-primary-hover); }
 .text-muted, .form-text { color: var(--pp5-text-muted) !important; }
 [hidden] { display: none !important; }
-:focus-visible {
+/* Programmatic focus after a command must stay visible in pointer modality too.
+   Tabulator score cells keep their dedicated single-boundary focus treatment. */
+:focus-visible, :focus:not(.tabulator-cell) {
   outline: 3px solid var(--pp5-focus) !important;
   outline-offset: 3px;
   box-shadow: 0 0 0 2px var(--pp5-surface);
