@@ -44,18 +44,23 @@
     assert(!key('ArrowLeft').defaultPrevented && !key('ArrowRight').defaultPrevented
       && grid.querySelector('input')?.value === '12.50' && writes.length === beforeCaret,
     'Explicit Left and Right remain caret keys without save or navigation');
-    key('Escape'); assert(focusedCell(1, 10), 'Explicit Escape restores cell focus');
-    key('Enter'); assert(grid.querySelector('input')?.value === '12.50', 'Enter opens explicit existing-value editor');
+    key('Escape'); assert(focusedCell(1, 10), 'GB-EDIT-009 — Explicit Escape restores cell focus');
+    key('Enter'); assert(grid.querySelector('input')?.value === '12.50', 'GB-EDIT-002 — Enter opens explicit existing-value editor');
     assert(!key('ArrowRight').defaultPrevented && grid.querySelector('input') && writes.length === beforeCaret,
       'Enter-opened explicit editor keeps ArrowRight as caret movement');
     key('Escape');
-    key('F2'); assert(grid.querySelector('input')?.value === '12.50', 'F2 opens explicit existing-value editor');
+    key('F2'); assert(grid.querySelector('input')?.value === '12.50', 'GB-EDIT-003 — F2 opens explicit existing-value editor');
     assert(!key('ArrowLeft').defaultPrevented && grid.querySelector('input') && writes.length === beforeCaret,
       'F2-opened explicit editor keeps ArrowLeft as caret movement');
+    const copyData = new DataTransfer();
+    const editorCopy = new ClipboardEvent('copy', { bubbles: true, cancelable: true, clipboardData: copyData });
+    grid.querySelector('input').dispatchEvent(editorCopy);
+    assert(!editorCopy.defaultPrevented && writes.length === beforeCaret,
+      'GB-EDIT-007 — Explicit editor copy remains a native text operation');
     key('Escape');
     enter('5'); key('Escape');
     assert(focusedCell(1, 10) && cell(1, 10).textContent === '12.50' && writes.length === beforeCaret,
-      'Direct Escape restores original value without request');
+      'GB-DIRECT-008 — Direct Escape restores original value without request');
     key('ArrowRight'); assert(focusedCell(1, 11), 'After Escape, ArrowRight navigates outside editor');
 
     await choose(0, 10);
@@ -72,9 +77,9 @@
 
     await choose(1, 11); enter('5'); key('ArrowLeft'); await until(() => focusedCell(1, 10)); await saved(4);
     assert(writes[3].url.includes('/components/11/enrollments/2/') && cell(1, 11).textContent === '5.00',
-      'Direct ArrowLeft commits and moves to previous component');
+      'GB-DIRECT-003 — Direct ArrowLeft commits and moves to previous component');
     enter('5'); key('ArrowUp'); await until(() => focusedCell(0, 10)); await saved(5);
-    assert(cell(1, 10).textContent === '5.00', 'Direct ArrowUp commits and moves to previous writable row');
+    assert(cell(1, 10).textContent === '5.00', 'GB-DIRECT-005 — Direct ArrowUp commits and moves to previous writable row');
     enter('5'); key('ArrowDown'); await until(() => focusedCell(1, 10)); await saved(6);
     assert(cell(0, 10).textContent === '5.00', 'Direct ArrowDown commits and moves to next writable row');
 
@@ -98,11 +103,11 @@
     assert(focusedCell(0, 10), 'Left Arrow boundary stays on first score component');
 
     await choose(1, 12); enter('5'); key('Enter'); await until(() => focusedCell(2, 12));
-    assert(!grid.querySelector('input'), 'Direct Enter commits and moves down');
+    assert(!grid.querySelector('input'), 'GB-DIRECT-006 — Direct Enter commits and moves down');
     enter('6'); key('Enter', { shiftKey: true }); await until(() => focusedCell(1, 12));
     assert(!grid.querySelector('input'), 'Direct Shift+Enter commits and moves up');
     await choose(1, 10); enter('7'); key('Tab'); await until(() => focusedCell(1, 11));
-    assert(!grid.querySelector('input'), 'Direct Tab commits and moves right');
+    assert(!grid.querySelector('input'), 'GB-DIRECT-007 — Direct Tab commits and moves right');
     enter('6'); key('Tab', { shiftKey: true }); await until(() => focusedCell(1, 10));
     assert(!grid.querySelector('input'), 'Direct Shift+Tab commits and moves left');
     await until(() => !grid.querySelector('[data-pp5-saving]'));
@@ -126,7 +131,7 @@
     const paste = new ClipboardEvent('paste', { bubbles: true, cancelable: true, clipboardData: pasteData });
     document.activeElement.dispatchEvent(paste);
     assert(!paste.defaultPrevented && writes.length === beforePaste && grid.querySelector('input')?.value === '1',
-      'Direct editor paste remains native and starts no grid batch');
+      'GB-EDIT-008 — Direct editor paste remains native and starts no grid batch');
     key('Escape');
 
     await choose(0, 12); enter('6'); key('Tab');

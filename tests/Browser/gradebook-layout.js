@@ -18,13 +18,15 @@
         await new Promise(resolve => setTimeout(resolve, 20));
       const d = frame.contentDocument, w = frame.contentWindow;
       const mode = frame.title.split(' ')[0], width = w.innerWidth;
+      const scaleId = ({ 390: 'GB-SCALE-004', 768: 'GB-SCALE-005',
+        1024: 'GB-SCALE-006', 1440: 'GB-SCALE-007' })[width];
       const host = d.getElementById('gradebook-tabulator');
       const fallback = d.querySelector('.pp5-gradebook');
       if (host && mode !== 'nojs') {
         for (let attempt = 0; attempt < 100 && !fallback.hidden; attempt++) await new Promise(resolve => setTimeout(resolve, 20));
       }
       assert(d.querySelectorAll('html,body,main,h1').length === 4, 'single shell');
-      assert(d.documentElement.scrollWidth <= width + 1, 'no document overflow');
+      assert(scaleId && d.documentElement.scrollWidth <= width + 1, `${scaleId} — no document overflow at ${width}px`);
       assert(d.querySelectorAll('script:not([src]):not([type="application/json"]),[onerror]').length === 0, 'no executable inline script');
       assert(!/[0-9]{13}/.test(d.body.textContent), 'no raw national ID');
       if (host) {
@@ -34,7 +36,7 @@
           && data.rows.length === (mode === 'empty' ? 0 : 4), 'bootstrap uses expected read model');
         assert(!d.getElementById('gradebook-grid-data').innerHTML.includes('<script>'), 'bootstrap escapes tags');
         if (mode === 'nojs') {
-          assert(host.hidden && !fallback.hidden, 'no-JS semantic fallback remains readable');
+          assert(host.hidden && !fallback.hidden, 'GB-RUNTIME-006 — no-JS semantic fallback remains readable');
           assert(d.querySelector('noscript').textContent.includes('JavaScript'), 'no-JS save limitation visible');
           assert(d.querySelector('table caption') && fallback.scrollWidth > fallback.clientWidth, 'fallback table scrolls internally');
         } else {

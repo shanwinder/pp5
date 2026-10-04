@@ -45,18 +45,34 @@
     const script = [...document.scripts].find(item => item.src.includes('/assets/gradebook.js'));
     const css = [...document.querySelectorAll('link[rel="stylesheet"]')].find(item => item.href.includes('/assets/gradebook-grid.css'));
     assert(/\/gradebook\.js\?v=\d+$/.test(script?.src ?? '') && /\/gradebook-grid\.css\?v=\d+$/.test(css?.href ?? ''),
-      'First-party Gradebook assets have deterministic versioned URLs');
+      'GB-RUNTIME-004 — First-party Gradebook assets have deterministic versioned URLs');
     assert(![...document.querySelectorAll('script[src],link[href]')].some(item => /https?:\/\//.test(item.getAttribute('src') ?? item.getAttribute('href') ?? '')),
       'Runtime assets remain local');
+    for (const field of ['identity', 'rowType', 'total']) {
+      const target = at(0, field);
+      target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      target.click();
+    }
+    assert(document.querySelectorAll('.tabulator-range-selected').length === 0,
+      'GB-SEL-004 — Identity, row type and summary clicks do not select scores');
     await choose(at(0, 'score_10'));
     assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-cell[tabindex="0"]').length === 1,
       'Click establishes one active score tab stop without test focus repair');
     assert(grid.tabIndex === -1 && grid.querySelector('.tabulator-tableholder')?.tabIndex === -1,
       'Active score is the only grid Tab stop');
-    key('ArrowDown'); assert(focused() === at(1, 'score_10'), 'ArrowDown moves one score row');
-    key('ArrowUp'); assert(focused() === at(0, 'score_10'), 'ArrowUp moves one score row');
-    key('ArrowRight'); assert(focused() === at(0, 'score_11'), 'ArrowRight moves one score component');
-    key('ArrowLeft'); assert(focused() === at(0, 'score_10'), 'ArrowLeft moves one score component');
+    key('ArrowDown'); assert(focused() === at(1, 'score_10'), 'GB-NAV-002 — ArrowDown moves one score row');
+    key('ArrowUp'); assert(focused() === at(0, 'score_10'), 'GB-NAV-001 — ArrowUp moves one score row');
+    key('ArrowRight'); assert(focused() === at(0, 'score_11'), 'GB-NAV-004 — ArrowRight moves one score component');
+    key('ArrowRight'); assert(focused() === at(0, 'score_11'),
+      'GB-NAV-006 — Arrow navigation stops before summary columns');
+    const singleCopy = clipboard('copy');
+    assert(singleCopy.text === '0.00', 'GB-COPY-001 — Single score copy preserves saved zero');
+    key('ArrowLeft'); assert(focused() === at(0, 'score_10'), 'GB-NAV-003 — ArrowLeft moves one score component');
+    key('Escape');
+    assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 0,
+      'GB-SEL-006 — Escape removes the range while keeping score focus');
+    await choose(at(0, 'score_10'));
     if (document.getElementById('gradebook-csrf')) {
     key('5'); assert(grid.querySelector('input')?.value === '5', 'Printable typing opens replace editor');
     key('Escape'); assert(!grid.querySelector('input') && focused() === at(0, 'score_10'), 'Editor Escape restores cell focus');
@@ -75,19 +91,25 @@
     assert(copied.text === '\t0.00\n1.50\t6.00', 'Copy emits score-only TSV with blank and zero');
     key('ArrowLeft', { shiftKey: true });
     assert(focused() === at(1, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 2,
-      'Forward Shift+Left shrinks from real extent');
+      'GB-RANGE-103 — Forward Shift+Left shrinks from real extent');
+    key('ArrowUp', { shiftKey: true });
+    assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 1,
+      'GB-RANGE-101 — Shift+Up shrinks the actual extent');
+    key('ArrowDown', { shiftKey: true });
+    assert(focused() === at(1, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 2,
+      'GB-RANGE-102 — Shift+Down extends the actual extent');
     await drag(at(1, 'score_11'), at(0, 'score_10'));
     assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 4,
       'Reverse drag retains top-left extent');
     key('ArrowRight', { shiftKey: true });
     assert(focused() === at(0, 'score_11') && document.querySelectorAll('.tabulator-range-selected').length === 2,
-      'Reverse Shift+Right moves from A1 toward B1');
+      'GB-RANGE-104 GB-RANGE-105 — Reverse Shift+Right moves from A1 toward B1');
     await drag(at(1, 'score_11'), at(0, 'score_10'));
     if (!document.getElementById('gradebook-csrf')) {
-      key('ArrowDown'); assert(focused() === at(1, 'score_10'), 'Read-only ArrowDown works');
+      key('ArrowDown'); assert(focused() === at(1, 'score_10'), 'GB-NAV-005 — Read-only ArrowDown works');
       key('ArrowDown'); key('ArrowDown');
       assert(focused() === at(3, 'score_10'), 'Historical score is keyboard navigable');
-      assert(!clipboard('copy').text.includes('STUDENT-'), 'Read-only copy excludes identity');
+      assert(!clipboard('copy').text.includes('STUDENT-'), 'GB-COPY-005 — Read-only and historical copy excludes identity');
       const before = requests.length; key('Delete'); clipboard('paste', '5'); key('5');
       assert(requests.length === before && !grid.querySelector('input'), 'Read-only commands make no write and open no editor');
     } else {
@@ -96,7 +118,7 @@
       await until(() => requests.length === beforePaste + 1 && at(1, 'score_11').textContent === '12.50');
       const paste = JSON.parse(requests.at(-1).body.get('batch'));
       assert(JSON.stringify(paste.enrollment_ids) === '[1,2]' && JSON.stringify(paste.component_ids) === '[10,11]',
-        'Reverse selected-range paste starts at top-left stable IDs');
+        'GB-PASTE-003 — Reverse selected-range paste starts at top-left stable IDs');
       assert(JSON.stringify(paste.values) === JSON.stringify([['5','0'],['','12.5']]), 'Paste preserves blank and zero');
       assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-range-selected').length === 4,
         'Successful paste keeps target range and top-left typing anchor');
@@ -106,6 +128,18 @@
       key('9'); assert(grid.querySelector('input')?.value === '9' && grid.querySelector('input')?.closest('.tabulator-row') === cells()[0],
         'Typing after Delete starts at top-left without a second click');
       key('Escape');
+      await drag(at(0, 'score_10'), at(1, 'score_11'));
+      const forwardStart = requests.length;
+      clipboard('paste', '4\t0\n\t5');
+      await until(() => requests.length === forwardStart + 1 && at(1, 'score_11').textContent === '5.00');
+      const forward = JSON.parse(requests.at(-1).body.get('batch'));
+      assert(JSON.stringify(forward.enrollment_ids) === '[1,2]' && JSON.stringify(forward.component_ids) === '[10,11]',
+        'GB-PASTE-002 — Forward selected-range paste starts at top-left stable IDs');
+      await choose(at(2, 'score_11'));
+      const beforeSpill = requests.length;
+      clipboard('paste', '1\t2\n3\t4');
+      assert(requests.length === beforeSpill && at(2, 'score_11').textContent === '',
+        'GB-PASTE-008 — Spill rejects the whole paste before a request');
       await choose(at(3, 'score_10'));
       const beforeHistory = requests.length; key('Delete'); clipboard('paste', '5');
       assert(requests.length === beforeHistory, 'Historical write commands reject atomically');

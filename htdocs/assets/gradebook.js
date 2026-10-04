@@ -212,7 +212,7 @@
   };
   const readyForBatch = () => {
     if (state.pendingBatch) { message('กำลังบันทึกตารางคะแนน กรุณารอสักครู่', 'saving'); return false; }
-    if (state.pendingSingles.size || state.editing) { message('รอการบันทึกช่องปัจจุบันให้เสร็จก่อน แล้วลองอีกครั้ง', 'error'); return false; }
+    if (state.editing) { message('กรุณาบันทึกหรือยกเลิกการแก้ไขช่องปัจจุบันก่อน', 'error'); return false; }
     if (state.uncertain) { message('ผลการบันทึกยังไม่แน่นอน กรุณาโหลดหน้าใหม่ก่อนแก้ไขต่อ', 'error'); return false; }
     if (!config.canScore || state.permissionLost) { message('ไม่มีสิทธิ์แก้ไขคะแนนในหน้านี้', 'error'); return false; }
     return true;
@@ -307,13 +307,34 @@
       headers: { Accept: 'application/json' }, body: new URLSearchParams(body) }); }
     finally { clearTimeout(timeout); }
   };
+  const refreshBatchPlan = plan => {
+    const targets = new Map();
+    for (const rowId of plan.enrollmentIds) for (const componentId of plan.componentIds) {
+      const row = table.getRow(rowId);
+      const cell = row && row.getCell(`score_${componentId}`);
+      if (!isWritableScoreCell(cell) || cellKey(cell) !== `${rowId}:${componentId}`)
+        throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
+      targets.set(`${rowId}:${componentId}`, cell);
+    }
+    plan.targets = targets;
+    if (plan.start) plan.start = liveCell(plan.start);
+    if (plan.end) plan.end = liveCell(plan.end);
+    return plan;
+  };
   const submitBatch = async (matrix, plan, sourceName, completion = null) => {
     const revision = ++state.revision;
     const commandOwner = state.focusOwner;
+    const priorSingles = state.singleQueue;
+    const waitingForSingles = state.pendingSingles.size > 0;
     state.pendingBatch = true; host.setAttribute('aria-busy', 'true'); updateControls();
-    message(`กำลังบันทึกคะแนน ${plan.targets.size} ช่อง`, 'saving');
+    message(waitingForSingles ? 'รอการบันทึกช่องก่อนหน้า แล้วจะทำคำสั่งช่วงที่เลือก' : `กำลังบันทึกคะแนน ${plan.targets.size} ช่อง`, 'saving');
     let committed = false;
     try {
+      if (waitingForSingles) await priorSingles;
+      if (state.uncertain) throw new Error('ผลการบันทึกก่อนหน้ายังไม่แน่นอน กรุณาโหลดหน้าใหม่ก่อนแก้ไขต่อ');
+      if (!config.canScore || state.permissionLost) throw new Error('ไม่มีสิทธิ์แก้ไขคะแนนในหน้านี้');
+      refreshBatchPlan(plan);
+      message(`กำลังบันทึกคะแนน ${plan.targets.size} ช่อง`, 'saving');
       const response = await request(`/hx/gradebook/${config.offeringId}/scores/batch`, { _token: token(), batch: JSON.stringify(matrix) });
       const json = response.headers.get('Content-Type')?.split(';')[0].trim() === 'application/json';
       const data = json ? await response.json() : null;
@@ -381,7 +402,7 @@
       // A later local edit or result owns the cell. The stale response may still carry a stale row summary.
       if (state.pendingSingles.get(key) !== revision || cell.getValue() !== typed) return;
       await apply([{ cell, value: returned.value }], [{ id: rowId, values }], revision);
-      message('', 'saved');
+      if (!state.pendingBatch) message('', 'saved');
     } catch (error) {
       if (commitConfirmed || error.name === 'AbortError' || error instanceof TypeError || error instanceof SyntaxError) state.uncertain = true;
       if (cell.getValue() === typed) {

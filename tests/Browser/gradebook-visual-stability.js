@@ -183,7 +183,7 @@
     const horizontalWindow = [scrollX, scrollY];
     for (let n = 0; n < 3; n++) { key('ArrowRight'); await frame(); }
     assert(holder.scrollLeft > 0 && [scrollX, scrollY].every((value, index) => near(value, horizontalWindow[index])),
-      'Offscreen horizontal move scrolls only the holder');
+      'GB-VIS-004 — offscreen horizontal move scrolls only the holder');
     for (let n = 0; n < 3; n++) { key('ArrowLeft'); await frame(); }
     const first = cell(0, 10).getBoundingClientRect();
     const frozen = cell(0, 10).closest('.tabulator-row').querySelector('.tabulator-frozen-left').getBoundingClientRect();
@@ -198,7 +198,7 @@
     for (let n = 0; n < 3; n++) { key('ArrowDown'); await frame(); }
     assert(holder.scrollTop > 0 && near(holder.scrollLeft, verticalLeft)
       && [scrollX, scrollY].every((value, index) => near(value, verticalWindow[index])),
-    'Offscreen vertical move scrolls only the holder');
+    'GB-VIS-004 — offscreen vertical move scrolls only the holder');
     diagnostics.push({ offscreen: { horizontalWindow, verticalWindow,
       holder: [holder.scrollLeft, holder.scrollTop], frozenRight: frozen.right, firstScoreLeft: first.left } });
     await choose(0, 10);

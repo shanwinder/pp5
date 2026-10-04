@@ -19,6 +19,7 @@
   const paste = (target, value) => { const data = new DataTransfer(); data.setData('text/plain', value);
     const event = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }); target.dispatchEvent(event); return event; };
   const originalFetch = window.fetch;
+  const singles = () => requests.filter(item => item.url.includes('/components/'));
   let delayResponse = false;
   window.fetch = async (...args) => {
     requests.push({ url: String(args[0]), body: args[1]?.body });
@@ -32,7 +33,7 @@
       await choose(cell(0, 'score_10'));
       const tsv = Array.from({ length: 2001 }, () => '5').join('\n');
       assert(paste(cell(0, 'score_10'), tsv).defaultPrevented, 'Oversize paste intercepted');
-      assert(requests.length === 0, '2,001 cells rejected before server');
+      assert(requests.length === 0, 'GB-PASTE-011 — 2,001 cells rejected before server');
       assert(document.getElementById('gradebook-batch-status').textContent.includes('2000'), 'Limit feedback visible');
       assert(cell(0, 'score_10').textContent === '', 'Oversize paste does not mutate visible score');
       output.textContent = `PASS: ${checks.length} limit checks\n` + checks.join('\n'); document.title = `PASS ${checks.length} — limit`; return;
@@ -41,28 +42,32 @@
     key(cell(0, 'score_10'), '5'); key(grid.querySelector('input'), 'ArrowDown');
     await until(() => document.activeElement === cell(1, 'score_10'));
     assert(requests.length === 1, 'First rapid entry submits one single-cell POST');
-    assert(paste(cell(1, 'score_10'), '9').defaultPrevented, 'Pending save blocks paste command');
-    assert(requests.length === 1 && document.getElementById('gradebook-batch-status').textContent.includes('รอการบันทึก'), 'No batch races pending single save');
+    assert(paste(cell(1, 'score_10'), '9').defaultPrevented, 'Pending save queues the paste command');
+    assert(requests.length === 1 && grid.hasAttribute('aria-busy')
+      && document.getElementById('gradebook-batch-status').textContent.includes('รอการบันทึก'),
+    'GB-SERVER-007 — pending range command waits behind the single save');
+    await until(() => requests.length === 2 && !grid.hasAttribute('aria-busy') && cell(1, 'score_10').textContent === '9.00');
+    assert(requests[1].url.endsWith('/scores/batch'), 'GB-SERVER-007 — queued paste executes once after the single');
     key(cell(1, 'score_10'), '6'); key(grid.querySelector('input'), 'ArrowDown');
     await until(() => document.activeElement === cell(2, 'score_10'));
     key(cell(2, 'score_10'), '7'); key(grid.querySelector('input'), 'ArrowDown');
-    await until(() => requests.length === 3 && cell(0, 'score_10').textContent === '5.00'
+    await until(() => singles().length === 3 && cell(0, 'score_10').textContent === '5.00'
       && !grid.querySelector('[data-pp5-saving]'));
-    assert(requests.length === 3 && requests.every(r => r.url.includes('/components/10/enrollments/')), 'Rapid vertical entry sends exactly three single writes');
-    assert(requests.map(r => r.url.match(/enrollments\/(\d+)/)?.[1]).join(',') === '1,2,3', 'Rapid writes stay in roster order with stable IDs');
-    assert(document.activeElement === cell(2, 'score_10'), 'Late responses do not steal newest focus');
-    assert(cell(0, 'score_10').textContent === '5.00' && cell(1, 'score_10').textContent === '6.00', 'Queued responses reconcile independently');
+    assert(singles().length === 3 && singles().every(r => r.url.includes('/components/10/enrollments/')), 'Rapid vertical entry sends exactly three single writes');
+    assert(singles().map(r => r.url.match(/enrollments\/(\d+)/)?.[1]).join(',') === '1,2,3', 'Rapid writes stay in roster order with stable IDs');
+    assert(document.activeElement === cell(2, 'score_10'), 'GB-SERVER-006 — late responses do not steal newest focus');
+    assert(cell(0, 'score_10').textContent === '5.00' && cell(1, 'score_10').textContent === '6.00', 'GB-SERVER-005 — queued responses reconcile independently');
     await choose(cell(2, 'score_10'));
     const oneStart = requests.length;
     key(cell(2, 'score_10'), 'Delete');
     await until(() => requests.length === oneStart + 1 && cell(2, 'score_10').textContent === '');
-    assert(requests.at(-1).url.endsWith('/scores/batch'), '1 by 1 selected Delete uses batch endpoint');
-    assert(JSON.stringify(JSON.parse(requests.at(-1).body.get('batch')).values) === '[[""]]', '1 by 1 clear sends explicit blank');
+    assert(requests.at(-1).url.endsWith('/scores/batch'), 'GB-CLEAR-001 — 1 by 1 selected Delete uses batch endpoint');
+    assert(JSON.stringify(JSON.parse(requests.at(-1).body.get('batch')).values) === '[[""]]', 'GB-CLEAR-001 — 1 by 1 clear sends explicit blank');
     await choose(cell(2, 'score_10'));
     const backspaceStart = requests.length;
     key(cell(2, 'score_10'), 'Backspace');
     await until(() => requests.length === backspaceStart + 1 && !grid.hasAttribute('aria-busy'));
-    assert(requests.at(-1).url.endsWith('/scores/batch'), 'Selected Backspace also uses batch endpoint');
+    assert(requests.at(-1).url.endsWith('/scores/batch'), 'GB-CLEAR-002 — selected Backspace also uses batch endpoint');
     await choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
     const editor = grid.querySelector('input'), editorStart = requests.length;
     assert(editor?.value === '6.00', 'Explicit edit preserves existing value');
@@ -82,7 +87,7 @@
     key(cell(1, 'score_10'), 'ArrowRight');
     assert(document.activeElement === cell(1, 'score_11'), 'Arrow Right selects last score component');
     key(cell(1, 'score_11'), 'Tab');
-    assert(!grid.contains(document.activeElement), 'Tab from last score exits grid');
+    assert(!grid.contains(document.activeElement), 'GB-NAV-007 — Tab from last score exits grid');
     delayResponse = true;
     await choose(cell(0, 'score_11'));
     key(cell(0, 'score_11'), '5'); key(grid.querySelector('input'), 'Enter');
@@ -92,7 +97,7 @@
     assert(document.activeElement === outside && cell(0, 'score_11').dataset.pp5Saving === 'true',
       'User can leave the grid while a save is pending');
     await until(() => cell(0, 'score_11').textContent === '5.00' && !cell(0, 'score_11').dataset.pp5Saving);
-    assert(document.activeElement === outside, 'Authoritative response does not steal external focus');
+    assert(document.activeElement === outside, 'GB-SERVER-011 — authoritative response does not steal external focus');
     output.textContent = `PASS: ${checks.length} race and keyboard checks\n` + checks.join('\n'); document.title = `PASS ${checks.length} — races`;
   } catch (error) {
     output.textContent = `FAIL after ${checks.length}: ${error.message}\n` + checks.join('\n'); document.title = 'FAIL — races';

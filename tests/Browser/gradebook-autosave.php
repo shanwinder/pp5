@@ -27,9 +27,27 @@ $assets = [
     '/grid-parity-tests.js' => '/tests/Browser/gradebook-spreadsheet-parity.js',
     '/grid-direct-tests.js' => '/tests/Browser/gradebook-direct-entry.js',
     '/grid-visual-tests.js' => '/tests/Browser/gradebook-visual-stability.js',
+    '/grid-golden-tests.js' => '/tests/Browser/gradebook-golden-journeys.js',
 ];
 if (isset($assets[$path])) {
-    header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8'); readfile(dirname(__DIR__, 2) . $assets[$path]); exit;
+    header('Content-Type: '.(str_ends_with($path,'.css') ? 'text/css' : 'text/javascript').'; charset=UTF-8');
+    $assetPath = dirname(__DIR__, 2) . $assets[$path];
+    if ($path === '/assets/gradebook.js') {
+        header('Cache-Control: no-store');
+        // Fixture-only diagnostics expose private coordination state without changing production bytes.
+        $source = file_get_contents($assetPath);
+        $source = str_replace('  let table;', '  window.__gradebookTiming = { snapshot: () => ({ pendingSingles: state.pendingSingles.size, editing: Boolean(state.editing), pendingBatch: state.pendingBatch, uncertain: state.uncertain }), readyRejections: [] };' . "\n" . '  let table;', $source);
+        $readyStart = strpos($source, '  const readyForBatch = () => {');
+        $readyEnd = $readyStart === false ? false : strpos($source, '  const parseTsv =', $readyStart);
+        if ($readyStart === false || $readyEnd === false) { http_response_code(500); exit; }
+        $ready = substr($source, $readyStart, $readyEnd - $readyStart);
+        $ready = str_replace('return false;',
+            'window.__gradebookTiming.readyRejections.push({ pendingSingles: state.pendingSingles.size, editing: Boolean(state.editing) }); return false;',
+            $ready);
+        $source = substr($source, 0, $readyStart).$ready.substr($source, $readyEnd);
+        echo $source; exit;
+    }
+    readfile($assetPath); exit;
 }
 if ($path === '/hx/gradebook/1/scores/batch') {
     usleep(150000);
@@ -104,16 +122,16 @@ if ($path === '/matrix') {
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','direct','visual','active','error','empty','no-components','nojs','large','workload','stress'], true);
+$canScore = in_array($mode, ['editable','direct','visual','golden','active','error','empty','no-components','nojs','large','workload','stress'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
     3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
-if (in_array($mode, ['direct', 'visual'], true)) {
+if (in_array($mode, ['direct', 'visual', 'golden'], true)) {
     $fixtureScores[2][10] = '12.50';
     foreach ($fixtureScores as &$scores) { $scores[12] = null; }
     unset($scores);
 }
-if ($mode === 'visual') {
+if (in_array($mode, ['visual', 'golden'], true)) {
     foreach ($fixtureScores as &$scores) { $scores[13] = null; }
     unset($scores);
 }
@@ -136,8 +154,8 @@ $offering = ['id' => 1, 'year_be' => 2569, 'academic_year_status' => $mode === '
     'classroom_code' => 'ROOM', 'classroom_name' => 'ห้องทดสอบ', 'subject_code' => 'SUBJECT', 'subject_name' => 'วิชาทดสอบ', 'term_no' => 1, 'status' => 'ACTIVE'];
 $components = [['id' => 10, 'code' => 'WORK', 'name_th' => $path === '/frame' ? str_repeat('หัวข้อคะแนนภาษาไทย',4) : 'งาน', 'max_score' => '15.50', 'sort_order'=>0, 'status'=>'ACTIVE'],
     ['id' => 11, 'code' => 'EXAM', 'name_th' => 'สอบ', 'max_score' => '20.00', 'sort_order'=>1, 'status'=>'ACTIVE']];
-if (in_array($mode, ['direct', 'visual'], true)) $components[] = ['id'=>12,'code'=>'THIRD','name_th'=>'หัวข้อที่สาม','max_score'=>'20.00','sort_order'=>2,'status'=>'ACTIVE'];
-if ($mode === 'visual') $components[] = ['id'=>13,'code'=>'FOURTH','name_th'=>'หัวข้อที่สี่','max_score'=>'20.00','sort_order'=>3,'status'=>'ACTIVE'];
+if (in_array($mode, ['direct', 'visual', 'golden'], true)) $components[] = ['id'=>12,'code'=>'THIRD','name_th'=>'หัวข้อที่สาม','max_score'=>'20.00','sort_order'=>2,'status'=>'ACTIVE'];
+if (in_array($mode, ['visual', 'golden'], true)) $components[] = ['id'=>13,'code'=>'FOURTH','name_th'=>'หัวข้อที่สี่','max_score'=>'20.00','sort_order'=>3,'status'=>'ACTIVE'];
 if ($mode === 'no-components') {
     $components = [];
     foreach ($rows as &$row) {
@@ -180,9 +198,10 @@ $ui = ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนข้อ�
 $isSetup = in_array($mode, ['setup','empty-setup','inactive-setup','error-setup','closed-setup'], true);
 $testScript = [
     'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
-    'workload'=>'/grid-workload-tests.js', 'parity'=>'/grid-parity-tests.js',
+    'workload'=>'/grid-workload-tests.js', 'parity'=>'/grid-parity-tests.js', 'golden'=>'/grid-golden-tests.js',
     'direct'=>'/grid-direct-tests.js', 'visual'=>'/grid-visual-tests.js',
 ][$_GET['tests'] ?? ''] ?? '/grid-tests.js';
+if (isset($assets[$testScript])) $testScript .= '?v='.filemtime(dirname(__DIR__, 2).$assets[$testScript]);
 $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'canScore'=>$canScore,'canManageComponents'=>true,'csrfToken'=>'browser-fixture-token','gradebook'=>$gradebook,
     'offering'=>$offering, 'components'=>$setupComponents, 'canMutate'=>$isSetup && $mode !== 'closed-setup',
@@ -192,4 +211,5 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
     'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.$testScript.'" defer></script>' : '',
 ]);
+if (($_GET['tests'] ?? '') === 'golden') $html = str_replace('/assets/gradebook.js?v=', '/assets/gradebook.js?fixture=timing&v=', $html);
 echo $html;

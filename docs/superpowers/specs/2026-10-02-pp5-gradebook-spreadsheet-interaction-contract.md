@@ -1,7 +1,7 @@
 # PP5 Gradebook spreadsheet interaction contract
 
 **Date:** 2026-10-02
-**Status:** Task 10.6d clarified interaction contract; Task 10.6e adds visual stability. Product-owner manual acceptance remains separate.
+**Status:** Task 10.6d clarified interaction contract; Task 10.6e added visual stability and was confirmed comfortable by the product owner. Task 10.6f reproduced and repaired the pending-single clear regression and added the 124-ID behavior registry; product-owner final acceptance remains separate.
 
 This specification is mandatory for later Gradebook work, including Task 11. The principle is **Online first, Excel familiar**. The grid handles interaction and display. The PP5 server remains authoritative for permission, tenancy, lifecycle, score validation, NULL versus zero, transactions, audit, and summaries.
 
@@ -31,7 +31,7 @@ Moving to an adjacent score cell that is already fully visible must not move the
 
 The target owns focus and selection immediately after a navigation key. A delayed response for the previous score must not restore focus to that score or reclaim its viewport. Authoritative normalization (for example `5` to `5.00`) and summary updates must remain visible without a row or grid jump. Save-status text changes must not collapse the page layout around the Gradebook. No animation, debounce, or delayed save is used to conceal movement.
 
-Writing requires a current enrollment, score permission, writable lifecycle, and no permission-loss or uncertain lock. Selection and navigation do not imply permission to write. A pending single save makes a range write wait or reject visibly; it must never race or silently disappear. A rejected single score leaves attempted text and its error visible, with old server summary intact and immediate correction possible.
+Writing requires a current enrollment, score permission, writable lifecycle, and no permission-loss or uncertain lock. Selection and navigation do not imply permission to write. **GB-COMMAND-001:** A valid user range command issued while an earlier single save is pending must not be dropped with a request to try again when it can be serialized safely. It must wait for the earlier single-save queue to settle, then execute exactly once, or stop without sending a batch if permission is lost or the prior result is uncertain. The batch must never race the earlier single write. A rejected single score leaves attempted text and its error visible, with old server summary intact and immediate correction possible.
 
 ## Clipboard and range commands
 
@@ -46,3 +46,11 @@ The only write endpoints are the existing single-cell score POST and Task 8 batc
 Tabulator is a local pinned renderer. Native uncontrolled clearing, drag fill, formulas, row/column insertion or deletion, arbitrary sort/filter/reorder, Undo/Redo and browser totals remain disabled or non-authoritative. The 10.6a single visible editor boundary, stable row height and stable column width remain required. First-party Gradebook adapter and theme URLs carry a content-change-derived version; vendor URLs remain local and pinned.
 
 Tests must exercise pointer clicks and drags, keyboard shortcuts, and clipboard in a real browser without focusing cells or assigning internal active state in the test. Deterministic synthetic event tests may supplement that proof and must be labeled as such. The isolated PHP fixture does not prove authenticated application integration. A real MAMP Gradebook route with a safe authenticated session is a separate acceptance attempt; product-owner manual spreadsheet-feel approval is the final gate.
+
+## Interaction release gate
+
+The source-of-truth order is: product-owner accepted behavior, the [machine-readable behavior registry](2026-10-02-pp5-gradebook-behavior-registry.json), this contract, golden journeys, focused tests, then implementation. Current implementation behavior does not override an accepted interaction.
+
+Every future change to Gradebook JavaScript, CSS, views, Tabulator integration, or browser tests must run the registry validator, all 13 golden journeys A–M, all focused behavior suites, a real-browser critical pointer/keyboard/clipboard journey, and the relevant authenticated MAMP workflow when a safe session is available. Report synthetic, real-browser, and MAMP evidence separately. Do not claim that the Gradebook regression gate passed when the registry validator or any required journey failed or was not run.
+
+An intentional change to an accepted behavior must be explicit in the same commit: update this contract, the registry record, its test mapping, corrective history, and product-owner decision evidence. Removing a test because the current implementation fails it is not an accepted behavior change.

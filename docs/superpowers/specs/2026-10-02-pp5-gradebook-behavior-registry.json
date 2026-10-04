@@ -1,0 +1,2289 @@
+{
+  "schema_version": 1,
+  "authority": "Product-owner accepted Gradebook interactions through Task 10.6f",
+  "system_rules": [
+    {
+      "id": "GB-COMMAND-001",
+      "rule": "คำสั่งของผู้ใช้ที่มาถูกต้องในขณะ save ก่อนหน้ายัง pending ต้องไม่ถูก drop แล้วให้ลองใหม่ ถ้าสามารถ serialize อย่างปลอดภัยได้",
+      "execution": "Capture the valid range command, wait for the earlier single-save queue, then execute it exactly once. Stop without a batch or automatic retry when the prior result is uncertain or permission is lost."
+    }
+  ],
+  "behaviors": [
+    {
+      "id": "GB-CLEAR-001",
+      "title": "1x1 Delete clears via atomic range infrastructure",
+      "state": "clear",
+      "trigger": "keyboard:Delete on one score",
+      "expected": "1x1 Delete clears via atomic range infrastructure.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-002",
+      "title": "1x1 Backspace clears",
+      "state": "clear",
+      "trigger": "keyboard:Backspace on one score",
+      "expected": "1x1 Backspace clears.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-003",
+      "title": "forward multi-cell real pointer drag + Delete clears whole range",
+      "state": "clear",
+      "trigger": "keyboard:Delete after forward pointer drag",
+      "expected": "Forward multi-cell real pointer drag + Delete clears whole range.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-004",
+      "title": "forward multi-cell real pointer drag + Backspace clears whole range",
+      "state": "clear",
+      "trigger": "keyboard:Backspace after forward pointer drag",
+      "expected": "Forward multi-cell real pointer drag + Backspace clears whole range.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-005",
+      "title": "reverse drag + Delete clears correct rectangle",
+      "state": "clear",
+      "trigger": "keyboard:Delete after reverse pointer drag",
+      "expected": "Reverse drag + Delete clears correct rectangle.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "E"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-006",
+      "title": "mixed current/history rejects whole write",
+      "state": "clear",
+      "trigger": "keyboard:Delete on mixed current/history range",
+      "expected": "Mixed current/history rejects whole write.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-007",
+      "title": "no partial clear",
+      "state": "clear",
+      "trigger": "server:batch clear failure or success",
+      "expected": "No partial clear.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D",
+        "E",
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-008",
+      "title": "successful clear keeps useful selected rectangle",
+      "state": "clear",
+      "trigger": "server:successful range clear",
+      "expected": "Successful clear keeps useful selected rectangle.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-009",
+      "title": "top-left becomes typing anchor",
+      "state": "clear",
+      "trigger": "keyboard:focus after range clear",
+      "expected": "Top-left becomes typing anchor.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-010",
+      "title": "type immediately after clear without clicking",
+      "state": "clear",
+      "trigger": "keyboard:type after range clear",
+      "expected": "Type immediately after clear without clicking.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-011",
+      "title": "direct-entry commit then immediate range drag and Delete is not lost",
+      "state": "clear",
+      "trigger": "keyboard:Delete immediately after direct-entry Arrow and real pointer drag",
+      "expected": "A valid 3x3 Delete command waits for the earlier single save, then executes exactly once without racing it or requiring the user to retry.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": ["real_browser", "mamp_if_safe"],
+      "automated_tests": ["tests/Browser/gradebook-golden-journeys.js"],
+      "real_browser_journeys": ["J", "L"],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-CLEAR-012",
+      "title": "direct-entry commit then immediate range drag and Backspace is not lost",
+      "state": "clear",
+      "trigger": "keyboard:Backspace immediately after direct-entry Arrow and real pointer drag",
+      "expected": "A valid 3x3 Backspace command waits for the earlier single save, then executes exactly once without racing it or requiring the user to retry.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": ["real_browser", "mamp_if_safe"],
+      "automated_tests": ["tests/Browser/gradebook-golden-journeys.js"],
+      "real_browser_journeys": ["K", "M"],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-COPY-001",
+      "title": "single score copy",
+      "state": "clipboard",
+      "trigger": "clipboard:copy one selected score",
+      "expected": "Single score copy.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-COPY-002",
+      "title": "multi-cell score TSV",
+      "state": "clipboard",
+      "trigger": "clipboard:copy rectangular score selection",
+      "expected": "Multi-cell score TSV.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-COPY-003",
+      "title": "blank field empty",
+      "state": "clipboard",
+      "trigger": "clipboard:copy rectangle containing blank",
+      "expected": "Blank field empty.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-COPY-004",
+      "title": "zero non-empty",
+      "state": "clipboard",
+      "trigger": "clipboard:copy rectangle containing saved zero",
+      "expected": "Zero non-empty.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-COPY-005",
+      "title": "read-only/history copy allowed",
+      "state": "clipboard",
+      "trigger": "clipboard:copy historical score",
+      "expected": "Read-only/history copy allowed.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-COPY-006",
+      "title": "no identity/summary leakage",
+      "state": "clipboard",
+      "trigger": "clipboard:copy score rectangle beside identity/summary",
+      "expected": "No identity/summary leakage.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-001",
+      "title": "printable typing from selected score replaces old value",
+      "state": "direct_entry",
+      "trigger": "keyboard:printable on selected score",
+      "expected": "Printable typing from selected score replaces old value.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "A"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-002",
+      "title": "ArrowRight commit+move",
+      "state": "direct_entry",
+      "trigger": "editor:ArrowRight",
+      "expected": "ArrowRight commit+move.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "A",
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-003",
+      "title": "ArrowLeft commit+move",
+      "state": "direct_entry",
+      "trigger": "editor:ArrowLeft",
+      "expected": "ArrowLeft commit+move.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-004",
+      "title": "ArrowDown commit+move",
+      "state": "direct_entry",
+      "trigger": "editor:ArrowDown",
+      "expected": "ArrowDown commit+move.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "B",
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-005",
+      "title": "ArrowUp commit+move",
+      "state": "direct_entry",
+      "trigger": "editor:ArrowUp",
+      "expected": "ArrowUp commit+move.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-006",
+      "title": "Enter / Shift+Enter",
+      "state": "direct_entry",
+      "trigger": "editor:Enter or Shift+Enter",
+      "expected": "Enter / Shift+Enter.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-007",
+      "title": "Tab / Shift+Tab",
+      "state": "direct_entry",
+      "trigger": "editor:Tab or Shift+Tab",
+      "expected": "Tab / Shift+Tab.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-008",
+      "title": "Escape cancel",
+      "state": "direct_entry",
+      "trigger": "editor:Escape",
+      "expected": "Escape cancel.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-009",
+      "title": "rapid horizontal entry",
+      "state": "direct_entry",
+      "trigger": "keyboard:rapid row-wise direct entry",
+      "expected": "Rapid horizontal entry.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "A",
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-DIRECT-010",
+      "title": "rapid vertical entry",
+      "state": "direct_entry",
+      "trigger": "keyboard:rapid column-wise direct entry",
+      "expected": "Rapid vertical entry.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "B"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-001",
+      "title": "double-click opens existing value",
+      "state": "explicit_edit",
+      "trigger": "pointer:double-click score",
+      "expected": "Double-click opens existing value.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "C"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-002",
+      "title": "Enter opens explicit edit",
+      "state": "explicit_edit",
+      "trigger": "keyboard:Enter on score",
+      "expected": "Enter opens explicit edit.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-003",
+      "title": "F2 opens explicit edit",
+      "state": "explicit_edit",
+      "trigger": "keyboard:F2 on score",
+      "expected": "F2 opens explicit edit.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-004",
+      "title": "Left/Right remain caret",
+      "state": "explicit_edit",
+      "trigger": "editor:ArrowLeft or ArrowRight",
+      "expected": "Left/Right remain caret.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "C"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-005",
+      "title": "Up/Down commit+move",
+      "state": "explicit_edit",
+      "trigger": "editor:ArrowUp or ArrowDown",
+      "expected": "Up/Down commit+move.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "C"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-006",
+      "title": "native Backspace/Delete text editing",
+      "state": "explicit_edit",
+      "trigger": "editor:Backspace or Delete",
+      "expected": "Native Backspace/Delete text editing.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "C"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-007",
+      "title": "native editor copy",
+      "state": "explicit_edit",
+      "trigger": "editor:native copy shortcut",
+      "expected": "Native editor copy.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-008",
+      "title": "native editor paste",
+      "state": "explicit_edit",
+      "trigger": "editor:native paste shortcut",
+      "expected": "Native editor paste.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-direct-entry.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-009",
+      "title": "Escape restores previous value",
+      "state": "explicit_edit",
+      "trigger": "editor:Escape",
+      "expected": "Escape restores previous value.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "C"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-EDIT-010",
+      "title": "IME/composition guard",
+      "state": "explicit_edit",
+      "trigger": "editor:IME composition and Enter",
+      "expected": "IME/composition guard.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-FILL-001",
+      "title": "fill writable selected range",
+      "state": "fill",
+      "trigger": "range-action:Fill selected writable scores",
+      "expected": "Fill writable selected range.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-FILL-002",
+      "title": "one atomic batch",
+      "state": "fill",
+      "trigger": "range-action:submit Fill",
+      "expected": "One atomic batch.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-FILL-003",
+      "title": "mixed non-writable rejects whole command",
+      "state": "fill",
+      "trigger": "range-action:Fill mixed current/history range",
+      "expected": "Mixed non-writable rejects whole command.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-FILL-004",
+      "title": "top-left typing anchor after fill",
+      "state": "fill",
+      "trigger": "keyboard:focus after Fill",
+      "expected": "Top-left typing anchor after fill.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-FILL-005",
+      "title": "focus returns after Gradebook-owned Fill action",
+      "state": "fill",
+      "trigger": "range-action:complete Fill from control",
+      "expected": "Focus returns after Gradebook-owned Fill action.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-HIST-001",
+      "title": "historical selectable",
+      "state": "historical",
+      "trigger": "pointer:select historical score",
+      "expected": "Historical selectable.",
+      "mutates": false,
+      "permission_mode": "historical",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-HIST-002",
+      "title": "historical navigable",
+      "state": "historical",
+      "trigger": "keyboard:navigate historical score",
+      "expected": "Historical navigable.",
+      "mutates": false,
+      "permission_mode": "historical",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-HIST-003",
+      "title": "historical copyable",
+      "state": "historical",
+      "trigger": "clipboard:copy historical score",
+      "expected": "Historical copyable.",
+      "mutates": false,
+      "permission_mode": "historical",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-HIST-004",
+      "title": "historical not writable",
+      "state": "historical",
+      "trigger": "keyboard:write historical score",
+      "expected": "Historical not writable.",
+      "mutates": false,
+      "permission_mode": "historical",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-001",
+      "title": "ArrowUp",
+      "state": "navigation",
+      "trigger": "keyboard:ArrowUp",
+      "expected": "Active score moves to the previous readable row.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-002",
+      "title": "ArrowDown",
+      "state": "navigation",
+      "trigger": "keyboard:ArrowDown",
+      "expected": "Active score moves to the next readable row.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-003",
+      "title": "ArrowLeft",
+      "state": "navigation",
+      "trigger": "keyboard:ArrowLeft",
+      "expected": "Active score moves to the previous readable component.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-004",
+      "title": "ArrowRight",
+      "state": "navigation",
+      "trigger": "keyboard:ArrowRight",
+      "expected": "Active score moves to the next readable component.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-005",
+      "title": "navigation includes readable historical/read-only scores",
+      "state": "navigation",
+      "trigger": "keyboard:Arrow across current/history boundary",
+      "expected": "Historical and read-only scores remain in the navigation path.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-006",
+      "title": "navigation never enters identity/summary",
+      "state": "navigation",
+      "trigger": "keyboard:Arrow at score boundary",
+      "expected": "Identity, row type, and summary cells are skipped.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-NAV-007",
+      "title": "Tab exits grid at horizontal score boundary",
+      "state": "navigation",
+      "trigger": "keyboard:Tab from last score component",
+      "expected": "Focus leaves the grid in normal document tab order.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-001",
+      "title": "single-cell paste from active",
+      "state": "paste",
+      "trigger": "clipboard:paste scalar on active score",
+      "expected": "Single-cell paste from active.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-002",
+      "title": "forward selected-range paste starts top-left",
+      "state": "paste",
+      "trigger": "clipboard:paste from forward range",
+      "expected": "Forward selected-range paste starts top-left.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-003",
+      "title": "reverse selected-range paste starts top-left",
+      "state": "paste",
+      "trigger": "clipboard:paste from reverse range",
+      "expected": "Reverse selected-range paste starts top-left.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-004",
+      "title": "2x2 one batch request",
+      "state": "paste",
+      "trigger": "clipboard:paste 2x2 TSV",
+      "expected": "2x2 one batch request.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-005",
+      "title": "3x3 one batch request",
+      "state": "paste",
+      "trigger": "clipboard:paste 3x3 TSV",
+      "expected": "3x3 one batch request.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-workload.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-006",
+      "title": "blank -> NULL request",
+      "state": "paste",
+      "trigger": "clipboard:paste TSV with blank",
+      "expected": "Blank -> NULL request.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-007",
+      "title": "zero remains real zero",
+      "state": "paste",
+      "trigger": "clipboard:paste TSV with zero",
+      "expected": "Zero remains real zero.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-008",
+      "title": "spill rejects whole operation",
+      "state": "paste",
+      "trigger": "clipboard:paste beyond writable bounds",
+      "expected": "Spill rejects whole operation.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-009",
+      "title": "no optimistic committed display",
+      "state": "paste",
+      "trigger": "clipboard:paste before server response",
+      "expected": "No optimistic committed display.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-010",
+      "title": "authoritative response reconciles",
+      "state": "paste",
+      "trigger": "server:successful paste response",
+      "expected": "Authoritative response reconciles.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "F"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-011",
+      "title": "paste above 2000-cell limit rejects before request",
+      "state": "paste",
+      "trigger": "clipboard:paste 2001-cell matrix",
+      "expected": "No server request or visible score mutation occurs; the limit is explained.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-001",
+      "title": "real forward pointer drag selects rectangle",
+      "state": "range_selection",
+      "trigger": "pointer:drag top-left to bottom-right",
+      "expected": "Real forward pointer drag selects rectangle.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D",
+        "F",
+        "G",
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-002",
+      "title": "real reverse pointer drag selects rectangle",
+      "state": "range_selection",
+      "trigger": "pointer:drag bottom-right to top-left",
+      "expected": "Real reverse pointer drag selects rectangle.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "E"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-003",
+      "title": "anchor is actual start",
+      "state": "range_selection",
+      "trigger": "pointer:press start score",
+      "expected": "Anchor is actual start.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-004",
+      "title": "extent is actual end",
+      "state": "range_selection",
+      "trigger": "pointer:release end score",
+      "expected": "Extent is actual end.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-005",
+      "title": "active = extent after pointer release",
+      "state": "range_selection",
+      "trigger": "pointer:release selected rectangle",
+      "expected": "Active = extent after pointer release.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-006",
+      "title": "range is score-cell-only",
+      "state": "range_selection",
+      "trigger": "pointer:drag across score and non-score columns",
+      "expected": "Range is score-cell-only.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-007",
+      "title": "range remains visible and correctly painted",
+      "state": "range_selection",
+      "trigger": "selection:paint after drag",
+      "expected": "Range remains visible and correctly painted.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "D"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-008",
+      "title": "range survives normal virtualization/re-render where relevant",
+      "state": "range_selection",
+      "trigger": "virtualization:scroll selected rows out and back",
+      "expected": "Range survives normal virtualization/re-render where relevant.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-workload.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-101",
+      "title": "Shift+Up",
+      "state": "range_selection",
+      "trigger": "keyboard:Shift+ArrowUp",
+      "expected": "The score-only rectangle extends from the fixed anchor to the new extent.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-102",
+      "title": "Shift+Down",
+      "state": "range_selection",
+      "trigger": "keyboard:Shift+ArrowDown",
+      "expected": "The score-only rectangle extends from the fixed anchor to the new extent.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-103",
+      "title": "Shift+Left",
+      "state": "range_selection",
+      "trigger": "keyboard:Shift+ArrowLeft",
+      "expected": "The score-only rectangle extends from the fixed anchor to the new extent.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-104",
+      "title": "Shift+Right",
+      "state": "range_selection",
+      "trigger": "keyboard:Shift+ArrowRight",
+      "expected": "The score-only rectangle extends from the fixed anchor to the new extent.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RANGE-105",
+      "title": "reverse range extension uses actual extent",
+      "state": "range_selection",
+      "trigger": "keyboard:Shift+Arrow reverse extent",
+      "expected": "The score-only rectangle extends from the fixed anchor to the new extent.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RO-001",
+      "title": "read-only selectable",
+      "state": "read_only",
+      "trigger": "pointer:select read-only score",
+      "expected": "Read-only selectable.",
+      "mutates": false,
+      "permission_mode": "read_only",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RO-002",
+      "title": "read-only Arrow navigation",
+      "state": "read_only",
+      "trigger": "keyboard:Arrow on read-only score",
+      "expected": "Read-only Arrow navigation.",
+      "mutates": false,
+      "permission_mode": "read_only",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RO-003",
+      "title": "read-only copy",
+      "state": "read_only",
+      "trigger": "clipboard:copy read-only score",
+      "expected": "Read-only copy.",
+      "mutates": false,
+      "permission_mode": "read_only",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RO-004",
+      "title": "read-only no editor",
+      "state": "read_only",
+      "trigger": "keyboard:edit on read-only score",
+      "expected": "Read-only no editor.",
+      "mutates": false,
+      "permission_mode": "read_only",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RO-005",
+      "title": "read-only no paste",
+      "state": "read_only",
+      "trigger": "clipboard:paste read-only score",
+      "expected": "Read-only no paste.",
+      "mutates": false,
+      "permission_mode": "read_only",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RO-006",
+      "title": "read-only no clear/fill",
+      "state": "read_only",
+      "trigger": "keyboard:clear or Fill read-only score",
+      "expected": "Read-only no clear/fill.",
+      "mutates": false,
+      "permission_mode": "read_only",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RUNTIME-001",
+      "title": "fallback hidden after Tabulator success",
+      "state": "runtime",
+      "trigger": "runtime:Tabulator build succeeds",
+      "expected": "Fallback hidden after Tabulator success.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RUNTIME-002",
+      "title": "fallback score inputs disabled",
+      "state": "runtime",
+      "trigger": "runtime:Tabulator build succeeds",
+      "expected": "Fallback score inputs disabled.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RUNTIME-003",
+      "title": "only one writable engine",
+      "state": "runtime",
+      "trigger": "runtime:initialize writable grid",
+      "expected": "Only one writable engine.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RUNTIME-004",
+      "title": "current cache-busted Gradebook JS loaded",
+      "state": "runtime",
+      "trigger": "asset:load Gradebook adapter and theme",
+      "expected": "Current cache-busted Gradebook JS loaded.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RUNTIME-005",
+      "title": "vendor local/pinned",
+      "state": "runtime",
+      "trigger": "asset:load local Tabulator vendor",
+      "expected": "The audited local Tabulator JS, CSS, and license hashes match the pinned files.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-behavior-registry-check.php"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-RUNTIME-006",
+      "title": "no-JavaScript semantic fallback stays readable",
+      "state": "runtime",
+      "trigger": "runtime:Gradebook JavaScript unavailable",
+      "expected": "The semantic score table remains visible and readable without duplicate write controls.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-layout.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-001",
+      "title": "35x20 interaction",
+      "state": "responsive_virtualization",
+      "trigger": "fixture:35x20 current scores",
+      "expected": "35x20 interaction.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-workload.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-002",
+      "title": "100x40 navigation",
+      "state": "responsive_virtualization",
+      "trigger": "fixture:100x40 scores",
+      "expected": "100x40 navigation.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-workload.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-003",
+      "title": "virtualized rows preserve active/selection semantics",
+      "state": "responsive_virtualization",
+      "trigger": "virtualization:scroll or navigate rows",
+      "expected": "Virtualized rows preserve active/selection semantics.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-workload.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-004",
+      "title": "390 px",
+      "state": "responsive_virtualization",
+      "trigger": "viewport:390px",
+      "expected": "The Gradebook remains contained and usable at 390px without document overflow.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-layout.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-005",
+      "title": "768 px",
+      "state": "responsive_virtualization",
+      "trigger": "viewport:768px",
+      "expected": "The Gradebook remains contained and usable at 768px without document overflow.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-layout.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-006",
+      "title": "1024 px",
+      "state": "responsive_virtualization",
+      "trigger": "viewport:1024px",
+      "expected": "The Gradebook remains contained and usable at 1024px without document overflow.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-layout.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SCALE-007",
+      "title": "1440 px",
+      "state": "responsive_virtualization",
+      "trigger": "viewport:1440px",
+      "expected": "The Gradebook remains contained and usable at 1440px without document overflow.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-layout.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SEL-001",
+      "title": "single pointer click selects one score cell",
+      "state": "selection",
+      "trigger": "pointer:click score",
+      "expected": "Single pointer click selects one score cell.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "A"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SEL-002",
+      "title": "clicked score gets browser focus",
+      "state": "selection",
+      "trigger": "pointer:click score",
+      "expected": "Clicked score gets browser focus.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "A"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SEL-003",
+      "title": "Tab into Gradebook establishes first score cell",
+      "state": "selection",
+      "trigger": "keyboard:Tab into grid",
+      "expected": "Tab into Gradebook establishes first score cell.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SEL-004",
+      "title": "identity / row type / summary are not score selections",
+      "state": "selection",
+      "trigger": "pointer:click identity, row type, or summary",
+      "expected": "Identity / row type / summary are not score selections.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SEL-005",
+      "title": "one coherent roving Tab stop",
+      "state": "selection",
+      "trigger": "selection:move active score",
+      "expected": "One coherent roving Tab stop.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "H"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SEL-006",
+      "title": "Escape clears grid range but keeps the active score focused",
+      "state": "selection",
+      "trigger": "keyboard:Escape on focused grid score",
+      "expected": "The selected rectangle is removed and the active score retains browser focus.",
+      "mutates": false,
+      "permission_mode": "readable_score",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-spreadsheet-parity.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-001",
+      "title": "single success requires correct success marker",
+      "state": "server_reconciliation",
+      "trigger": "server:single response missing success marker",
+      "expected": "Single success requires correct success marker.",
+      "mutates": true,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-errors.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-002",
+      "title": "batch success marker required",
+      "state": "server_reconciliation",
+      "trigger": "server:batch response missing success marker",
+      "expected": "Batch success marker required.",
+      "mutates": true,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-errors.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-003",
+      "title": "server score normalization authoritative",
+      "state": "server_reconciliation",
+      "trigger": "server:normalized score response",
+      "expected": "Server score normalization authoritative.",
+      "mutates": true,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-004",
+      "title": "server summaries authoritative",
+      "state": "server_reconciliation",
+      "trigger": "server:summary response",
+      "expected": "Server summaries authoritative.",
+      "mutates": true,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-005",
+      "title": "late response cannot overwrite newer value",
+      "state": "server_reconciliation",
+      "trigger": "server:late response after newer edit",
+      "expected": "Late response cannot overwrite newer value.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-006",
+      "title": "late response cannot reclaim focus",
+      "state": "server_reconciliation",
+      "trigger": "server:late response after focus moves",
+      "expected": "Late response cannot reclaim focus.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-007",
+      "title": "pending single does not race batch command",
+      "state": "server_reconciliation",
+      "trigger": "server:batch attempted during pending single",
+      "expected": "Pending single does not race batch command.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-008",
+      "title": "known rejection remains correctable",
+      "state": "server_reconciliation",
+      "trigger": "server:known rejected write then correction",
+      "expected": "Known rejection remains correctable.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-errors.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-009",
+      "title": "uncertain result blocks writes",
+      "state": "server_reconciliation",
+      "trigger": "server:uncertain response",
+      "expected": "Uncertain result blocks writes.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-errors.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-010",
+      "title": "uncertain write never auto-retries",
+      "state": "server_reconciliation",
+      "trigger": "server:uncertain write retry attempt",
+      "expected": "Uncertain write never auto-retries.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-errors.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-SERVER-011",
+      "title": "late response preserves deliberately external focus",
+      "state": "server_reconciliation",
+      "trigger": "server:single response after focus moves to another control",
+      "expected": "The external control keeps browser focus after the score response.",
+      "mutates": false,
+      "permission_mode": "server_authorized",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-tabulator-races.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-001",
+      "title": "adjacent visible horizontal direct entry does not move document",
+      "state": "visual_stability",
+      "trigger": "editor:commit to adjacent visible column",
+      "expected": "Adjacent visible horizontal direct entry does not move document.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-002",
+      "title": "adjacent visible vertical direct entry does not move document",
+      "state": "visual_stability",
+      "trigger": "editor:commit to adjacent visible row",
+      "expected": "Adjacent visible vertical direct entry does not move document.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-003",
+      "title": "no unnecessary holder movement for visible neighbor",
+      "state": "visual_stability",
+      "trigger": "navigation:move to visible neighbor",
+      "expected": "No unnecessary holder movement for visible neighbor.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-004",
+      "title": "offscreen target scrolls internal holder only",
+      "state": "visual_stability",
+      "trigger": "navigation:move to offscreen score",
+      "expected": "Offscreen target scrolls internal holder only.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "synthetic",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-visual-stability.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-005",
+      "title": "no server-response scroll snap",
+      "state": "visual_stability",
+      "trigger": "server:response after direct entry",
+      "expected": "No server-response scroll snap.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-006",
+      "title": "no row-height jump",
+      "state": "visual_stability",
+      "trigger": "editor:open and commit without row-height change",
+      "expected": "No row-height jump.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-007",
+      "title": "no column-width jump",
+      "state": "visual_stability",
+      "trigger": "editor:open and commit without column-width change",
+      "expected": "No column-width jump.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-008",
+      "title": "single editor boundary",
+      "state": "visual_stability",
+      "trigger": "editor:open one score",
+      "expected": "Single editor boundary.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-009",
+      "title": "frozen identity remains stable",
+      "state": "visual_stability",
+      "trigger": "horizontal-scroll:keep frozen identity",
+      "expected": "Frozen identity remains stable.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    },
+    {
+      "id": "GB-VIS-010",
+      "title": "status message does not collapse surrounding layout",
+      "state": "visual_stability",
+      "trigger": "status:show save feedback",
+      "expected": "Status message does not collapse surrounding layout.",
+      "mutates": false,
+      "permission_mode": "any_authorized_page",
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "I"
+      ],
+      "status": "accepted"
+    }
+  ]
+}

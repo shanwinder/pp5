@@ -57,8 +57,8 @@
   window.fetch = (...args) => { requests.push({ url: String(args[0]), body: args[1]?.body }); return originalFetch(...args); };
   try {
     await until(() => fallback.hidden && rows().length >= 4);
-    assert(grid.hidden === false && fallback.hidden, 'Tabulator is visible and semantic fallback is hidden after build');
-    assert([...fallback.querySelectorAll('input[data-score-input]')].every(input => input.disabled), 'Hidden fallback cannot write twice');
+    assert(grid.hidden === false && fallback.hidden, 'GB-RUNTIME-001 — Tabulator is visible and semantic fallback is hidden after build');
+    assert([...fallback.querySelectorAll('input[data-score-input]')].every(input => input.disabled), 'GB-RUNTIME-002 GB-RUNTIME-003 — hidden fallback cannot write twice');
     assert(rows().length === 4, 'Current and historical roster rows are rendered');
     assert(cell(0, 'score_10').textContent === '' && cell(0, 'score_11').textContent === '0.00', 'Blank and zero are distinct');
     assert(cell(3, 'rowType').textContent.includes('ประวัติ'), 'Historical state is visible');
@@ -85,7 +85,8 @@
     assert(editorPresentation(cell(0, 'score_10')), 'Editor fills one cell without a nested border or duplicate focus boundary');
     assert(stableGeometry(blankGeometry, cell(0, 'score_10')), 'Blank editor preserves row, column, and internal scroll geometry');
     editor.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true }));
-    assert(!key(editor, 'Enter').defaultPrevented && grid.querySelector('input') === editor, 'IME Enter does not commit');
+    assert(!key(editor, 'Enter').defaultPrevented && grid.querySelector('input') === editor,
+      'GB-EDIT-010 — IME Enter does not commit');
     editor.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true }));
     assert(key(editor, 'Enter').defaultPrevented, 'Enter commits and moves down');
     await until(() => document.activeElement === cell(1, 'score_10'));
@@ -93,7 +94,7 @@
     assert(document.activeElement === cell(1, 'score_10'), 'Enter focuses next enrollment in same component');
     await until(() => cell(0, 'score_10').textContent === '5.00');
     assert(requests.length === 1 && requests[0].url.endsWith('/components/10/enrollments/1/score'), 'Single edit uses stable component and enrollment IDs');
-    assert(cell(0, 'total').textContent === '19.25', 'Single summary uses authoritative response');
+    assert(cell(0, 'total').textContent === '19.25', 'GB-SERVER-003 GB-SERVER-004 — single score and summary use authoritative response');
     await choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
     const caret = grid.querySelector('input');
     assert(caret.value === '1.50', 'Enter opens the existing score for caret editing');
@@ -126,7 +127,7 @@
     const batchStart = requests.length;
     const paste = clipboard(cell(0, 'score_10'), 'paste', '5\t0\n\t12.5');
     assert(paste.event.defaultPrevented, 'Native paste is intercepted before mutation');
-    assert(cell(0, 'score_10').textContent === '', 'Paste is not optimistically committed');
+    assert(cell(0, 'score_10').textContent === '', 'GB-PASTE-009 — paste is not optimistically committed');
     await until(() => cell(1, 'score_11').textContent === '12.50');
     assert(requests.length === batchStart + 1 && requests.at(-1).url.endsWith('/scores/batch'), 'Paste uses one Task 8 batch request');
     const sent = JSON.parse(requests.at(-1).body.get('batch'));
@@ -149,9 +150,25 @@
     const emptyStart = requests.length; fill.value = '';
     document.getElementById('gradebook-range-actions').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     assert(requests.length === emptyStart && status.textContent.includes('ปุ่มล้างคะแนน'), 'Empty fill cannot implicitly clear');
+    const singlePasteStart = requests.length;
+    await choose(cell(0, 'score_10'));
+    await sleep(30);
+    const singlePaste = clipboard(cell(0, 'score_10'), 'paste', '4');
+    assert(singlePaste.event.defaultPrevented, 'GB-PASTE-001 — single score paste is intercepted from active score');
+    await until(() => requests.length === singlePasteStart + 1 && cell(0, 'score_10').textContent === '4.00');
+    assert(requests.at(-1).url.endsWith('/scores/batch')
+      && JSON.stringify(JSON.parse(requests.at(-1).body.get('batch')).values) === '[["4"]]',
+      'GB-PASTE-001 — single score paste uses one batch with exact value');
+    assert(cell(0, 'score_10').textContent === '4.00', 'Single paste displays authoritative result');
     await choose(cell(3, 'score_10')); const historyStart = requests.length;
     key(cell(3, 'score_10'), '5'); key(cell(3, 'score_10'), 'Delete'); clipboard(cell(3, 'score_10'), 'paste', '5');
     assert(requests.length === historyStart, 'Historical edit, clear and paste do not write');
+    key(cell(3, 'score_10'), 'ArrowUp', { shiftKey: true });
+    await until(() => grid.querySelectorAll('.tabulator-range-selected').length === 2);
+    fill.value = '7';
+    assert(document.getElementById('gradebook-fill-submit').disabled, 'GB-FILL-003 — mixed current/history range disables Fill');
+    document.getElementById('gradebook-range-actions').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    assert(requests.length === historyStart, 'GB-FILL-003 — mixed range Fill sends no partial batch');
     output.textContent = `PASS: ${checks.length} Tabulator checks\n` + checks.join('\n');
     document.title = `PASS ${checks.length} — Tabulator`;
   } catch (error) {

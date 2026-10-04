@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-01  
 **Milestone:** 6.5 — Classroom Workspace + Spreadsheet Workflow  
-**Status:** accepted plan addendum; Task 10.6e visual stability correction follows product-owner functional confirmation of 10.6d
+**Status:** accepted plan addendum; Task 10.6f reproduced the pending-single clear regression, repaired command ordering, and added the behavior lock; product-owner manual acceptance remains separate
 **Production branch:** `milestone/6-5-classroom-workspace`
 
 ---
@@ -46,6 +46,7 @@ Task 10
 -> Task 10.6c full spreadsheet interaction audit and restoration
 -> Task 10.6d direct-entry Arrow navigation correction
 -> Task 10.6e direct-entry visual stability correction
+-> Task 10.6f Gradebook interaction behavior registry and golden journey lock
 -> Task 11 hardening of the actual production grid
 -> Task 12 final verification / real MAMP smoke / documentation
 ~~~
@@ -58,7 +59,8 @@ Tasks 11 and 12 remain part of Milestone 6.5 and are **not cancelled**. They are
 - **Task 10.6b:** focus correction was implemented and isolated fixture checks passed, but product-owner real-use spreadsheet interaction acceptance failed. The fixture counts are not product acceptance. Task 10.6b is superseded by the 10.6c audit and restoration.
 - **Task 10.6c:** audits the accepted 10.5b/10.5c behavior against production and actual browser use, restores score-cell interaction parity, and strengthens regression evidence. The [pre-implementation parity audit](../notes/2026-10-02-m6-5-task-10-6c-parity-audit.md) records the gaps. The canonical behavior source is the [Gradebook spreadsheet interaction contract](../specs/2026-10-02-pp5-gradebook-spreadsheet-interaction-contract.md). Future Task 11 must use it as mandatory input. Product-owner manual acceptance remains separate from implementation and automated tests.
 - **Task 10.6d:** Task 10.6c implemented full parity restoration, but product-owner acceptance still failed: click, type a score, then ArrowLeft/Right moved the caret instead of committing and moving to the next score cell. The canonical contract had treated all open editors alike. Task 10.6d clarifies direct replacement entry versus deliberate editing of an existing value; direct-entry Arrows commit and move, while explicit-edit Left/Right remain caret keys. Product-owner manual acceptance remains the final gate.
-- **Task 10.6e:** The product owner confirmed that 10.6d's direct-entry Arrow navigation works, but withheld spreadsheet-feel acceptance because repeated entry visibly flickered or shifted. The correction targets page and grid viewport stability, frozen-column visibility, status layout, and redundant focus/repaint while retaining server-authoritative scores and summaries. Product-owner visual acceptance remains pending after automated and MAMP verification.
+- **Task 10.6e:** The product owner confirmed that 10.6d's direct-entry Arrow navigation works, but initially withheld spreadsheet-feel acceptance because repeated entry visibly flickered or shifted. The correction targeted page and grid viewport stability, frozen-column visibility, status layout, and redundant focus/repaint while retaining server-authoritative scores and summaries. The product owner subsequently confirmed that direct-entry visual stability is comfortable.
+- **Task 10.6f (actual regression fix):** After the visual-stability confirmation, the product owner reported that continuous direct entry, Arrow, pointer drag, and multi-cell Delete/Backspace could lose the clear command. A controlled delayed-single fixture reproduced the failure: the 3×3 range and host keydown were correct, but `readyForBatch()` rejected while `pendingSingles.size=1` and no batch was sent. The adapter now queues a valid range command behind the earlier single-save queue and sends exactly one batch after it settles; uncertain outcomes still block without retry. The [machine-readable behavior registry](../specs/2026-10-02-pp5-gradebook-behavior-registry.json) has 124 accepted IDs, source-to-ID validation, and real-browser golden journeys A–M. Authenticated MAMP `/gradebook/12` passed the continuous workflow and test-data restoration; product-owner manual acceptance remains separate.
 
 ---
 
