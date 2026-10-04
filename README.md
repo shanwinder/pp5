@@ -5,7 +5,9 @@
 หรือ database triggers
 
 Milestone 6 — UI/UX Foundation + Application Shell ผ่าน Task 9 verification และ merge เข้า `main` ผ่าน PR #6 แล้ว
-`main` จึงเป็น baseline ล่าสุดสำหรับงานถัดไป และยังไม่เริ่ม Milestone 7
+Milestone 6.5 พัฒนา Classroom Workspace และ Gradebook บน branch
+`milestone/6-5-classroom-workspace`; `main` ยังเป็น baseline ที่ merge แล้วล่าสุด
+และยังไม่เริ่ม Milestone 7
 
 ## Local setup
 
@@ -791,6 +793,51 @@ certification ตรวจ local assets จาก DOM/CSSOM และ source con
 full network trace ไม่ได้รัน MariaDB runtime smoke หรือ real import apply
 ผลนี้เป็น local verification สำหรับ final review ไม่ใช่การรับรอง production deployment
 
+## Milestone 6.5 — Classroom Workspace และ Gradebook
+
+ทางเข้าหลักของงานห้องเรียนคือ `/workspaces/classrooms/{classroomId}` โดย
+`classroomId` เป็นเพียงตัวระบุ resource ใน URL ระบบตรวจโรงเรียน สิทธิ์ และ
+ขอบเขต resource ที่ server ทุกครั้ง ไม่ใช้ ID จาก browser เป็นอำนาจเข้าถึง
+บริบทโรงเรียน ปีการศึกษา ระดับชั้น และห้องเรียนอยู่กับการเดินระหว่างภาพรวม
+นักเรียน รายวิชาและครู การตั้งค่าการเก็บคะแนน และสมุดคะแนน
+
+`/gradebooks` คือ “งานสอนของฉัน” ซึ่งแสดงเฉพาะรายวิชาที่บัญชีเข้าถึงได้
+ครูเปิดรายวิชาในห้องที่ได้รับมอบหมายแล้วไปยังสมุดคะแนนได้โดยตรง
+ส่วนผู้ดูแลที่มีสิทธิ์เห็นงานนักเรียน รายวิชา การมอบหมายครู และการตั้งค่าคะแนน
+ตาม resource ที่อนุญาต ลิงก์เดิมของหน้าจัดการนักเรียน/วิชาการและ
+`/gradebook/{offeringId}` ยังใช้ได้
+
+Gradebook ใช้ Tabulator รุ่นที่ pin ไว้ในเครื่องร่วมกับ adapter ของ PP5
+เพื่อให้กรอกคะแนนแบบคุ้นเคยกับสเปรดชีต: เลือกช่องและใช้ลูกศร/Tab/Enter
+นำทาง, พิมพ์คะแนนโดยตรง, เปิดแก้ไขค่าเดิมอย่างชัดเจน, ลากหรือใช้แป้นพิมพ์
+เลือกช่วง, คัดลอก TSV, วาง TSV, Fill ค่าเดียวทั้งช่วง และใช้ Delete/Backspace
+ล้างช่วง การวาง เติม และล้างหลายช่องถูกตรวจที่ server และบันทึกแบบ atomic:
+ถ้าเป้าหมายใดไม่ถูกต้อง คำสั่งทั้งชุดล้มเหลวโดยไม่มีการบันทึกบางส่วน
+ดูรายละเอียดปฏิสัมพันธ์ที่
+[Gradebook spreadsheet interaction contract](docs/superpowers/specs/2026-10-02-pp5-gradebook-spreadsheet-interaction-contract.md)
+
+**ช่องว่างไม่เท่ากับศูนย์:** ช่องว่างหมายถึงยังไม่มีคะแนน (`NULL`)
+ส่วน `0.00` เป็นคะแนนศูนย์ที่บันทึกจริง จึงมีผลต่างกันต่อยอดรวม จำนวนช่อง
+ที่กรอก และความครบถ้วน คะแนนและผลสรุปที่แสดงหลังบันทึกมาจาก server
+ไม่ใช่การคำนวณที่ browser ยึดเป็นข้อมูลจริง
+
+การแสดงปุ่มและช่องแก้ไขขึ้นกับสิทธิ์และ resource; คำขอโดยตรง รวมทั้งการเขียน
+หลังเปิดหน้าแล้ว ยังตรวจสิทธิ์ ขอบเขตโรงเรียน สถานะ และ CSRF ที่ server
+อีกครั้ง บัญชีอ่านอย่างเดียวเลือก นำทาง และคัดลอกได้ตามสิทธิ์ แต่เขียนไม่ได้
+
+ขอบเขตที่ยังไม่รองรับใน M6.5: สูตรคำนวณและหลายชีต, Undo/Redo แบบ workbook,
+การแก้ไข offline, การแสดงผู้ใช้คนอื่นที่กำลังแก้ช่องหรือการล็อกช่องแบบ real time,
+native XLSX/XLSB import หรือ migration จากไฟล์ Excel เดิม, Attendance,
+Evaluation, Competencies และเอกสาร PP5/PP6/PDF อย่างเป็นทางการ
+การตรวจด้วย screen reader จริง, Thai IME ใน browser จริง และ reduced-motion
+ผ่านการตั้งค่า OS/browser ต้องบันทึกเป็นผล verification แยกต่างหากก่อนอ้างว่าผ่าน
+
+กรอบการประเมิน สมรรถนะ เนื้อหาอ้างอิงแบบมี version และข้อกำหนดเอกสารพิมพ์/รายงาน
+ยังเป็นข้อกำหนดอนาคตที่คงไว้ใน
+[Future Assessment + Reporting Requirements Ledger](docs/superpowers/specs/2026-09-26-pp5-future-assessment-reporting-requirements.md)
+ไม่ได้ถูกยกเลิก M6.5 **ยังไม่ implement Milestone 7** และงานปรับภาพลักษณ์
+ให้สีสันนุ่มนวลเหมาะกับงานภาครัฐถูกเลื่อนไป Milestone 6.6
+
 ## ขอบเขต milestone ถัดไป
 
 Milestone 1–5 ครอบคลุม SYSTEM/SCHOOL authentication, โรงเรียน/ผู้ใช้, โครงสร้างวิชาการ,
@@ -800,7 +847,8 @@ configurable term gradebook, audited score entry และ per-cell HTMX autosav
 พร้อม service, UI, permission และ audit
 
 Milestone 6 เพิ่ม shared UI/UX foundation และ application shell บน business contracts
-เดิม และ merge เข้า `main` ผ่าน PR #6 แล้ว; `main` เป็น baseline สำหรับ milestone ถัดไป
+เดิม และ merge เข้า `main` ผ่าน PR #6 แล้ว; Milestone 6.5 เพิ่มงานห้องเรียนและ
+ปฏิสัมพันธ์ Gradebook ตามหัวข้อข้างต้นบน branch แยก โดยยังไม่ merge เข้า `main`
 
 Milestone 5 ยังเป็น gradebook core: เก็บคะแนนราย component และคำนวณ term totals/completeness
 แต่ยังไม่ได้ implement grade symbol, term grade calculation, annual result, GPA,
@@ -810,6 +858,6 @@ subject finalization, unlock/approval หรือ promotion/repeat/graduation
 automatic cross-school transfer/linking, full staff profile subsystem,
 homeroom-teacher assignment และ classroom-wide homeroom scope,
 generic cross-domain scope editor, attendance, evaluations/competencies, activities,
-PP5/PP6 reports, mPDF official report generation, bulk score import/export,
+PP5/PP6 reports, mPDF official report generation, native workbook import/export,
 school chooser, user transfer, email invitation/reset, 2FA/SSO,
 audit browsing UI และ deployment automation

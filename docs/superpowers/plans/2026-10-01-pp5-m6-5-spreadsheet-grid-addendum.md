@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-01  
 **Milestone:** 6.5 — Classroom Workspace + Spreadsheet Workflow  
-**Status:** accepted plan addendum; Task 10.6f reproduced the pending-single clear regression, repaired command ordering, and added the behavior lock; product-owner manual acceptance remains separate
+**Status:** accepted plan addendum; Tasks 10.6f and 11 were accepted by the product owner; Task 12 final verification passed on the implementation branch and awaits product-owner final acceptance of M6.5
 **Production branch:** `milestone/6-5-classroom-workspace`
 
 ---
@@ -61,6 +61,10 @@ Tasks 11 and 12 remain part of Milestone 6.5 and are **not cancelled**. They are
 - **Task 10.6d:** Task 10.6c implemented full parity restoration, but product-owner acceptance still failed: click, type a score, then ArrowLeft/Right moved the caret instead of committing and moving to the next score cell. The canonical contract had treated all open editors alike. Task 10.6d clarifies direct replacement entry versus deliberate editing of an existing value; direct-entry Arrows commit and move, while explicit-edit Left/Right remain caret keys. Product-owner manual acceptance remains the final gate.
 - **Task 10.6e:** The product owner confirmed that 10.6d's direct-entry Arrow navigation works, but initially withheld spreadsheet-feel acceptance because repeated entry visibly flickered or shifted. The correction targeted page and grid viewport stability, frozen-column visibility, status layout, and redundant focus/repaint while retaining server-authoritative scores and summaries. The product owner subsequently confirmed that direct-entry visual stability is comfortable.
 - **Task 10.6f (actual regression fix):** After the visual-stability confirmation, the product owner reported that continuous direct entry, Arrow, pointer drag, and multi-cell Delete/Backspace could lose the clear command. A controlled delayed-single fixture reproduced the failure: the 3×3 range and host keydown were correct, but `readyForBatch()` rejected while `pendingSingles.size=1` and no batch was sent. The adapter now queues a valid range command behind the earlier single-save queue and sends exactly one batch after it settles; uncertain outcomes still block without retry. The [machine-readable behavior registry](../specs/2026-10-02-pp5-gradebook-behavior-registry.json) has 124 accepted IDs, source-to-ID validation, and real-browser golden journeys A–M. Authenticated MAMP `/gradebook/12` passed the continuous workflow and test-data restoration; product-owner manual acceptance remains separate.
+
+## Final verification status (2026-10-05)
+
+The product owner subsequently accepted Task 10.6f and Task 11 as individual tasks. Their historical failures and corrective steps above remain part of the record. Task 12's [final verification note](../notes/2026-10-04-m6-5-task-12-final-verification.md) records the full automated gate, Golden Journeys A–M, authenticated local MAMP administrator/scoped-teacher/revocation workflows, authoritative score and audit checks, and restoration of disposable data. The Behavior Registry remains at **124 accepted IDs**, and A–M remain a release gate. Task 12 found no material production defect and changed documentation only. The M6.6 softer visual redesign remains deferred; no M7 implementation was added. Product-owner **final acceptance of M6.5** remains a separate decision.
 
 ---
 
@@ -455,7 +459,7 @@ If future implementation evidence conflicts with assumptions recorded here, surf
 
 ---
 
-# Current milestone status at this addendum
+# Milestone status when this addendum was accepted
 
 Accepted production tasks:
 
@@ -489,4 +493,4 @@ Task 11   — Cross-Screen / Responsive / Accessibility / Security Hardening
 Task 12   — Full Verification + Real MAMP Workflow Smoke + Documentation
 ~~~
 
-No Milestone 7 implementation should start before these are completed and reviewed.
+The sequence above is the historical status at the initial addendum. Tasks 10.6, 11 and 12 were subsequently completed on the implementation branch; Tasks 10.6f and 11 were accepted individually, while M6.5 as a whole awaits product-owner final acceptance. No Milestone 7 implementation should start before that review.
