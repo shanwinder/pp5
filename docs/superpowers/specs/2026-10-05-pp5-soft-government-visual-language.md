@@ -5,6 +5,14 @@
 **Scope:** Presentation pilot based on accepted M6.5 `826a2417a247d9405bdfacc432405d44a61478b2`.
 **Status:** Technical pilot; product-owner visual acceptance pending.
 
+## Product-owner correction after Task 1
+
+Task 1 passed engineering and regression checks, but its visual direction was not accepted. The visible change was too small, pastel zoning was not apparent to a normal user, and workflows still felt organized around separate entity pages. M6.6 now means **Soft Government Workspace + Workflow Simplification**. The accepted Task 1 tokens, contrast work, and local asset architecture remain the foundation; this correction does not erase that history.
+
+The Classroom Overview and Students workspace are the only Task 1b pilot. Their classroom identity uses a visibly soft blue band. Work areas use semantic zones: blue for students and classroom context, sage for subjects and teaching, sand for score work and setup attention, and rose for important blocked or destructive states. White neutral tables remain dense for sustained reading. Color supports explicit labels and actions; it never carries state alone. Values may be refined to preserve normal-text contrast.
+
+Each workspace leads with the current classroom, year, and school, then a small number of authorized tasks with one clear next action each. Common student choices appear in a row disclosure so the selected student stays associated with the action area. Existing service and route authority still governs all mutations. Add direct in-page actions only when the current endpoint and permission rules can be reused safely; otherwise the panel explains the choice and links to its authoritative flow. This one-page pilot is a direction test, not a claim that every student task is complete without navigation. Product-owner visual acceptance remains pending.
+
 ## Intent and visual inventory
 
 PP5 is a daily work application for Thai school administration. The light interface should feel calm, credible and slightly warm while keeping student rosters, teaching lists and score entry compact. Use charcoal blue-gray text, quiet blue navigation, sage summary support, soft semantic status fills and thin neutral borders. Local/system fonts remain the only font source. A surface earns a border when it contains a distinct task; a table remains a table rather than a collection of cards.
@@ -31,6 +39,12 @@ The following root tokens are defined in `app.css`. Contrast notes are computed 
 | `--pp5-primary-hover` | `#294b62` | Hover and selected navigation text | White text 9.22:1; on primary soft 7.96:1 |
 | `--pp5-primary-soft` | `#e6f0f4` | Active navigation, range controls, quiet hover | Active text 7.96:1; active bar and weight also signal state |
 | `--pp5-primary-border` | `#b8cbd5` | Soft blue boundary and breadcrumb underline | Decorative; not sole cue |
+| `--pp5-workspace-blue` | `#e5f0f6` | Classroom identity and student work zone | Body text 10.05:1 |
+| `--pp5-workspace-sage` | `#e7f1e9` | Subject and teaching work zone | Body text 10.06:1 |
+| `--pp5-workspace-sage-border` | `#b7d0bf` | Subject zone boundary | Decorative; not sole cue |
+| `--pp5-workspace-sand` | `#f7eedb` | Score work zone | Body text 10.09:1 |
+| `--pp5-workspace-sand-border` | `#d9c8a0` | Score zone boundary | Decorative; not sole cue |
+| `--pp5-workspace-selected` | `#f0f6f9` | Selected roster row behind contextual actions | Body text 10.67:1; selected summary also changes structure and weight |
 | `--pp5-on-primary` | `#ffffff` | Text on solid primary or danger buttons | 6.85:1 on primary; 6.83:1 on danger |
 | `--pp5-success` | `#32634c` | Success text and positive badges | 6.06:1 on success fill |
 | `--pp5-success-bg` | `#e8f2eb` | Success fill | Paired with success text and explicit wording |

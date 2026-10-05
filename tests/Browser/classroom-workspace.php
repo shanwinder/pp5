@@ -76,11 +76,14 @@ $offerings = $page === 'subjects-empty' ? [] : [[
 if ($page === 'subjects-normal') { $offerings[] = array_replace($offerings[0], ['id' => 2, 'term' => 2, 'teachers' => [], 'canOpenGradebook' => false,
     'scoreSummary' => ['active_count' => 0, 'inactive_count' => 0, 'active_max_total' => '0.00']]); }
 echo View::page($roster ? 'workspaces/classroom/students' : ($subjectsPage ? 'workspaces/classroom/subjects' : 'workspaces/classroom/overview'),
-    ['workspace' => $workspace, 'students' => $students, 'openYear' => $page !== 'subjects-readonly', 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin,
+    ['workspace' => $workspace, 'students' => $students, 'studentCount' => $admin ? 8 : null,
+        'offeringCount' => $page === 'empty' ? 0 : 1, 'configuredCount' => $page === 'empty' ? 0 : 1,
+        'openYear' => $page !== 'subjects-readonly', 'canManage' => $admin, 'canAdd' => $admin, 'canImport' => $admin,
         'offerings' => $offerings, 'teacherChoices' => $admin ? [['user_role_assignment_id' => 1, 'display_name' => 'ครูทดสอบ']] : [],
         'canOpenOffering' => $admin && $page !== 'subjects-readonly', 'canManageSubjects' => $admin && $page !== 'subjects-readonly',
         'canManageAssignment' => $admin, 'canViewAll' => $admin, 'csrfToken' => 'synthetic-only'], [
     'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => ($roster ? 'นักเรียน' : ($subjectsPage ? 'รายวิชาและครู' : 'งานชั้นเรียน')) . ' · ป.4/1',
+    'bodyClass' => $subjectsPage ? '' : 'pp5-classroom-pilot',
     'ui' => ['contextType' => 'SCHOOL', 'schoolName' => $workspace['school']['name'], 'displayName' => 'ผู้ใช้ทดสอบ',
         'workspace' => $workspace, 'csrfToken' => 'synthetic-only', 'currentKey' => $currentKey, 'sections' => $sections],
 ]);

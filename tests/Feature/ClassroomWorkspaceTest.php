@@ -200,7 +200,7 @@ final class ClassroomWorkspaceTest extends TestCase
         self::assertSame(404, $this->request('GET', $this->workspacePath())->status());
     }
 
-    public function testOverviewDoesNotQueryStudentsScoresOrTeachingIdentitiesEvenForAdmin(): void
+    public function testOverviewReadsOnlyAuthorizedTaskCountsWithoutSensitiveProfileOrScoreRows(): void
     {
         foreach (['SCHOOL_ADMIN', 'SUBJECT_TEACHER'] as $role) {
             $this->login($role);
@@ -209,10 +209,16 @@ final class ClassroomWorkspaceTest extends TestCase
             $response = $this->request('GET', $this->workspacePath());
             self::assertSame(200, $response->status());
             $sql = implode("\n", $this->pdo->queries);
-            self::assertDoesNotMatchRegularExpression('/\b(students|student_enrollments|student_classroom_placements|gradebook_scores|gradebook_components|national_id|birth_date)\b/i', $sql);
+            self::assertDoesNotMatchRegularExpression('/\b(gradebook_scores|national_id|birth_date)\b/i', $sql);
+            self::assertSame($role === 'SCHOOL_ADMIN', str_contains($sql, 'student_enrollments'));
             self::assertArrayNotHasKey('counts', $model);
             self::assertArrayNotHasKey('students', $model);
             self::assertSame($role === 'SCHOOL_ADMIN' ? 1 : 0, $this->xpath($response->body())->query('//nav[@aria-label="งานในห้องเรียน"]//a[@href="' . $this->workspacePath() . '/students"]')->length);
+            self::assertSame($role === 'SCHOOL_ADMIN' ? 1 : 0, $this->xpath($response->body())->query('//section[@aria-labelledby="workspace-students-zone"]')->length);
+            if ($role === 'SCHOOL_ADMIN') {
+                self::assertStringContainsString('4 คน', $response->body());
+                self::assertStringContainsString('2 รายการ', $response->body());
+            }
             $this->assertReadSafe(json_encode($model));
             $this->assertReadSafe($response->body());
             foreach (['เวลาเรียน', 'การประเมิน', 'สมรรถนะ', 'กิจกรรมพัฒนาผู้เรียน', 'สรุปผล', 'เอกสาร', '/reports'] as $future) {
@@ -242,7 +248,8 @@ final class ClassroomWorkspaceTest extends TestCase
         $this->login();
         $response = $this->request('GET', '/workspaces/classrooms/' . $id);
         self::assertSame(200, $response->status());
-        self::assertStringContainsString('ยังไม่มีสมุดคะแนนที่คุณเข้าถึงได้ในห้องนี้', $response->body());
+        self::assertSame(0, $this->xpath($response->body())->query('//section[@id="workspace-scores"]')->length);
+        self::assertStringContainsString('ดูแลรายชื่อนักเรียน', $response->body());
     }
 
     public function testHostileLabelsAreEscapedAndStoreFailureDoesNotLeak(): void

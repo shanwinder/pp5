@@ -13,6 +13,12 @@
   --pp5-primary-hover: #294b62;
   --pp5-primary-soft: #e6f0f4;
   --pp5-primary-border: #b8cbd5;
+  --pp5-workspace-blue: #e5f0f6;
+  --pp5-workspace-sage: #e7f1e9;
+  --pp5-workspace-sage-border: #b7d0bf;
+  --pp5-workspace-sand: #f7eedb;
+  --pp5-workspace-sand-border: #d9c8a0;
+  --pp5-workspace-selected: #f0f6f9;
   --pp5-on-primary: #ffffff;
   --pp5-success: #32634c;
   --pp5-success-bg: #e8f2eb;
@@ -433,3 +439,67 @@ a:hover { color: var(--pp5-primary-hover); }
 .pp5-workspace-nav a { display: block; padding: var(--pp5-space-2) var(--pp5-space-3); border-radius: var(--pp5-radius-sm); }
 .pp5-workspace-nav [aria-current] { color: var(--pp5-primary-hover); font-weight: 700; text-decoration: underline; text-decoration-thickness: 3px; background: var(--pp5-primary-soft); }
 #workspace-scores { scroll-margin-top: calc(var(--pp5-header-height) + var(--pp5-space-4)); }
+
+/* M6.6 pilot: a visible classroom identity, three task colors, and a neutral roster. */
+.pp5-classroom-pilot .pp5-content > h1 { font-size: .9rem; font-weight: 700; color: var(--pp5-text-muted); margin-bottom: .55rem; }
+.pp5-classroom-pilot .pp5-workspace-shell {
+  background: var(--pp5-workspace-blue);
+  border-color: var(--pp5-primary-border);
+  border-inline-start: .5rem solid var(--pp5-primary);
+  padding: 0;
+  box-shadow: none;
+}
+.pp5-classroom-pilot .pp5-workspace-heading { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding: 1.4rem 1.6rem 1rem; }
+.pp5-classroom-pilot .pp5-workspace-context { margin: 0; min-width: 0; }
+.pp5-workspace-eyebrow, .pp5-section-kicker, .pp5-task-zone-label { margin: 0 0 .35rem; color: var(--pp5-primary-hover); font-size: .8rem; font-weight: 750; letter-spacing: .02em; }
+.pp5-classroom-pilot .pp5-workspace-context h2 { font-size: clamp(1.8rem, 3vw, 2.55rem); margin: 0 0 .1rem; }
+.pp5-classroom-pilot .pp5-workspace-context p { margin-bottom: .15rem; }
+.pp5-classroom-pilot .pp5-workspace-grade { color: var(--pp5-text-muted); font-size: .92rem; }
+.pp5-classroom-pilot .pp5-workspace-switcher { max-width: min(100%, 21rem); background: color-mix(in srgb, var(--pp5-surface) 72%, transparent); border: 1px solid var(--pp5-primary-border); border-radius: var(--pp5-radius-sm); }
+.pp5-classroom-pilot .pp5-workspace-switcher summary { padding: .55rem .8rem; font-weight: 650; }
+.pp5-classroom-pilot .pp5-workspace-shell nav { border-top: 1px solid var(--pp5-primary-border); }
+.pp5-classroom-pilot .pp5-workspace-nav { margin: 0; padding: .55rem 1rem; gap: .3rem; }
+.pp5-classroom-pilot .pp5-workspace-nav a { text-decoration: none; border-bottom: 3px solid transparent; }
+.pp5-classroom-pilot .pp5-workspace-nav a[aria-current] { background: var(--pp5-surface); border-bottom-color: var(--pp5-primary); text-decoration: none; }
+.pp5-workspace-intro, .pp5-workspace-data-heading, .pp5-roster-heading { display: flex; align-items: start; justify-content: space-between; flex-wrap: wrap; gap: .8rem 1.5rem; }
+.pp5-workspace-intro { margin: 1.3rem 0 1rem; }
+.pp5-workspace-intro h2, .pp5-roster-heading h2, .pp5-workspace-data-heading h2 { margin: 0 0 .2rem; }
+.pp5-workspace-intro p, .pp5-workspace-data-heading p { margin-bottom: .3rem; }
+.pp5-workspace-state { display: flex; flex-wrap: wrap; gap: .4rem 1rem; font-size: .9rem; }
+.pp5-task-zones { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: .85rem; margin-bottom: 1.5rem; }
+.pp5-task-zone { display: flex; flex-direction: column; align-items: start; min-width: 0; padding: 1.2rem; border: 1px solid var(--pp5-primary-border); border-radius: var(--pp5-radius-md); }
+.pp5-task-zone--students { background: var(--pp5-workspace-blue); border-color: var(--pp5-primary-border); }
+.pp5-task-zone--subjects { background: var(--pp5-workspace-sage); border-color: var(--pp5-workspace-sage-border); }
+.pp5-task-zone--scores { background: var(--pp5-workspace-sand); border-color: var(--pp5-workspace-sand-border); }
+.pp5-task-zone h2 { font-size: 1.15rem; margin: 0; }
+.pp5-task-zone-stat { color: var(--pp5-text); font-size: 1.75rem; font-weight: 750; line-height: 1.3; margin: .8rem 0 .25rem; }
+.pp5-task-zone > p:not(.pp5-task-zone-label, .pp5-task-zone-stat) { margin-bottom: 1.2rem; }
+.pp5-task-zone .btn, .pp5-task-zone-action { margin-top: auto; }
+.pp5-task-zone-action { font-weight: 700; padding: .45rem 0; }
+.pp5-workspace-data { background: var(--pp5-surface); border: 1px solid var(--pp5-border); border-radius: var(--pp5-radius-md); padding: 1rem; }
+.pp5-workspace-data .pp5-table-scroll { margin-bottom: 0; }
+.pp5-student-taskbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 1rem; background: var(--pp5-workspace-blue); border-inline-start: .3rem solid var(--pp5-primary); padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+.pp5-student-taskbar h2 { margin-bottom: .2rem; }
+.pp5-student-taskbar h2 span { font-size: .9rem; vertical-align: middle; background: var(--pp5-surface); border: 1px solid var(--pp5-primary-border); border-radius: var(--pp5-radius-sm); padding: .25rem .55rem; white-space: nowrap; }
+.pp5-student-taskbar p:last-child { margin-bottom: 0; }
+.pp5-student-top-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pp5-roster-heading { margin-bottom: .3rem; }
+.pp5-roster-heading > a { font-weight: 650; }
+.pp5-roster-note { color: var(--pp5-text-muted); font-size: .92rem; margin-bottom: .8rem; }
+.pp5-roster-scroll { background: var(--pp5-surface); }
+.pp5-student-workspace .pp5-roster-row:has(details[open]) { --bs-table-bg: var(--pp5-workspace-selected); box-shadow: inset 4px 0 var(--pp5-primary); }
+.pp5-student-workspace .pp5-roster-row:has(details[open]) > * { vertical-align: top; }
+.pp5-student-detail { min-width: 12rem; }
+.pp5-student-detail summary { cursor: pointer; display: inline-flex; gap: .4rem; align-items: center; color: var(--pp5-primary-hover); font-weight: 700; padding: .35rem .55rem; border: 1px solid var(--pp5-primary-border); border-radius: var(--pp5-radius-sm); background: var(--pp5-primary-soft); }
+.pp5-student-detail[open] summary { background: var(--pp5-primary); color: var(--pp5-on-primary); }
+.pp5-student-detail-panel { width: 17rem; max-width: 100%; padding: .8rem .2rem .3rem; overflow-wrap: anywhere; }
+.pp5-student-detail-panel h3 { margin-bottom: .2rem; }
+.pp5-student-detail-panel > p { margin-bottom: .45rem; }
+.pp5-student-detail-actions { display: grid; gap: .1rem; border-top: 1px solid var(--pp5-primary-border); margin-top: .6rem; padding-top: .4rem; }
+.pp5-student-detail-actions a { display: block; padding: .45rem .2rem; font-weight: 600; }
+@media (max-width: 47.999rem) {
+  .pp5-classroom-pilot .pp5-workspace-heading { padding: 1rem; }
+  .pp5-classroom-pilot .pp5-workspace-switcher { width: 100%; max-width: none; }
+  .pp5-student-taskbar { padding: 1rem; }
+  .pp5-student-top-actions .btn { flex: 1 1 12rem; }
+}

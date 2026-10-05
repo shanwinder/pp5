@@ -31,6 +31,7 @@ final class ClassroomWorkspaceController
             'ui' => $this->ui->build('workspaces.classrooms.students', false, $roster['workspace']),
             'documentTitle' => 'นักเรียนในห้อง — ระบบ ปพ.5',
             'pageTitle' => 'นักเรียน · ' . $roster['workspace']['classroom']['name'],
+            'bodyClass' => 'pp5-classroom-pilot',
         ]));
     }
 
@@ -54,10 +55,29 @@ final class ClassroomWorkspaceController
             $this->session->get('school_id'), $classroomId);
         if ($workspace === null) { return new Response(View::error(404), 404); }
 
-        return new Response(View::page('workspaces/classroom/overview', ['workspace' => $workspace], [
+        $studentCount = null;
+        if ($workspace['capabilities']['students']) {
+            $roster = $this->rosters->getRoster($this->session->get('user_id'), $this->session->get('context_type'),
+                $this->session->get('school_id'), $classroomId);
+            $studentCount = $roster === null ? null : count($roster['students']);
+        }
+        $offeringCount = null;
+        $configuredCount = null;
+        if ($workspace['capabilities']['subjects'] || $workspace['capabilities']['teaching'] || $workspace['capabilities']['scores']) {
+            $subjectWork = $this->subjects->getSubjects($this->session->get('user_id'), $this->session->get('context_type'),
+                $this->session->get('school_id'), $classroomId);
+            if ($subjectWork !== null) {
+                $offeringCount = count($subjectWork['offerings']);
+                $configuredCount = count(array_filter($subjectWork['offerings'],
+                    static fn (array $offering): bool => (int) $offering['scoreSummary']['active_count'] > 0));
+            }
+        }
+
+        return new Response(View::page('workspaces/classroom/overview', compact('workspace', 'studentCount', 'offeringCount', 'configuredCount'), [
             'ui' => $this->ui->build('workspaces.classrooms', false, $workspace),
             'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5',
             'pageTitle' => 'งานชั้นเรียน · ' . $workspace['classroom']['name'],
+            'bodyClass' => 'pp5-classroom-pilot',
         ]));
     }
 }

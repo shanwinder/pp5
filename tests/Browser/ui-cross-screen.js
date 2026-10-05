@@ -54,6 +54,17 @@
       check(table.querySelectorAll('a[href$="#move-classroom"]').length === (broadWorkspace ? 8 : 0), 'manage links only for manager');
       check(table.querySelectorAll('a[href$="#student-status"]').length === (broadWorkspace ? 8 : 0), 'status links only for manager');
       check(!table.querySelector('script, input'), 'no injected markup or hidden profile fields');
+      const details = table.querySelectorAll('[data-student-detail]');
+      check(details.length === (frame.title.startsWith('roster empty') ? 0 : 8), 'one contextual action per student');
+      if (details.length > 1 && !frame.hasAttribute('sandbox')) {
+        details[0].querySelector('summary').click(); await tick();
+        check(details[0].open && details[0].textContent.includes('นักเรียนที่เลือก'), 'selected student stays in row');
+        check(details[0].querySelectorAll('a').length === (broadWorkspace ? 3 : 1), 'panel actions follow permission');
+        details[1].querySelector('summary').click(); await tick();
+        check(!details[0].open && details[1].open, 'only one student selected');
+        details[1].dispatchEvent(new w.KeyboardEvent('keydown', {key:'Escape',bubbles:true,cancelable:true}));
+        check(!details[1].open && d.activeElement === details[1].querySelector('summary'), 'Escape closes and returns row focus');
+      }
     }
     if (isSubjects) {
       const table = d.querySelector('table#classroom-subjects');
@@ -98,7 +109,7 @@
     // Check actual occlusion, not only the presence of an outline declaration.
     const controls = d.querySelectorAll('main a,main summary,main button,main input:not([type="hidden"]):not(:disabled),main select,main textarea,main .pp5-table-scroll:not([hidden]),main .pp5-gradebook-tabulator');
     for (const control of controls) {
-      if (control.disabled) continue;
+      if (control.disabled || control.closest('details:not([open])') || !control.getClientRects().length) continue;
       control.focus({preventScroll:true});
       control.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
       const rect = control.getBoundingClientRect();

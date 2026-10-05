@@ -7,6 +7,21 @@
     });
   });
 
+  // Keep one selected student in view. Native details still works without JavaScript.
+  const studentDetails = document.querySelectorAll('[data-student-detail]');
+  studentDetails.forEach(detail => {
+    detail.addEventListener('toggle', () => {
+      if (!detail.open) return;
+      studentDetails.forEach(other => { if (other !== detail) other.open = false; });
+    });
+    detail.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !detail.open) return;
+      event.preventDefault();
+      detail.open = false;
+      detail.querySelector('summary').focus();
+    });
+  });
+
   // In-page disclosure, not a modal: native Tab remains available throughout.
   // Match the shell breakpoint in app.css. No enhancement means visible navigation.
   const narrow = window.matchMedia('(max-width: 63.999rem)');

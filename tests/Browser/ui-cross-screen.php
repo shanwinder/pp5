@@ -52,7 +52,7 @@ $cases = [
 <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PP5 cross-screen matrix</title></head><body>
 <h1>Task 8 cross-screen matrix</h1><pre id="browser-results" role="status">Running…</pre>
 <p>Production templates with synthetic data only. Focus checks are scripted; native keyboard traversal is verified separately.</p>
-<?php foreach ($cases as $name=>[$fixture,$page]): foreach ([[1440,900],[1024,768],[768,1024],[390,844]] as [$width,$height]): ?>
+<?php foreach ($cases as $name=>[$fixture,$page]): foreach ([[1440,900],[1280,800],[1024,768],[768,1024],[390,844]] as [$width,$height]): ?>
 <iframe title="<?= $name.' '.$width.'x'.$height ?>" src="/frame?<?= htmlspecialchars(http_build_query(['fixture'=>$fixture, $fixture==='gradebook'?'mode':'page'=>$page, 'variant'=>'normal']), ENT_QUOTES, 'UTF-8') ?>" width="<?= $width ?>" height="<?= $height ?>"></iframe>
 <?php endforeach; endforeach; ?>
 <iframe title="no-JS navigation 390x844" src="/frame?fixture=student&amp;page=students/index&amp;variant=normal" width="390" height="844" sandbox="allow-same-origin allow-forms"></iframe>
