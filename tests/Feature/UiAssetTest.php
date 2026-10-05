@@ -36,15 +36,15 @@ final class UiAssetTest extends TestCase
         @$document->loadHTML($html);
         $xpath = new DOMXPath($document);
         $styles = $xpath->query('//head/link[@rel="stylesheet"]/@href');
-        self::assertSame([self::BOOTSTRAP, '/assets/app.css'], array_map(
+        self::assertSame([self::BOOTSTRAP, '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')], array_map(
             static fn ($node) => $node->nodeValue, iterator_to_array($styles)
         ));
         self::assertSame($scripts, array_map(static fn ($node) => $node->nodeValue,
             iterator_to_array($xpath->query('//script/@src'))));
         self::assertSame(count($scripts), $xpath->query('//script[@src and @defer]')->length);
         foreach ($xpath->query('//link[@rel="stylesheet"]/@href | //script/@src') as $asset) {
-            self::assertMatchesRegularExpression('~^/assets/[a-zA-Z0-9./-]+$~', $asset->nodeValue);
-            self::assertFileExists(dirname(__DIR__, 2) . '/htdocs' . $asset->nodeValue);
+            self::assertMatchesRegularExpression('~^/assets/[a-zA-Z0-9./-]+(?:\?v=[0-9]+)?$~', $asset->nodeValue);
+            self::assertFileExists(dirname(__DIR__, 2) . '/htdocs' . parse_url($asset->nodeValue, PHP_URL_PATH));
         }
         self::assertSame(1, $xpath->query('//head/meta[@name="viewport" and @content="width=device-width, initial-scale=1"]')->length);
         self::assertSame(0, $xpath->query('//*[@style or @onclick]')->length);

@@ -83,7 +83,7 @@ final class UiEntrySurfacesTest extends TestCase
         self::assertSame(1, substr_count($body, '<!doctype html>'));
         $x = $this->xpath($body);
         foreach (['html', 'head', 'body', 'main', 'h1'] as $tag) { self::assertSame(1, $x->query('//'.$tag)->length); }
-        self::assertSame(1, $x->query('//link[@href="/assets/app.css"]')->length);
+        self::assertSame(1, $x->query('//link[@href="/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css').'"]')->length);
         self::assertSame(0, $x->query('//script[not(@src)]|//*[@style]|//*[@onclick]|//link[starts-with(@href,"http")]')->length);
         return $x;
     }
