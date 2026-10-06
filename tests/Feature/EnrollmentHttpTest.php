@@ -317,7 +317,7 @@ final class EnrollmentHttpTest extends TestCase
         foreach (['/academic/enrollments','/academic/enrollments/create',$this->path('/academic/enrollments/{id}/edit')] as $path) {
             $response=$this->request('GET',$path,[],['academic_year_id'=>(string)$this->year,'grade_level_id'=>(string)$this->grade]);
             self::assertSame(200,$response->status()); self::assertStringContainsString(htmlspecialchars(self::HOSTILE,ENT_QUOTES,'UTF-8'),$response->body());
-            self::assertStringNotContainsString(self::HOSTILE,$response->body()); self::assertSame(0,$this->xpath($response->body())->query('//script[not(@src="/assets/app.js")]')->length); $this->assertSafe($response);
+            self::assertStringNotContainsString(self::HOSTILE,$response->body()); self::assertSame(0,$this->xpath($response->body())->query('//script[not(starts-with(@src,"/assets/app.js?v="))]')->length); $this->assertSafe($response);
         }
     }
 

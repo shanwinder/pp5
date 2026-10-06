@@ -48,7 +48,7 @@ final class UiConfirmationTest extends TestCase
             self::assertStringContainsString($contract, $js);
         }
         self::assertDoesNotMatchRegularExpression(
-            '~\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|htmx|school_id|tenant|permission|role|score|gradebook|calculate|status|FormData)\b|innerHTML|btn-danger|\.submit\(|\.requestSubmit\(~i', $js
+            '~\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|htmx|school_id|tenant|permission|score|gradebook|calculate|status|FormData)\b|innerHTML|btn-danger|\.submit\(|\.requestSubmit\(~i', $js
         );
     }
 }

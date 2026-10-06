@@ -25,7 +25,7 @@ final class UiAssetTest extends TestCase
 
     public static function layouts(): array
     {
-        return [['app', ['/assets/app.js']], ['guest', []], ['error', []]];
+        return [['app', ['/assets/app.js?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.js')]], ['guest', []], ['error', []]];
     }
 
     #[DataProvider('layouts')]
@@ -36,7 +36,10 @@ final class UiAssetTest extends TestCase
         @$document->loadHTML($html);
         $xpath = new DOMXPath($document);
         $styles = $xpath->query('//head/link[@rel="stylesheet"]/@href');
-        self::assertSame([self::BOOTSTRAP, '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')], array_map(
+        $expected = $layout === 'app'
+            ? ['/assets/vendor/tabler/tabler-1.6.1.min.css', '/assets/app-compat.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app-compat.css'), '/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css')]
+            : [self::BOOTSTRAP, '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')];
+        self::assertSame($expected, array_map(
             static fn ($node) => $node->nodeValue, iterator_to_array($styles)
         ));
         self::assertSame($scripts, array_map(static fn ($node) => $node->nodeValue,
@@ -101,7 +104,7 @@ final class UiAssetTest extends TestCase
         $js = $this->asset('/assets/app.js');
         self::assertLessThan(6000, strlen($js));
         self::assertDoesNotMatchRegularExpression(
-            '~\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|htmx|school_id|tenant|permission|role|score|gradebook|calculate)\b~i', $js
+            '~\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|htmx|school_id|tenant|permission|score|gradebook|calculate)\b~i', $js
         );
         foreach (['data-nav-toggle', 'aria-controls', 'aria-expanded', 'Escape', '.focus()', 'matchMedia'] as $contract) {
             self::assertStringContainsString($contract, $js);

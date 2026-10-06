@@ -25,7 +25,7 @@
     assert(document.querySelector('.pp5-user-name').textContent.includes('<script>'), 'hostile display name is plain text');
     assert(document.documentElement.scrollWidth <= innerWidth + 1, 'long Thai names do not overflow page');
     for (const element of document.querySelectorAll('.pp5-school-name, .pp5-user-name')) {
-      assert(element.scrollWidth <= element.clientWidth + 1, 'identity wraps within its container');
+      assert(element.title === element.textContent && getComputedStyle(element).textOverflow === 'ellipsis', 'truncated identity retains full text help');
     }
     assert(document.querySelectorAll('nav a[aria-current="page"]').length === 1, 'current page marked');
     assert(document.querySelector('form[action="/logout"]').method === 'post', 'logout remains POST');

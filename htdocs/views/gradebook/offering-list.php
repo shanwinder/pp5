@@ -24,7 +24,7 @@ $escape = static fn ($value): string => htmlspecialchars((string) $value, ENT_QU
       <td><?= $escape($offering['term_no']) ?></td>
       <td><span class="pp5-badge" data-status="<?= $escape($offering['academic_year_status']) ?>"><?= $escape(StatusLabel::text($offering['academic_year_status'], 'academic-year')) ?></span></td>
       <td><span class="pp5-badge" data-status="<?= $escape($offering['status']) ?>"><?= $escape(StatusLabel::text($offering['status'])) ?></span></td>
-      <td><a class="btn btn-outline-secondary" href="/gradebook/<?= (int) $offering['id'] ?>">เปิดสมุดคะแนน<span class="visually-hidden"> <?= $escape($offering['year_be'].' '.$offering['classroom_code'].' '.$offering['subject_code'].' ภาคเรียน '.$offering['term_no']) ?></span></a></td>
+      <td><?php if ($compactActions ?? false): ?><a class="btn btn-outline-primary btn-sm btn-icon pp5-row-action" href="/gradebook/<?= (int) $offering['id'] ?>" aria-label="เปิดสมุดคะแนน <?= $escape($offering['year_be'].' '.$offering['classroom_code'].' '.$offering['subject_code'].' ภาคเรียน '.$offering['term_no']) ?>" title="เปิดสมุดคะแนน" data-tooltip="เปิดสมุดคะแนน"><?= App\Support\View::render('ui/icon', ['name' => 'notebook']) ?></a><?php else: ?><a class="btn btn-outline-secondary" href="/gradebook/<?= (int) $offering['id'] ?>">เปิดสมุดคะแนน<span class="visually-hidden"> <?= $escape($offering['year_be'].' '.$offering['classroom_code'].' '.$offering['subject_code'].' ภาคเรียน '.$offering['term_no']) ?></span></a><?php endif; ?></td>
     </tr>
   <?php endforeach; ?>
   </tbody>

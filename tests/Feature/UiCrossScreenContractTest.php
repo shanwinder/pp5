@@ -71,14 +71,20 @@ final class UiCrossScreenContractTest extends TestCase
         }
         self::assertSame('th', $x->evaluate('string(/html/@lang)'));
         self::assertSame(1, $x->query('//head/meta[@name="viewport" and @content="width=device-width, initial-scale=1"]')->length);
-        $expectedStyles=['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')];
+        if ($active === null) {
+            $expectedStyles=['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')];
+        } else {
+            $expectedStyles=['/assets/vendor/tabler/tabler-1.6.1.min.css'];
+            if ($path !== '/dashboard') { $expectedStyles[]='/assets/app-compat.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app-compat.css'); }
+            $expectedStyles[]='/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css');
+        }
         if ($x->query('//script[@id="gradebook-grid-data" and @type="application/json"]')->length === 1) {
             array_push($expectedStyles, '/assets/vendor/tabulator/tabulator.min.css',
                 '/assets/gradebook-grid.css?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook-grid.css'));
         }
         self::assertSame($expectedStyles,
             array_map(static fn($n)=>$n->nodeValue, iterator_to_array($x->query('//link[@rel="stylesheet"]/@href'))));
-        self::assertSame($active === null ? 0 : 1, $x->query('//script[@src="/assets/app.js" and @defer]')->length);
+        self::assertSame($active === null ? 0 : 1, $x->query('//script[starts-with(@src,"/assets/app.js?v=") and @defer]')->length);
 
         $issues = []; $seen = [];
         foreach ($x->query('//*[@id]') as $node) {

@@ -100,7 +100,7 @@ final class GradebookScoreUxTest extends TestCase
             $sources[] = $script->getAttribute('src');
         }
         self::assertSame([
-            '/assets/app.js',
+            '/assets/app.js?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/app.js'),
             '/assets/vendor/htmx-2.0.8.min.js',
             '/assets/vendor/tabulator/tabulator.min.js',
             '/assets/gradebook.js?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook.js'),

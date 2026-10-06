@@ -212,6 +212,7 @@
     } else if (journey === 'I') {
       await click(0, 10);
       const before = snapshot();
+      window.__goldenViewBefore = before;
       await type('5'); await move('Right', 0, 11, ['GB-DIRECT-002']);
       await type('6'); await move('Right', 0, 12, ['GB-DIRECT-009']);
       await type('7'); await move('Down', 1, 12, ['GB-DIRECT-004']);
@@ -275,7 +276,8 @@
     const debug = window.__gradebookTiming;
     const lastKey = events.filter(item => item.type === 'host-keydown').at(-1);
     output.textContent = `FAIL: Golden Journey ${journey} — ${error.message}\nDiagnostics: ${JSON.stringify({
-      delay: singleDelayMs, snapshot: debug?.snapshot(), readyRejections: debug?.readyRejections, lastKey,
+      delay: singleDelayMs, snapshot: debug?.snapshot(), viewportBefore: window.__goldenViewBefore,
+      viewportAfter: journey === 'I' ? snapshot() : null, readyRejections: debug?.readyRejections, lastKey,
       selected: selected().length, focusField: focus()?.getAttribute('tabulator-field'),
       singles: requests.filter(item => item.url.endsWith('/score')).length, batches: batch().length,
     })}\n` + passed.join('\n');

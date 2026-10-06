@@ -22,8 +22,8 @@
     const close = panel.querySelector('[data-nav-close]');
     const field = document.getElementById('fixture-name');
     const mobile = matchMedia('(max-width: 63.999rem)').matches;
-    assert(getComputedStyle(document.body).backgroundColor === 'rgb(243, 246, 245)', 'soft government canvas loaded');
-    assert(document.styleSheets.length === 2, 'two local stylesheets');
+    assert(getComputedStyle(document.body).backgroundColor === 'rgb(243, 246, 251)', 'Tabler canvas loaded');
+    assert(document.styleSheets.length === 3, 'Tabler and two local stylesheets');
     for (const sheet of document.styleSheets) assert(sheet.cssRules.length > 0, 'stylesheet parsed');
     assert(document.documentElement.scrollWidth <= innerWidth + 1, 'no page overflow');
     const table = document.querySelector('.pp5-table-scroll');

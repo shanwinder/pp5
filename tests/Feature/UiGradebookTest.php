@@ -173,7 +173,7 @@ final class UiGradebookTest extends TestCase
     private function assertPage(string $html): DOMXPath
     {
         $x=$this->xpath($html);
-        foreach (['//html','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//script[@src="/assets/app.js"]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
+        foreach (['//html','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//script[starts-with(@src,"/assets/app.js?v=")]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
         self::assertSame(1,substr_count($html,'<!doctype html>'));
         self::assertSame(0,$x->query('//*[@style or @onclick]|//script[not(@src) and not(@type="application/json")]|//script[starts-with(@src,"http")]')->length);
         return $x;

@@ -1,0 +1,364 @@
+/* Transitional rules for unmigrated application content under Tabler.
+   Shell and M6.6 pastel pilot styles are intentionally excluded. */
+/* PP5 visual foundation. Load after the pinned Bootstrap stylesheet.
+   Use semantic tokens and opt-in pp5-* hooks as screens are migrated. */
+:root {
+  --pp5-background: #f3f6f5;
+  --pp5-surface: #ffffff;
+  --pp5-surface-muted: #edf2f3;
+  --pp5-surface-subtle: #f8faf9;
+  --pp5-text: #263b49;
+  --pp5-text-muted: #526674;
+  --pp5-border: #c7d3d8;
+  --pp5-control-border: #8296a1;
+  --pp5-primary: #365f78;
+  --pp5-primary-hover: #294b62;
+  --pp5-primary-soft: #e6f0f4;
+  --pp5-primary-border: #b8cbd5;
+  --pp5-workspace-blue: #e5f0f6;
+  --pp5-workspace-sage: #e7f1e9;
+  --pp5-workspace-sage-border: #b7d0bf;
+  --pp5-workspace-sand: #f7eedb;
+  --pp5-workspace-sand-border: #d9c8a0;
+  --pp5-workspace-selected: #f0f6f9;
+  --pp5-on-primary: #ffffff;
+  --pp5-success: #32634c;
+  --pp5-success-bg: #e8f2eb;
+  --pp5-warning: #75551f;
+  --pp5-warning-bg: #f9f0dd;
+  --pp5-danger: #914248;
+  --pp5-danger-bg: #faecec;
+  --pp5-info: #365e70;
+  --pp5-info-bg: #e7f2f5;
+  --pp5-focus: #075fa8;
+  --pp5-table-header: #e9f0f2;
+  --pp5-table-stripe: #f9fbfa;
+  --pp5-identity-soft: #f3f7f8;
+  --pp5-summary-soft: #edf4ee;
+  --pp5-selected-soft: #e4eff5;
+  --pp5-space-1: 0.25rem;
+  --pp5-space-2: 0.5rem;
+  --pp5-space-3: 0.75rem;
+  --pp5-space-4: 1rem;
+  --pp5-space-6: 1.5rem;
+  --pp5-space-8: 2rem;
+  --pp5-radius-sm: 0.25rem;
+  --pp5-radius-md: 0.5rem;
+  --pp5-shadow-sm: 0 1px 3px rgb(38 59 73 / 5%);
+  --pp5-sidebar-width: 15rem;
+  --pp5-header-height: 4rem;
+  --pp5-content-width: 90rem;
+  --pp5-form-width: 44rem;
+  --pp5-table-cell-padding: 0.625rem 0.75rem;
+  --pp5-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif;
+
+  --bs-body-font-family: var(--pp5-font-family);
+  --bs-body-color: var(--pp5-text);
+  --bs-body-bg: var(--pp5-background);
+  --bs-border-color: var(--pp5-border);
+  --bs-link-color: var(--pp5-primary);
+  --bs-link-hover-color: var(--pp5-primary-hover);
+  --bs-secondary-color: var(--pp5-text-muted);
+  --bs-border-radius: var(--pp5-radius-sm);
+  --bs-primary: var(--pp5-primary);
+  --bs-primary-rgb: 54, 95, 120;
+}
+
+body { margin: 0; font-size: 1rem; line-height: 1.6; }
+h1, h2, h3 { color: var(--pp5-text); line-height: 1.4; font-weight: 650; }
+h1 { font-size: 1.625rem; }
+h2 { font-size: 1.25rem; }
+h3 { font-size: 1.125rem; }
+a { color: var(--pp5-primary); text-underline-offset: 0.2em; }
+a:hover { color: var(--pp5-primary-hover); }
+.text-muted, .form-text { color: var(--pp5-text-muted) !important; }
+[hidden] { display: none !important; }
+/* Programmatic focus after a command must stay visible in pointer modality too.
+   Tabulator score cells keep their dedicated single-boundary focus treatment. */
+:focus-visible, :focus:not(.tabulator-cell) {
+  outline: 3px solid var(--pp5-focus) !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--pp5-surface);
+}
+[tabindex="-1"] { scroll-margin-top: calc(var(--pp5-header-height) + var(--pp5-space-4)); }
+.pp5-skip-link {
+  position: fixed;
+  inset-block-start: var(--pp5-space-2);
+  inset-inline-start: var(--pp5-space-2);
+  z-index: 1100;
+  padding: var(--pp5-space-3) var(--pp5-space-4);
+  color: var(--pp5-on-primary);
+  background: var(--pp5-primary);
+  transform: translateY(-200%);
+}
+.pp5-skip-link:focus { transform: none; color: var(--pp5-on-primary); }
+
+.pp5-page-header, .pp5-actions, .pp5-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--pp5-space-3);
+}
+.pp5-page-header { justify-content: space-between; margin-block-end: var(--pp5-space-6); }
+.pp5-page-header > * { min-width: 0; overflow-wrap: anywhere; }
+.pp5-page-header h1 { margin-block-end: var(--pp5-space-2); }
+.pp5-content > h1 { margin-block-end: var(--pp5-space-4); }
+.pp5-page-header p { margin: 0; }
+.breadcrumb { font-size: 0.875rem; margin-block-end: var(--pp5-space-2); }
+.breadcrumb a { text-decoration-color: var(--pp5-primary-border); }
+.breadcrumb-item.active { color: var(--pp5-text-muted); }
+.pp5-surface, .pp5-empty-state {
+  background: var(--pp5-surface);
+  border: 1px solid var(--pp5-border);
+  border-radius: var(--pp5-radius-md);
+  padding: var(--pp5-space-6);
+  margin-block-end: var(--pp5-space-4);
+}
+.pp5-surface { box-shadow: var(--pp5-shadow-sm); }
+.pp5-empty-state { text-align: center; color: var(--pp5-text-muted); }
+.pp5-empty-state p:last-child { margin-bottom: 0; }
+
+/* Form fields and controls stay large enough for Thai text and touch input. */
+.pp5-form { max-width: var(--pp5-form-width); }
+.pp5-field { margin-block-end: var(--pp5-space-4); min-width: 0; }
+.form-label { font-weight: 600; margin-block-end: var(--pp5-space-1); }
+.form-control, .form-select {
+  font-size: 1rem;
+  line-height: 1.6;
+  min-height: 2.75rem;
+  color: var(--pp5-text);
+  background-color: var(--pp5-surface);
+  border-color: var(--pp5-control-border);
+  border-radius: var(--pp5-radius-sm);
+}
+.form-control::placeholder { color: var(--pp5-text-muted); opacity: 1; }
+.form-control:focus, .form-select:focus {
+  color: var(--pp5-text);
+  background-color: var(--pp5-surface);
+  border-color: var(--pp5-focus);
+  box-shadow: none;
+}
+.form-control[readonly] { background: var(--pp5-surface-muted); border-style: dashed; }
+.form-control:disabled, .form-select:disabled { color: var(--pp5-text-muted); background: var(--pp5-surface-muted); border-color: var(--pp5-border); opacity: 1; }
+[aria-invalid="true"], .form-control.is-invalid, .form-select.is-invalid { border-color: var(--pp5-danger); }
+.pp5-field-error, .invalid-feedback { color: var(--pp5-danger); }
+.pp5-filter-bar { align-items: end; margin-block-end: var(--pp5-space-4); }
+.pp5-filter-bar .pp5-field { flex: 1 1 12rem; margin: 0; }
+.btn {
+  min-height: 2.75rem;
+  padding: var(--pp5-space-2) var(--pp5-space-4);
+  font-weight: 600;
+  border-radius: var(--pp5-radius-sm);
+}
+.btn:disabled, .btn.disabled { opacity: 0.7; }
+.btn-primary {
+  --bs-btn-color: var(--pp5-on-primary);
+  --bs-btn-bg: var(--pp5-primary);
+  --bs-btn-border-color: var(--pp5-primary);
+  --bs-btn-hover-color: var(--pp5-on-primary);
+  --bs-btn-hover-bg: var(--pp5-primary-hover);
+  --bs-btn-hover-border-color: var(--pp5-primary-hover);
+  --bs-btn-active-color: var(--pp5-on-primary);
+  --bs-btn-active-bg: var(--pp5-primary-hover);
+  --bs-btn-active-border-color: var(--pp5-primary-hover);
+  --bs-btn-disabled-bg: var(--pp5-primary);
+  --bs-btn-disabled-border-color: var(--pp5-primary);
+}
+.btn-secondary, .btn-outline-secondary {
+  --bs-btn-color: var(--pp5-text);
+  --bs-btn-bg: var(--pp5-surface);
+  --bs-btn-border-color: var(--pp5-control-border);
+  --bs-btn-hover-color: var(--pp5-text);
+  --bs-btn-hover-bg: var(--pp5-surface-muted);
+  --bs-btn-hover-border-color: var(--pp5-text-muted);
+  --bs-btn-active-color: var(--pp5-text);
+  --bs-btn-active-bg: var(--pp5-surface-muted);
+  --bs-btn-active-border-color: var(--pp5-text-muted);
+  --bs-btn-disabled-color: var(--pp5-text-muted);
+  --bs-btn-disabled-bg: var(--pp5-surface-muted);
+  --bs-btn-disabled-border-color: var(--pp5-border);
+}
+.btn-danger {
+  --bs-btn-color: var(--pp5-on-primary);
+  --bs-btn-bg: var(--pp5-danger);
+  --bs-btn-border-color: var(--pp5-danger);
+  --bs-btn-hover-color: var(--pp5-danger);
+  --bs-btn-hover-bg: var(--pp5-danger-bg);
+  --bs-btn-hover-border-color: var(--pp5-danger);
+  --bs-btn-active-color: var(--pp5-danger);
+  --bs-btn-active-bg: var(--pp5-danger-bg);
+  --bs-btn-active-border-color: var(--pp5-danger);
+  --bs-btn-disabled-bg: var(--pp5-danger);
+  --bs-btn-disabled-border-color: var(--pp5-danger);
+}
+.btn-link { --bs-btn-color: var(--pp5-primary); --bs-btn-hover-color: var(--pp5-primary-hover); }
+
+/* Status text is required in markup: color is a supporting signal only. */
+.pp5-alert, .pp5-badge {
+  color: var(--pp5-status-text, var(--pp5-text));
+  background: var(--pp5-status-bg, var(--pp5-surface-muted));
+  border: 1px solid color-mix(in srgb, currentColor 35%, var(--pp5-surface));
+  border-radius: var(--pp5-radius-sm);
+}
+.pp5-alert { padding: var(--pp5-space-3) var(--pp5-space-4); margin-block: var(--pp5-space-4); border-inline-start: 3px solid currentColor; }
+.pp5-badge { display: inline-block; padding: var(--pp5-space-1) var(--pp5-space-2); font-size: 0.875rem; font-weight: 600; }
+.pp5-alert--success, .pp5-badge--success { --pp5-status-text: var(--pp5-success); --pp5-status-bg: var(--pp5-success-bg); }
+.pp5-alert--warning, .pp5-badge--warning { --pp5-status-text: var(--pp5-warning); --pp5-status-bg: var(--pp5-warning-bg); }
+.pp5-alert--danger, .pp5-badge--danger { --pp5-status-text: var(--pp5-danger); --pp5-status-bg: var(--pp5-danger-bg); }
+.pp5-alert--info, .pp5-badge--info { --pp5-status-text: var(--pp5-info); --pp5-status-bg: var(--pp5-info-bg); }
+.pp5-badge:is([data-status="ACTIVE"], [data-status="APPLIED"]) { --pp5-status-text: var(--pp5-success); --pp5-status-bg: var(--pp5-success-bg); }
+.pp5-badge:is([data-status="DRAFT"], [data-status="PREVIEW"]) { --pp5-status-text: var(--pp5-info); --pp5-status-bg: var(--pp5-info-bg); }
+.pp5-badge:is([data-status="CLOSED"], [data-status="INACTIVE"], [data-status="ENDED"], [data-status="EXPIRED"]) { --pp5-status-text: var(--pp5-warning); --pp5-status-bg: var(--pp5-warning-bg); }
+.pp5-badge:is([data-status="SUSPENDED"], [data-status="WITHDRAWN"], [data-status="ERROR"], [data-status="CONFLICT"]) { --pp5-status-text: var(--pp5-danger); --pp5-status-bg: var(--pp5-danger-bg); }
+
+.pp5-table-scroll { max-width: 100%; overflow-x: auto; margin-block-end: var(--pp5-space-4); border: 1px solid var(--pp5-border); border-radius: var(--pp5-radius-sm); background: var(--pp5-surface); }
+.pp5-table { --bs-table-color: var(--pp5-text); --bs-table-bg: var(--pp5-surface); font-size: 0.9375rem; margin: 0; }
+.pp5-table > :not(caption) > * > * { padding: var(--pp5-table-cell-padding); vertical-align: middle; }
+.pp5-table thead { --bs-table-bg: var(--pp5-table-header); }
+.pp5-table thead th { color: var(--pp5-text); font-weight: 700; border-bottom: 1px solid var(--pp5-control-border); }
+.pp5-table tbody tr:nth-child(even) { --bs-table-bg: var(--pp5-table-stripe); }
+.pp5-table tbody tr:hover { --bs-table-bg: var(--pp5-primary-soft); }
+.pp5-table caption { caption-side: top; color: var(--pp5-text-muted); }
+.pp5-table .pp5-actions { flex-wrap: nowrap; }
+/* Reserve readable text columns in dense tables; their wrapper owns overflow. */
+.pp5-table .pp5-text-column { min-width: 12rem; }
+.pp5-gradebook table { width: max-content; min-width: 60rem; font-variant-numeric: tabular-nums; }
+.pp5-gradebook th { white-space: normal; overflow-wrap: anywhere; min-width: 9rem; max-width: 14rem; }
+.pp5-gradebook thead th { position: sticky; inset-block-start: 0; z-index: 2; }
+.pp5-gradebook .pp5-gradebook-identity { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--pp5-surface); }
+.pp5-gradebook input { width: 6rem; min-height: 2.75rem; font-size: 1rem; text-align: end; }
+.pp5-gradebook [data-save-state] [role="status"] { display: block; min-height: 1.5em; }
+.pp5-gradebook [data-save-state="error"] [role="status"] { color: var(--pp5-danger); }
+.pp5-gradebook [data-save-state="saved"] [role="status"] { color: var(--pp5-success); }
+.pp5-gradebook [data-save-state="saving"] [role="status"] { color: var(--pp5-info); }
+.pp5-gradebook .pp5-table tbody tr.pp5-historical { --bs-table-bg: var(--pp5-surface-muted); }
+
+/* Keep this breakpoint aligned with app.js. Without enhancement, nav stays visible. */
+@media (max-width: 63.999rem) {
+  .pp5-shell { grid-template-columns: minmax(0, 1fr); grid-template-areas: "topbar" "sidebar" "content"; grid-template-rows: auto auto 1fr; }
+  /* Wrapped school/user identity must not cover focused content on small screens. */
+  .pp5-topbar { position: static; }
+  .pp5-sidebar { position: static; max-height: none; border-inline-end: 0; border-block-end: 1px solid var(--pp5-border); }
+  .pp5-nav-toggle[data-nav-ready], [data-nav-ready] .pp5-nav-close { display: inline-block; }
+  .pp5-content { padding: var(--pp5-space-4); }
+}
+@media (max-width: 35.999rem) {
+  .pp5-topbar, .pp5-surface, .pp5-empty-state { padding: var(--pp5-space-4); }
+  .pp5-page-header { align-items: start; flex-direction: column; }
+  .pp5-filter-bar { align-items: stretch; flex-direction: column; }
+  .pp5-filter-bar .pp5-field { flex-basis: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+.pp5-offering-table { min-width: 48rem; }
+.pp5-offering-table th, .pp5-offering-table td { overflow-wrap: anywhere; max-width: 18rem; }
+/* Contain absolutely positioned accessible link labels inside the scroll region. */
+.pp5-offering-table .btn { position: relative; }
+
+.pp5-teaching-section { margin-block: var(--pp5-space-4); }
+.pp5-teaching-section h3 { margin-block: var(--pp5-space-4) var(--pp5-space-2); }
+.pp5-teaching-room { margin-block-end: var(--pp5-space-4); }
+.pp5-teaching-room h4 { overflow-wrap: anywhere; }
+.pp5-teaching-list { list-style: none; padding: 0; margin: 0; }
+.pp5-teaching-item { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--pp5-space-3); padding: var(--pp5-space-3); border-block-start: 1px solid var(--pp5-border); }
+.pp5-teaching-detail { display: grid; gap: .2rem; min-width: 0; overflow-wrap: anywhere; }
+.pp5-teaching-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pp5-space-2); }
+
+/* Administration forms and tables share the shell without changing legacy grids. */
+.pp5-admin-page { min-width: 0; overflow-wrap: anywhere; }
+.pp5-admin-page .pp5-form { margin-block-end: var(--pp5-space-6); }
+.pp5-admin-page .form-label { display: block; width: 100%; }
+.pp5-admin-page .form-check-input { margin-inline-end: var(--pp5-space-2); }
+.pp5-admin-page fieldset { min-width: 0; }
+.pp5-admin-page legend { font-size: 1.25rem; font-weight: 600; }
+.pp5-admin-page .pp5-sensitive { border-inline-start: 4px solid var(--pp5-danger); }
+.pp5-admin-page .pp5-table { min-width: 44rem; }
+.pp5-admin-page .pp5-table th, .pp5-admin-page .pp5-table td { max-width: 22rem; overflow-wrap: anywhere; }
+.pp5-admin-page .pp5-table td:last-child { min-width: 12rem; }
+.pp5-admin-page .pp5-table td:last-child > a { display: inline-flex; align-items: center; margin: 0 var(--pp5-space-2) var(--pp5-space-2) 0; }
+.pp5-admin-page .pp5-table td:last-child > a.btn { margin-block-start: 0; }
+.pp5-admin-page td .pp5-form { padding: 0; border: 0; box-shadow: none; margin: 0; }
+.pp5-admin-page td .btn { margin-block-start: var(--pp5-space-2); }
+.pp5-admin-page .pp5-filter-bar select { max-width: 100%; }
+.pp5-import-steps { display: flex; flex-wrap: wrap; gap: var(--pp5-space-6); padding-inline-start: var(--pp5-space-6); }
+.pp5-import-steps li { padding-inline-end: var(--pp5-space-6); }
+.pp5-import-steps [aria-current="step"] { font-weight: 700; color: var(--pp5-primary); }
+.pp5-csv-header { white-space: pre-wrap; overflow-wrap: anywhere; }
+.pp5-admin-page .pp5-badge:is([data-status="ACTIVE"], [data-status="INACTIVE"], [data-status="DRAFT"], [data-status="CLOSED"], [data-status="SUSPENDED"]) { white-space: nowrap; }
+.pp5-admin-page .pp5-table thead th { white-space: nowrap; }
+
+.pp5-admin-page .pp5-assignment-table { min-width: 64rem; }
+.pp5-admin-page .pp5-assignment-table td:nth-child(2),
+.pp5-admin-page .pp5-assignment-table td:nth-child(3),
+.pp5-admin-page .pp5-assignment-table td:nth-child(4) { min-width: 12rem; }
+
+/* Gradebook keeps a wide grid; only its own region scrolls. */
+.pp5-gradebook-page { min-width: 0; overflow-wrap: anywhere; }
+.pp5-gradebook-page > .pp5-actions { margin-block-end: var(--pp5-space-4); }
+.pp5-gradebook-range-actions { margin-block: var(--pp5-space-3); padding: var(--pp5-space-3); border: 1px solid var(--pp5-primary-border); border-radius: var(--pp5-radius-md); background: var(--pp5-primary-soft); }
+.pp5-gradebook-range-actions p { margin-block-end: var(--pp5-space-2); }
+.pp5-gradebook-range-actions label { display: block; margin-block-end: var(--pp5-space-2); }
+.pp5-gradebook-range-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--pp5-space-2); }
+.pp5-gradebook-range-controls input { width: min(100%, 10rem); }
+.pp5-gradebook-range-controls .btn { white-space: normal; }
+.pp5-gradebook-metadata { display: flex; flex-wrap: wrap; gap: var(--pp5-space-3) var(--pp5-space-6); margin-block: var(--pp5-space-4); }
+.pp5-gradebook-metadata > div { flex: 1 1 10rem; min-width: 0; }
+.pp5-gradebook-metadata dd { margin: 0; }
+.pp5-gradebook { max-height: 70vh; overflow: auto; scroll-padding-inline-start: 12rem; scroll-padding-inline-end: var(--pp5-space-2); scroll-padding-block-start: 10rem; scroll-padding-block-end: var(--pp5-space-2); }
+.pp5-gradebook input { scroll-margin: var(--pp5-space-2); }
+.pp5-gradebook .pp5-gradebook-identity { min-width: 10rem; width: 10rem; max-width: 10rem; }
+.pp5-gradebook-identity span { display: block; white-space: normal; overflow-wrap: anywhere; }
+.pp5-gradebook thead .pp5-gradebook-identity { z-index: 3; background: var(--pp5-table-header); }
+.pp5-gradebook .pp5-historical .pp5-gradebook-identity { background: var(--pp5-surface-muted); }
+.pp5-gradebook-summary { border-inline-start: 1px solid var(--pp5-border); font-variant-numeric: tabular-nums; }
+.pp5-gradebook td { min-width: 9rem; max-width: 14rem; overflow-wrap: anywhere; }
+.pp5-gradebook [data-score-cell] { min-width: 7rem; }
+.pp5-gradebook td[data-grid-score-cell] { position: relative; }
+.pp5-gradebook td[data-grid-selected="true"] {
+  --bs-table-bg: var(--pp5-selected-soft);
+  outline: 1px dashed var(--pp5-focus);
+  outline-offset: -3px;
+}
+.pp5-gradebook td[data-grid-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 2px solid transparent;
+}
+.pp5-gradebook td[data-grid-edge~="top"]::after { border-top-color: var(--pp5-focus); }
+.pp5-gradebook td[data-grid-edge~="bottom"]::after { border-bottom-color: var(--pp5-focus); }
+.pp5-gradebook td[data-grid-edge~="left"]::after { border-left-color: var(--pp5-focus); }
+.pp5-gradebook td[data-grid-edge~="right"]::after { border-right-color: var(--pp5-focus); }
+.pp5-gradebook [data-score-cell][data-active-cell="true"] {
+  outline: 2px solid var(--pp5-focus);
+  outline-offset: 2px;
+  border-radius: var(--pp5-radius-sm);
+  box-shadow: inset 0 0 0 2px var(--pp5-focus);
+}
+.pp5-gradebook-code { color: var(--pp5-text-muted); font-weight: normal; }
+.pp5-gradebook-total { margin-block: var(--pp5-space-3); }
+.pp5-gradebook-teachers { margin-block-start: var(--pp5-space-4); }
+.pp5-gradebook [role="status"] { font-size: 0.8125rem; }
+
+/* Classroom context stays inside the application shell; native disclosures work without JS. */
+.pp5-workspace-shell { margin-block-end: var(--pp5-space-4); overflow-wrap: anywhere; }
+.pp5-workspace-context { margin-block-end: var(--pp5-space-3); }
+.pp5-workspace-switcher summary { cursor: pointer; padding-block: var(--pp5-space-2); }
+.pp5-workspace-choices { max-height: 20rem; overflow: auto; padding: var(--pp5-space-3); }
+.pp5-workspace-choices ul { padding-inline-start: var(--pp5-space-4); }
+.pp5-workspace-choices a { display: inline-block; padding-block: var(--pp5-space-2); overflow-wrap: anywhere; }
+.pp5-workspace-choices [aria-current] { font-weight: 700; text-decoration-thickness: 3px; }
+.pp5-workspace-nav { display: flex; flex-wrap: wrap; gap: var(--pp5-space-2); list-style: none; padding: 0; margin: var(--pp5-space-3) 0 0; }
+.pp5-workspace-nav li { min-width: 0; max-width: 100%; }
+.pp5-workspace-nav a { display: block; padding: var(--pp5-space-2) var(--pp5-space-3); border-radius: var(--pp5-radius-sm); }
+.pp5-workspace-nav [aria-current] { color: var(--pp5-primary-hover); font-weight: 700; text-decoration: underline; text-decoration-thickness: 3px; background: var(--pp5-primary-soft); }
+#workspace-scores { scroll-margin-top: calc(var(--pp5-header-height) + var(--pp5-space-4)); }
+
+/* M6.6 pilot: a visible classroom identity, three task colors, and a neutral roster. */
+.pp5-classroom-pilot .pp5-content > h1 { font-size: .9rem; font-weight: 700; color: var(--pp5-text-muted); margin-bottom: .55rem; }
+.pp5-classroom-pilot .pp5-workspace-shell {
+  background: var(--pp5-workspace-blue);
+  border-color: var(--pp5-primary-border);

@@ -50,7 +50,7 @@ final class UiLayoutTest extends TestCase
 
         self::assertStringContainsString('<title>' . $escaped . '</title>', $html);
         self::assertStringContainsString('<h1>' . $escaped . '</h1>', $html);
-        self::assertStringContainsString('<body class="' . $escaped . '">', $html);
+        self::assertMatchesRegularExpression('~<body class="[^"]*' . preg_quote($escaped, '~') . '">~', $html);
         self::assertStringNotContainsString($hostile, $html);
         self::assertStringNotContainsString('<script>', $html);
     }
@@ -72,7 +72,7 @@ final class UiLayoutTest extends TestCase
         $plain = View::page(self::CONTENT, ['message' => 'content'], ['layout' => $layout]);
         self::assertSame($layout === 'app' ? 1 : 0, substr_count($plain, '<script'));
         if ($layout === 'app') {
-            self::assertStringContainsString('<script src="/assets/app.js" defer></script>', $plain);
+            self::assertStringContainsString('<script src="/assets/app.js?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.js').'" defer></script>', $plain);
         }
         self::assertStringNotContainsString('htmx', $plain);
         self::assertStringNotContainsString('<h1>', $plain);

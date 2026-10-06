@@ -140,7 +140,7 @@ final class GradebookComponentHttpTest extends TestCase
         }
         $r = $this->request('GET', $this->path()); self::assertSame(200, $r->status());
         self::assertStringNotContainsString($hostile, $r->body()); self::assertStringContainsString(htmlspecialchars($hostile, ENT_QUOTES, 'UTF-8'), $r->body());
-        self::assertSame(0, $this->xpath($r->body())->query('//script[not(@src="/assets/app.js")]')->length);
+        self::assertSame(0, $this->xpath($r->body())->query('//script[not(starts-with(@src,"/assets/app.js?v="))]')->length);
         self::assertStringContainsString('รหัสอ้างอิง: ' . htmlspecialchars($hostile, ENT_QUOTES, 'UTF-8'), $r->body());
         self::assertSame(0, $this->xpath($r->body())->query('//form[@action="' . $this->path('update') . '"]//input[@name="code"]')->length);
     }

@@ -11,6 +11,9 @@ use App\Support\View;
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $assets = [
     '/assets/vendor/bootstrap-5.3.8.min.css' => ['/htdocs/assets/vendor/bootstrap-5.3.8.min.css', 'text/css'],
+    '/assets/vendor/tabler/tabler-1.6.1.min.css'=>['/htdocs/assets/vendor/tabler/tabler-1.6.1.min.css', 'text/css'],
+    '/assets/tabler-app.css'=>['/htdocs/assets/tabler-app.css', 'text/css'],
+    '/assets/app-compat.css'=>['/htdocs/assets/app-compat.css', 'text/css'],
     '/assets/app.css' => ['/htdocs/assets/app.css', 'text/css'],
     '/assets/app.js' => ['/htdocs/assets/app.js', 'text/javascript'],
     '/checks.js' => ['/tests/Browser/ui-navigation.js', 'text/javascript'],
@@ -37,7 +40,7 @@ if (in_array($path, ['/frame', '/no-js'], true)) {
         'scripts'=>'<script src="/checks.js" defer></script>',
     ]);
     // Simulate app.js unavailable without altering production layout or its fallback markup.
-    if ($path === '/no-js') { $html = str_replace('<script src="/assets/app.js" defer></script>', '', $html); }
+    if ($path === '/no-js') { $html = preg_replace('~<script src="/assets/app\.js\?v=[0-9]+" defer></script>~', '', $html); }
     echo $html;
     exit;
 }

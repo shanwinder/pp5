@@ -1,0 +1,96 @@
+/* PP5 production presentation on pinned Tabler 1.6.1. Keep this file about
+   school workflow, compact tables and accessible disclosures, not components. */
+.pp5-tabler {
+  --tblr-primary: #206bc4;
+  --tblr-primary-rgb: 32, 107, 196;
+  --tblr-body-bg: #f3f6fb;
+  --pp5-focus: #0a58ad;
+  font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  line-height: 1.55;
+}
+.pp5-tabler .pp5-app-page { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "top top" "side content"; min-height: 100dvh; }
+.pp5-app-topbar { grid-area: top; position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid var(--tblr-border-color); }
+.pp5-app-topbar .container-fluid { min-height: 4rem; }
+.pp5-app-sidebar { grid-area: side; display: block !important; position: sticky !important; top: 4rem; align-self: start; width: 100% !important; height: calc(100dvh - 4rem); overflow-y: auto; background: #fff; border-right: 1px solid var(--tblr-border-color); }
+.pp5-app-sidebar .container-fluid { padding: 1rem .75rem; }
+.pp5-app-sidebar .nav-link { border-radius: .5rem; padding: .5rem .75rem; }
+.pp5-app-sidebar .nav-link.active { color: var(--tblr-primary); background: #e8f2ff; font-weight: 700; box-shadow: inset 3px 0 #206bc4; }
+.pp5-app-nav-section + .pp5-app-nav-section { margin-top: 1.25rem; }
+.pp5-app-nav-section h2 { margin: 0 .75rem .35rem; letter-spacing: .05em; }
+.pp5-app-wrapper { grid-area: content; min-width: 0; margin-left: 0; }
+.pp5-app-wrapper .page-body { margin-top: 0; padding-bottom: 2rem; }
+.pp5-app-wrapper .container-xl { max-width: 90rem; }
+.pp5-school-name { margin-left: auto; max-width: 24rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--tblr-secondary-color); }
+.pp5-user-name { max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pp5-brand-mark { display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; margin-right: .65rem; border-radius: .65rem; color: #fff; background: #206bc4; font-weight: 800; font-size: .9rem; }
+.pp5-tabler .page-header { margin-bottom: 1.5rem; }
+.pp5-tabler .page-title { font-size: clamp(1.45rem, 2vw, 2rem); line-height: 1.35; }
+.pp5-tabler .card { box-shadow: 0 2px 12px rgb(35 71 119 / 5%); }
+.pp5-hero { border-color: #bad3f4; background: linear-gradient(110deg, #eaf3ff, #fff 74%); }
+.pp5-hero .card-status-start { width: .35rem; }
+.pp5-context-card { border-color: #c8d8ef; }
+.pp5-context-card .card-title { font-size: 1.45rem; }
+.pp5-context-card .card-footer { background: #f7faff; }
+.pp5-icon-tile { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; border-radius: .65rem; flex: none; }
+.pp5-icon-tile .icon { width: 1.4rem; height: 1.4rem; }
+.pp5-icon-tile--students { color: #0969b7; background: #dff4ff; }
+.pp5-icon-tile--subjects { color: #6741b1; background: #eee8ff; }
+.pp5-icon-tile--scores { color: #b35b00; background: #fff0d9; }
+.pp5-icon-tile--management { color: #157347; background: #e0f7e9; }
+.pp5-work-card .card-title { font-size: 1.1rem; }
+.pp5-work-card .card-body { min-width: 0; }
+.pp5-work-card--students .card-status-top { background: #0ea5e9; }
+.pp5-work-card--academic .card-status-top { background: #7c3aed; }
+.pp5-work-card--subjects .card-status-top { background: #7c3aed; }
+.pp5-work-card--scores .card-status-top { background: #f59e0b; }
+.pp5-work-card--management .card-status-top { background: #16a34a; }
+.pp5-workspace-choices ul { list-style: none; padding-left: 0; margin: .4rem 0 0; }
+.pp5-workspace-choices a { display: block; padding: .45rem .6rem; border-radius: .4rem; text-decoration: none; }
+.pp5-workspace-choices a:hover, .pp5-workspace-choices a[aria-current] { background: #e8f2ff; }
+.pp5-workspace-choices > div + div { margin-top: 1rem; }
+.pp5-workspace-switcher { max-width: 100%; }
+.pp5-workspace-switcher summary { list-style: none; cursor: pointer; }
+.pp5-workspace-switcher summary::-webkit-details-marker, .pp5-student-detail summary::-webkit-details-marker { display: none; }
+.pp5-workspace-switcher .card { max-width: 22rem; }
+.pp5-tabler .pp5-table-scroll { max-width: 100%; overflow-x: auto; }
+.pp5-tabler .pp5-table { min-width: 37rem; margin-bottom: 0; }
+.pp5-tabler .pp5-table th, .pp5-tabler .pp5-table td { padding-top: .45rem; padding-bottom: .45rem; vertical-align: middle; }
+.pp5-tabler .pp5-table caption { padding: .5rem 1rem; color: var(--tblr-secondary-color); }
+.pp5-tabler .pp5-user-table { min-width: 48rem; }
+.pp5-tabler .pp5-user-table th, .pp5-tabler .pp5-user-table td { overflow-wrap: normal; }
+.pp5-tabler .pp5-badge { font-size: .78rem; font-weight: 650; }
+.pp5-student-detail summary { list-style: none; cursor: pointer; }
+.pp5-student-detail-panel { min-width: 17rem; max-width: 22rem; white-space: normal; }
+.pp5-student-detail[open] summary { background: #e8f2ff; color: #206bc4; border-color: #206bc4; }
+.pp5-student-detail-actions a { line-height: 1.35; }
+.pp5-row-action { min-width: 2rem; min-height: 2rem; padding: .3rem; position: relative; }
+.pp5-row-action .icon { width: 1rem; height: 1rem; }
+/* CSS help works with mouse and keyboard. The open panel carries visible labels on touch. */
+.pp5-row-action[data-tooltip]:not([data-tooltip-ready]):hover::after, .pp5-row-action[data-tooltip]:not([data-tooltip-ready]):focus-visible::after { content: attr(data-tooltip); position: absolute; right: 0; top: calc(100% + .4rem); z-index: 5; width: max-content; max-width: 12rem; padding: .35rem .55rem; border-radius: .35rem; background: #182b45; color: #fff; font-size: .78rem; line-height: 1.35; box-shadow: 0 3px 9px rgb(0 0 0 / 20%); pointer-events: none; }
+.pp5-tooltip { position: fixed; z-index: 1001; width: max-content; max-width: 12rem; padding: .35rem .55rem; border-radius: .35rem; background: #182b45; color: #fff; font-size: .78rem; line-height: 1.35; box-shadow: 0 3px 9px rgb(0 0 0 / 20%); pointer-events: none; }
+.pp5-tooltip[hidden] { display: none; }
+.pp5-tabler a, .pp5-tabler button, .pp5-tabler summary, .pp5-tabler [tabindex="0"] { scroll-margin: 5rem; }
+.pp5-tabler :focus-visible { outline: 3px solid var(--pp5-focus) !important; outline-offset: 3px; }
+.pp5-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 1000; padding: .5rem .75rem; background: #174a83; color: #fff; transform: translateY(-180%); }
+.pp5-skip-link:focus { transform: none; color: #fff; }
+.pp5-nav-toggle, .pp5-nav-close { display: none; }
+.pp5-app-sidebar[hidden] { display: none !important; }
+@media (max-width: 63.999rem) {
+  .pp5-tabler .pp5-app-page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; grid-template-areas: "top" "side" "content"; }
+  .pp5-nav-toggle[data-nav-ready], [data-nav-ready] .pp5-nav-close { display: inline-flex; }
+  .pp5-app-sidebar { position: static !important; width: 100% !important; height: auto; max-height: 65dvh; border-right: 0; border-bottom: 1px solid var(--tblr-border-color); }
+  .pp5-school-name { display: none; }
+  .pp5-app-topbar .navbar-brand { margin-right: auto; }
+}
+@media (max-width: 36rem) {
+  .pp5-user-name { display: none; }
+  .pp5-app-topbar .container-fluid { gap: .5rem !important; }
+  .pp5-app-topbar .navbar-brand { font-size: 1rem; }
+  .pp5-app-topbar .navbar-brand small { display: none !important; }
+  .pp5-app-wrapper .container-xl { padding-inline: .75rem; }
+  .pp5-context-card .nav { gap: .25rem !important; }
+  .pp5-context-card .nav-link { padding: .45rem .6rem; font-size: .9rem; }
+  .pp5-roster-scroll .pp5-table td:last-child { padding-block: .2rem; }
+  .pp5-roster-scroll .pp5-row-action { min-width: 2.75rem; min-height: 2.75rem; }
+  .pp5-roster-scroll th:last-child, .pp5-roster-scroll td:last-child { position: sticky; right: 0; background: #fff; box-shadow: -1px 0 0 var(--tblr-border-color); }
+}

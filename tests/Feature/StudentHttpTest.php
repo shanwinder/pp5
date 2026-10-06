@@ -322,7 +322,7 @@ final class StudentHttpTest extends TestCase
             self::assertSame(200, $response->status());
             self::assertStringContainsString(htmlspecialchars(self::HOSTILE, ENT_QUOTES, 'UTF-8'), $response->body());
             self::assertStringNotContainsString(self::HOSTILE, $response->body());
-            self::assertSame(0, $this->xpath($response->body())->query('//script[not(@src="/assets/app.js")] | //*[@onfocus]')->length);
+            self::assertSame(0, $this->xpath($response->body())->query('//script[not(starts-with(@src,"/assets/app.js?v="))] | //*[@onfocus]')->length);
         }
         $response = $this->request('GET', '/students/create');
         self::assertSame(200, $response->status());
@@ -330,7 +330,7 @@ final class StudentHttpTest extends TestCase
         $this->assertForms($response);
         $response = $this->request('POST', '/students', $this->payload(['student_code' => self::HOSTILE, 'first_name_th' => self::HOSTILE]));
         self::assertSame(422, $response->status()); $this->assertSafe($response);
-        self::assertSame(0, $this->xpath($response->body())->query('//script[not(@src="/assets/app.js")] | //*[@onfocus]')->length);
+        self::assertSame(0, $this->xpath($response->body())->query('//script[not(starts-with(@src,"/assets/app.js?v="))] | //*[@onfocus]')->length);
     }
 
     #[DataProvider('mutations')]
@@ -401,7 +401,7 @@ final class StudentHttpTest extends TestCase
         $this->pdo->prepare('UPDATE classrooms SET name_th=? WHERE school_id=?')->execute([self::HOSTILE,$this->school]);
         $response=$this->request('GET',$this->path('/students/{id}'));
         self::assertStringContainsString(htmlspecialchars(self::HOSTILE,ENT_QUOTES,'UTF-8'),$response->body());
-        self::assertSame(0,$this->xpath($response->body())->query('//script[not(@src="/assets/app.js")]')->length); $this->assertSafe($response);
+        self::assertSame(0,$this->xpath($response->body())->query('//script[not(starts-with(@src,"/assets/app.js?v="))]')->length); $this->assertSafe($response);
     }
 
     public function test_student_without_enrollments_shows_empty_history(): void

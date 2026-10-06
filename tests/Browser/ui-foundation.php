@@ -12,6 +12,9 @@ use App\Support\View;
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $assets = [
     '/assets/vendor/bootstrap-5.3.8.min.css' => ['/htdocs/assets/vendor/bootstrap-5.3.8.min.css', 'text/css'],
+    '/assets/vendor/tabler/tabler-1.6.1.min.css'=>['/htdocs/assets/vendor/tabler/tabler-1.6.1.min.css', 'text/css'],
+    '/assets/tabler-app.css'=>['/htdocs/assets/tabler-app.css', 'text/css'],
+    '/assets/app-compat.css'=>['/htdocs/assets/app-compat.css', 'text/css'],
     '/assets/app.css' => ['/htdocs/assets/app.css', 'text/css'],
     '/assets/app.js' => ['/htdocs/assets/app.js', 'text/javascript'],
     '/browser-tests.js' => ['/tests/Browser/ui-foundation.js', 'text/javascript'],
@@ -23,11 +26,16 @@ if (isset($assets[$path])) {
     exit;
 }
 if (in_array($path, ['/frame', '/no-js'], true)) {
-    echo View::page('../../tests/Fixtures/views/ui-foundation', [], [
-        'layout' => $path === '/no-js' ? 'guest' : 'app',
+    $html = View::page('../../tests/Fixtures/views/ui-foundation', [], [
         'documentTitle' => 'ทดสอบพื้นฐาน UI ปพ.5',
+        'pageTitle' => 'พื้นฐานงานโรงเรียน',
+        'ui' => ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนตัวอย่าง','displayName'=>'ผู้ใช้ทดสอบ','csrfToken'=>'fixture-only','currentKey'=>'fixture',
+            'sections'=>[['key'=>'fixture','label'=>'เมนูทดสอบ','items'=>[['key'=>'fixture','label'=>'หน้าทดสอบ','url'=>'#fixture-content','detail'=>null],
+                ['key'=>'form','label'=>'แบบฟอร์มตัวอย่าง','url'=>'#fixture-form','detail'=>null]]]]],
         'scripts' => '<script src="/browser-tests.js" defer></script>',
     ]);
+    if ($path === '/no-js') { $html = preg_replace('~<script src="/assets/app\.js\?v=[0-9]+" defer></script>~', '', $html); }
+    echo $html;
     exit;
 }
 if ($path !== '/') { http_response_code(404); exit; }

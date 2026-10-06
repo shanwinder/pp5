@@ -94,7 +94,7 @@
       check(region.getBoundingClientRect().right <= w.innerWidth + 1, 'table contained');
       check(region.tabIndex === 0 && region.getAttribute('aria-label'), 'table named/reachable');
       region.scrollLeft = region.scrollWidth;
-      const action = region.querySelector('td:last-child a,td:last-child button');
+      const action = region.querySelector('td:last-child summary,td:last-child > a,td:last-child > button');
       if (action) {
         action.focus(); action.scrollIntoView({block:'center',inline:'nearest',behavior:'instant'});
         const a = action.getBoundingClientRect(), r = region.getBoundingClientRect();
@@ -123,8 +123,8 @@
         check(rect.left >= -1 && rect.right <= w.innerWidth + 1, 'control contained '+control.id);
       }
       if (!control.classList.contains('pp5-table-scroll')) {
-        const hit = d.elementFromPoint((rect.left + rect.right) / 2, (rect.top + rect.bottom) / 2);
-        check(hit && (hit === control || control.contains(hit)), 'focus covered '+(control.id || control.textContent.trim().slice(0,30))+' top='+Math.round(rect.top)+' hit='+(hit?.className || 'none'));
+        const hits = Array.from(control.getClientRects(), box => d.elementFromPoint((box.left + box.right) / 2, (box.top + box.bottom) / 2));
+        check(hits.some(hit => hit && (hit === control || control.contains(hit))), 'focus covered '+(control.id || control.textContent.trim().slice(0,30))+' top='+Math.round(rect.top));
       }
       if (control.matches('[data-score-input]')) {
         const grid = control.closest('.pp5-gradebook'), identity = control.closest('tr').querySelector('th');

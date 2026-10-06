@@ -7,6 +7,8 @@ if (PHP_SAPI !== 'cli-server') { http_response_code(404); exit; }
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $root = dirname(__DIR__, 2);
 $assets = ['/assets/app.css'=>'htdocs/assets/app.css', '/assets/app.js'=>'htdocs/assets/app.js',
+    '/assets/vendor/tabler/tabler-1.6.1.min.css'=>'htdocs/assets/vendor/tabler/tabler-1.6.1.min.css',
+    '/assets/tabler-app.css'=>'htdocs/assets/tabler-app.css', '/assets/app-compat.css'=>'htdocs/assets/app-compat.css',
     '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/assets/gradebook-grid.css'=>'htdocs/assets/gradebook-grid.css',
     '/assets/vendor/tabulator/tabulator.min.js'=>'htdocs/assets/vendor/tabulator/tabulator.min.js',

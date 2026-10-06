@@ -4,7 +4,7 @@
     <p class="pp5-empty-state">ยังไม่มีสมาชิกโรงเรียน</p>
   <?php else: ?>
     <div class="pp5-table-scroll" role="region" aria-label="ผู้ใช้งาน" tabindex="0">
-<table class="table pp5-table">
+<table class="table pp5-table pp5-user-table">
       <thead>
         <tr><th scope="col">ชื่อผู้ใช้</th><th scope="col">ชื่อที่แสดง</th><th scope="col">อีเมล</th><th scope="col">สถานะสมาชิก</th><th scope="col">บทบาท</th><th scope="col">จัดการ</th></tr>
       </thead>

@@ -159,7 +159,7 @@ final class UiAdministrationTest extends TestCase
     {
         $x=$this->xpath($html);
         self::assertSame(1,substr_count($html,'<!doctype html>'));
-        foreach (['//html[@lang="th"]','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//form[@action="/logout"]','//link[@href="/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css').'"]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
+        foreach (['//html[@lang="th"]','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//form[@action="/logout"]','//link[@href="/assets/app-compat.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app-compat.css').'"]','//link[@href="/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css').'"]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
         self::assertSame(0,$x->query('//script[not(@src)]|//*[@style]|//link[starts-with(@href,"http")]|//script[starts-with(@src,"http")]')->length);
         self::assertStringNotContainsString('กลับแดชบอร์ด',$html);
         return $x;

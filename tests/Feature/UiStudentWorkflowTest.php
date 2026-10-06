@@ -248,7 +248,7 @@ final class UiStudentWorkflowTest extends StudentImportFixtureTestCase
     private function assertPage(Response $r): DOMXPath
     {
         $x=$this->xpath($r->body());
-        foreach (['//html','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//script[@src="/assets/app.js" and @defer]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
+        foreach (['//html','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//script[starts-with(@src,"/assets/app.js?v=") and @defer]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
         self::assertSame(1,substr_count($r->body(),'<!doctype html>'));
         self::assertSame(0,$x->query('//script[not(@src)]|//*[@onclick or @style]|//link[starts-with(@href,"http")]')->length);
         return $x;

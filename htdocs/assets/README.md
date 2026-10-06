@@ -98,3 +98,13 @@ executing the scripts:
 ```
 
 Other environments can use their browser parser. No build tool is required.
+
+## M6.6 production Tabler foundation (Task 1d)
+
+Authenticated `View::page()` screens use the local `@tabler/core@1.6.1` compiled CSS at `vendor/tabler/tabler-1.6.1.min.css` (SHA-256 `370a2d4e608ae518351d10528fc7dbe19b354ae5062c51b2a9cb294850d65403`). Official npm package tarball integrity: `sha512-lgmR9gcxRp5JlLxcmRi9Rz85JrEvH6Bz71KnlcPVSa97wtwQNjgSs3g3fxwbAlulHyRMghhIV04QUuW3pqDsIg==`. `vendor/tabler/LICENSE` is MIT (SHA-256 `4f88a82d13be3c5c63a12c5631eae914aa4381b6dc17641bf1ab85f3f8f6c8a5`). Tabler CSS includes Bootstrap; the app layout never loads the old Bootstrap stylesheet with it.
+
+`tabler-app.css` (7,845 raw / 2,322 gzip bytes) contains the shared production shell, PP5 domain accents, compact roster actions and tooltip/focus presentation. Dashboard, Classroom Overview and Students load it directly after Tabler CSS. Unmigrated authenticated bodies additionally load `app-compat.css` (20,409 raw / 4,786 gzip bytes) between Tabler and `tabler-app.css`. This is a trimmed migration layer from `app.css`: old shell, dashboard and pastel pilot rules are excluded. Guest/error documents still use Bootstrap 5.3.8 plus `app.css` until their later rollout.
+
+Tabler CSS is 635,394 raw / 78,989 gzip bytes. `app.js` is 4,984 raw / 1,652 gzip bytes, including local help for icon actions. No Tabler JS, Popper, CDN, icon font or runtime build is loaded. Four pinned, locally vendored Tabler Icons SVGs and their MIT license are documented in `vendor/tabler-icons/README.md`. The output paths/hashes can be checked with `shasum -a 256 htdocs/assets/vendor/tabler/* htdocs/assets/vendor/tabler-icons/*.svg htdocs/assets/vendor/tabler-icons/LICENSE`.
+
+The Gradebook grid and its JavaScript/vendor assets are unchanged. Existing `app.css` remains for guest/error and as the source of retained compatibility rules; future screen migrations should shed `app-compat.css` dependencies incrementally. This visual adoption does not alter permissions or server-side business actions.

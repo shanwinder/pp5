@@ -58,7 +58,7 @@ final class AcademicIsolationTest extends TestCase
         $response = $this->request('GET', '/academic/years');
         self::assertSame(200, $response->status());
         foreach (['classrooms' => 'ห้องเรียน', 'subjects' => 'รายวิชา', 'offerings' => 'การเปิดรายวิชา'] as $resource => $label) {
-            self::assertSame(1, substr_count($response->body(), '<a href="/academic/' . $resource . '">' . $label . '</a>'), 'Academic page navigation link missing: ' . $resource);
+            self::assertSame(1, preg_match('/<a\b[^>]*href="\/academic\/' . $resource . '"[^>]*>\s*<span[^>]*>' . preg_quote($label, '/') . '<\/span>/', $response->body()), 'Academic page navigation link missing: ' . $resource);
             self::assertSame(200, $this->request('GET', '/academic/' . $resource)->status());
         }
         $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN roles r ON r.id = rp.role_id JOIN permissions p ON p.id = rp.permission_id
