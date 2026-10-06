@@ -1,0 +1,87 @@
+/* Tabler 1.6.1 spike: only PP5 context, density, and accessibility adjustments. */
+.pp5-tabler-spike {
+  --tblr-primary: #3d6c86;
+  --tblr-primary-rgb: 61, 108, 134;
+  --tblr-body-bg: #f4f7f8;
+  --tblr-body-color: #293d49;
+  --tblr-border-color: #d7e2e7;
+  --pp5-sage: #e8f3e9;
+  --pp5-sand: #fbf1db;
+  --pp5-blue: #e8f3f9;
+  font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  line-height: 1.55;
+}
+.pp5-tabler-spike .page { display: grid; grid-template-columns: 15.5rem minmax(0, 1fr); grid-template-rows: auto 1fr; grid-template-areas: "top top" "side content"; min-height: 100dvh; }
+.pp5-spike-topbar { grid-area: top; position: sticky; top: 0; z-index: 30; background: #fff; border-bottom: 1px solid var(--tblr-border-color); }
+.pp5-spike-topbar .container-fluid { min-height: 4rem; }
+.pp5-spike-sidebar { grid-area: side; display: block !important; position: sticky !important; top: 4rem; align-self: start; width: 100% !important; height: calc(100dvh - 4rem); overflow-y: auto; background: #fff; border-right: 1px solid var(--tblr-border-color); }
+.pp5-spike-sidebar .container-fluid { padding: 1rem .75rem; }
+.pp5-spike-sidebar .nav-link { border-radius: .5rem; padding: .5rem .75rem; }
+.pp5-spike-sidebar .nav-link.active { background: var(--pp5-blue); font-weight: 650; }
+.pp5-spike-nav-section + .pp5-spike-nav-section { margin-top: 1.25rem; }
+.pp5-spike-nav-section h2 { margin: 0 .75rem .35rem; letter-spacing: .05em; }
+.pp5-spike-wrapper { grid-area: content; min-width: 0; margin-left: 0; }
+.pp5-spike-wrapper .page-body { margin-top: 0; padding-bottom: 2rem; }
+.pp5-spike-wrapper .container-xl { max-width: 90rem; }
+.pp5-brand-mark { display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; margin-right: .65rem; border-radius: .65rem; color: #315d77; background: var(--pp5-blue); font-weight: 800; font-size: .9rem; }
+.pp5-spike-school { margin-left: auto; max-width: 24rem; }
+.pp5-spike-user { max-width: 14rem; }
+.pp5-tabler-spike .page-header { margin-bottom: 1.5rem; }
+.pp5-tabler-spike .page-title { font-size: clamp(1.45rem, 2vw, 2rem); line-height: 1.35; }
+.pp5-tabler-spike .card { box-shadow: 0 2px 12px rgb(37 74 91 / 4%); }
+.pp5-spike-welcome { background: linear-gradient(110deg, #e6f2f8, #f3f8f4 72%, #fffaf0); border-color: #cddfe6; }
+.pp5-spike-context { background: linear-gradient(110deg, #edf6fa, #fff 75%); }
+.pp5-spike-context .card-title { font-size: 1.45rem; }
+.pp5-spike-context .card-footer { background: rgb(255 255 255 / 75%); }
+.pp5-spike-switcher { max-width: 100%; }
+.pp5-spike-switcher summary { list-style: none; cursor: pointer; }
+.pp5-spike-switcher summary::-webkit-details-marker, .pp5-student-detail summary::-webkit-details-marker { display: none; }
+.pp5-spike-switcher .card { max-width: 22rem; }
+.pp5-workspace-choices ul { list-style: none; padding-left: 0; margin: .4rem 0 0; }
+.pp5-workspace-choices a { display: block; padding: .45rem .6rem; border-radius: .4rem; text-decoration: none; }
+.pp5-workspace-choices a:hover, .pp5-workspace-choices a[aria-current] { background: var(--pp5-blue); }
+.pp5-workspace-choices > div + div { margin-top: 1rem; }
+.pp5-task-zone--students .card { background: linear-gradient(180deg, var(--pp5-blue), #fff 42%); }
+.pp5-task-zone--subjects .card { background: linear-gradient(180deg, var(--pp5-sage), #fff 42%); }
+.pp5-task-zone--scores .card { background: linear-gradient(180deg, var(--pp5-sand), #fff 42%); }
+.pp5-task-zone .card-title { font-size: 1.14rem; }
+.pp5-task-zone-stat { color: #29485c; font-size: clamp(1.5rem, 2vw, 2rem); }
+.pp5-tabler-spike .pp5-table-scroll { max-width: 100%; overflow-x: auto; }
+.pp5-tabler-spike .pp5-table { min-width: 37rem; margin-bottom: 0; }
+.pp5-tabler-spike .pp5-table th, .pp5-tabler-spike .pp5-table td { padding-top: .5rem; padding-bottom: .5rem; vertical-align: top; }
+.pp5-tabler-spike .pp5-table caption { padding: .5rem 1rem; color: var(--tblr-secondary-color); }
+.pp5-tabler-spike .pp5-badge { display: inline-block; padding: .2rem .5rem; border-radius: .4rem; background: var(--pp5-blue); font-size: .82rem; font-weight: 600; }
+.pp5-tabler-spike .pp5-badge[data-status="ACTIVE"] { background: var(--pp5-sage); }
+.pp5-tabler-spike .pp5-badge[data-status="DRAFT"] { background: var(--pp5-sand); }
+.pp5-tabler-spike .pp5-empty-state { padding: 1rem; }
+.pp5-student-taskbar { background: linear-gradient(110deg, var(--pp5-blue), #fff 65%); }
+.pp5-student-taskbar > .card-body > div:first-child { min-width: 0; flex: 1 1 25rem; }
+.pp5-student-detail { min-width: 16rem; }
+.pp5-student-detail summary { list-style: none; cursor: pointer; }
+.pp5-student-detail-panel { min-width: 17rem; max-width: 22rem; white-space: normal; }
+.pp5-student-detail[open] summary { background: var(--pp5-blue); }
+.pp5-student-detail-actions a { line-height: 1.35; }
+.pp5-tabler-spike a, .pp5-tabler-spike button, .pp5-tabler-spike summary, .pp5-tabler-spike [tabindex="0"] { scroll-margin: 5rem; }
+.pp5-tabler-spike :focus-visible { outline: 3px solid #075fa8 !important; outline-offset: 3px; }
+.pp5-skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 1000; padding: .5rem .75rem; background: #315d77; color: #fff; transform: translateY(-180%); }
+.pp5-skip-link:focus { transform: none; color: #fff; }
+.pp5-nav-toggle, .pp5-nav-close { display: none; }
+.pp5-spike-sidebar[hidden] { display: none !important; }
+@media (max-width: 63.999rem) {
+  .pp5-tabler-spike .page { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; grid-template-areas: "top" "side" "content"; }
+  .pp5-nav-toggle, .pp5-nav-close { display: inline-flex; }
+  .pp5-spike-sidebar { position: static !important; width: 100% !important; height: auto; max-height: 65dvh; border-right: 0; border-bottom: 1px solid var(--tblr-border-color); }
+  .pp5-spike-school { display: none; }
+  .pp5-spike-topbar .navbar-brand { margin-right: auto; }
+}
+@media (max-width: 36rem) {
+  .pp5-spike-user { display: none; }
+  .pp5-spike-topbar .container-fluid { gap: .5rem !important; }
+  .pp5-spike-topbar .navbar-brand { font-size: 1rem; }
+  .pp5-spike-topbar .navbar-brand small { display: none !important; }
+  .pp5-spike-wrapper .container-xl { padding-inline: .75rem; }
+  .pp5-spike-context .nav { gap: .25rem !important; }
+  .pp5-spike-context .nav-link { padding: .45rem .6rem; font-size: .9rem; }
+  .pp5-student-detail { min-width: 12rem; }
+  .pp5-roster-scroll th:last-child, .pp5-roster-scroll td:last-child { position: sticky; right: 0; background: #fff; box-shadow: -1px 0 0 var(--tblr-border-color); }
+}

@@ -32,6 +32,7 @@ final class ClassroomWorkspaceController
             'documentTitle' => 'นักเรียนในห้อง — ระบบ ปพ.5',
             'pageTitle' => 'นักเรียน · ' . $roster['workspace']['classroom']['name'],
             'bodyClass' => 'pp5-classroom-pilot',
+            'layout' => 'tabler-spike',
         ]));
     }
 
@@ -78,6 +79,7 @@ final class ClassroomWorkspaceController
             'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5',
             'pageTitle' => 'งานชั้นเรียน · ' . $workspace['classroom']['name'],
             'bodyClass' => 'pp5-classroom-pilot',
+            'layout' => 'tabler-spike',
         ]));
     }
 }

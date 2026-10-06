@@ -148,7 +148,7 @@ final class UiNavigationTest extends TestCase
         self::assertSame(200, $response->status());
         $x = $this->xpath($response->body());
         foreach (['//html', '//body', '//main[@id="main-content"]', '//h1', '//nav[@aria-label="เมนูหลัก"]',
-            '//a[@href="#main-content"]', '//header[contains(@class,"pp5-topbar")]', '//*[@class="pp5-shell"]',
+            '//a[@href="#main-content"]', '//header', '//body/div[@class="pp5-shell" or @class="page"]',
             '//aside[@id="app-navigation" and @data-nav-panel]', '//button[@data-nav-toggle and @aria-controls="app-navigation" and @aria-expanded="true"]',
             '//nav//a[@aria-current="page" and @href="'.$path.'"]', '//form[@method="post" and @action="/logout"]'] as $selector) {
             self::assertSame(1, $x->query($selector)->length, $selector);
@@ -156,8 +156,8 @@ final class UiNavigationTest extends TestCase
         self::assertSame(0, $x->query('//nav//section[not(.//a)]|//script[not(@src)]|//*[@hidden]')->length);
         self::assertStringContainsString(htmlspecialchars($name, ENT_QUOTES, 'UTF-8'), $response->body());
         self::assertStringNotContainsString($name, $response->body());
-        self::assertSame($name, $x->query('//*[@class="pp5-user-name"]')->item(0)->textContent);
-        if ($role !== 'SYSTEM_ADMIN') { self::assertSame($name, $x->query('//*[@class="pp5-school-name"]')->item(0)->textContent); }
+        self::assertSame($name, $x->query('//*[contains(@class,"pp5-user-name") or contains(@class,"pp5-spike-user")]')->item(0)->textContent);
+        if ($role !== 'SYSTEM_ADMIN') { self::assertSame($name, $x->query('//*[contains(@class,"pp5-school-name") or contains(@class,"pp5-spike-school")]')->item(0)->textContent); }
         $token = $x->query('//form[@action="/logout"]//input[@name="_token"]/@value')->item(0)->nodeValue;
         self::assertTrue((new Csrf())->verify(new Session(), $token));
         self::assertSame(419, $this->request('POST', '/logout', ['_token'=>'wrong'])->status());

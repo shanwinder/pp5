@@ -30,7 +30,9 @@ final class View
     public static function page(string $template, array $data = [], array $pageContext = []): string
     {
         $workspace = $pageContext['ui']['workspace'] ?? null;
-        $content = ($workspace === null ? '' : self::render('workspaces/classroom/shell', ['workspace' => $workspace]))
+        $shell = ($pageContext['layout'] ?? 'app') === 'tabler-spike'
+            ? 'workspaces/classroom/shell-tabler' : 'workspaces/classroom/shell';
+        $content = ($workspace === null ? '' : self::render($shell, ['workspace' => $workspace]))
             . self::render($template, $data + ['workspace' => $workspace]);
 
         return self::render('layouts/' . ($pageContext['layout'] ?? 'app'), [

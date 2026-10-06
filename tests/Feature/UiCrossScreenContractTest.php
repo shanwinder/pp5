@@ -72,6 +72,10 @@ final class UiCrossScreenContractTest extends TestCase
         self::assertSame('th', $x->evaluate('string(/html/@lang)'));
         self::assertSame(1, $x->query('//head/meta[@name="viewport" and @content="width=device-width, initial-scale=1"]')->length);
         $expectedStyles=['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')];
+        if ($x->query('//body[contains(@class,"pp5-tabler-spike")]')->length === 1) {
+            $expectedStyles=['/assets/vendor/tabler/tabler-1.6.1.min.css',
+                '/assets/tabler-spike.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-spike.css')];
+        }
         if ($x->query('//script[@id="gradebook-grid-data" and @type="application/json"]')->length === 1) {
             array_push($expectedStyles, '/assets/vendor/tabulator/tabulator.min.css',
                 '/assets/gradebook-grid.css?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook-grid.css'));

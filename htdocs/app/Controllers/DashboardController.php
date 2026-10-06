@@ -30,6 +30,7 @@ final class DashboardController
             'documentTitle' => 'แดชบอร์ด — ระบบ ปพ.5',
             'pageTitle' => 'แดชบอร์ด',
             'ui' => $ui,
+            'layout' => 'tabler-spike',
         ]));
     }
 }

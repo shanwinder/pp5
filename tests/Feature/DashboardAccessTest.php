@@ -100,7 +100,7 @@ final class DashboardAccessTest extends TestCase
         $this->pdo->prepare("INSERT INTO user_role_assignments (user_id, school_id, role_id)
             SELECT ?, ?, id FROM roles WHERE code = 'SCHOOL_ADMIN'")->execute([$this->userId, $this->schoolId]);
 
-        self::assertStringContainsString('<a href="/admin/users">ผู้ใช้งาน</a>', $this->dashboard()->body());
+        self::assertSame(1, $this->navigationLinkCount($this->dashboard(), '/admin/users', 'ผู้ใช้งาน'));
         self::assertSame(200, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
 
         $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN permissions p ON p.id = rp.permission_id
@@ -121,7 +121,7 @@ final class DashboardAccessTest extends TestCase
         $this->pdo->prepare("INSERT INTO role_permissions (role_id, permission_id)
             SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
             WHERE r.code = 'SUBJECT_TEACHER' AND p.code = 'SCHOOL_USER_VIEW'")->execute();
-        self::assertStringContainsString('<a href="/admin/users">ผู้ใช้งาน</a>', $this->dashboard()->body());
+        self::assertSame(1, $this->navigationLinkCount($this->dashboard(), '/admin/users', 'ผู้ใช้งาน'));
         self::assertSame(200, $this->app->handle(new Request('GET', '/admin/users', [], [], []))->status());
 
         $this->pdo->prepare("INSERT INTO school_memberships (user_id, school_id, status) VALUES (?, ?, 'SUSPENDED')")
@@ -240,14 +240,14 @@ final class DashboardAccessTest extends TestCase
         $this->assignRole($role, $this->schoolId);
         $this->assertAcademicNavigation($this->dashboard(), true);
         $this->assertAcademicLists(200);
-        self::assertSame($managesUsers, str_contains($this->dashboard()->body(), '<a href="/admin/users">ผู้ใช้งาน</a>'));
+        self::assertSame($managesUsers, $this->navigationLinkCount($this->dashboard(), '/admin/users', 'ผู้ใช้งาน') === 1);
 
         $this->pdo->prepare("DELETE rp FROM role_permissions rp JOIN roles r ON r.id = rp.role_id
             JOIN permissions p ON p.id = rp.permission_id WHERE r.code = ? AND p.code = 'ACADEMIC_SETUP_VIEW'")->execute([$role]);
 
         $this->assertAcademicNavigation($this->dashboard(), false);
         $this->assertAcademicLists(403);
-        self::assertSame($managesUsers, str_contains($this->dashboard()->body(), '<a href="/admin/users">ผู้ใช้งาน</a>'));
+        self::assertSame($managesUsers, $this->navigationLinkCount($this->dashboard(), '/admin/users', 'ผู้ใช้งาน') === 1);
     }
 
     public static function academicAdminRoles(): array { return [['SCHOOL_ADMIN', true], ['ACADEMIC_ADMIN', false]]; }
@@ -428,11 +428,11 @@ final class DashboardAccessTest extends TestCase
         self::assertStringNotContainsString('/academic/student-import', $this->dashboard()->body());
         $this->pdo->exec("INSERT INTO role_permissions (role_id, permission_id) SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
             WHERE r.code = 'VIEWER' AND p.code = 'STUDENT_IMPORT'");
-        self::assertStringContainsString('<a href="/academic/student-import">นำเข้านักเรียน</a>', $this->dashboard()->body());
+        self::assertSame(1, $this->navigationLinkCount($this->dashboard(), '/academic/student-import', 'นำเข้านักเรียน'));
         self::assertSame(200, $this->app->handle(new Request('GET', '/academic/student-import', [], [], []))->status());
         $this->removeStudentView('VIEWER');
         $this->assertStudentNavigation($this->dashboard(), false);
-        self::assertStringContainsString('<a href="/academic/student-import">นำเข้านักเรียน</a>', $this->dashboard()->body());
+        self::assertSame(1, $this->navigationLinkCount($this->dashboard(), '/academic/student-import', 'นำเข้านักเรียน'));
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id = rp.role_id JOIN permissions p ON p.id = rp.permission_id
             WHERE r.code = 'VIEWER' AND p.code = 'STUDENT_IMPORT'");
         self::assertStringNotContainsString('/academic/student-import', $this->dashboard()->body());
@@ -462,7 +462,7 @@ final class DashboardAccessTest extends TestCase
     {
         self::assertSame(200, $response->status());
         foreach (['/students' => 'รายชื่อนักเรียน', '/academic/enrollments' => 'การลงทะเบียน'] as $path => $label) {
-            self::assertSame($visible ? 1 : 0, substr_count($response->body(), '<a href="' . $path . '">' . $label . '</a>'), $path);
+            self::assertSame($visible ? 1 : 0, $this->navigationLinkCount($response, $path, $label), $path);
             self::assertSame($visible ? ($path === '/students' ? 2 : 1) : 0, substr_count($response->body(), 'href="' . $path . '"'), $path);
         }
         self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
@@ -498,9 +498,17 @@ final class DashboardAccessTest extends TestCase
     private function assertAcademicNavigation(Response $response, bool $visible): void
     {
         self::assertSame(200, $response->status());
-        self::assertSame($visible ? 1 : 0, substr_count($response->body(), '<a href="/academic/years">ปีการศึกษา</a>'));
+        self::assertSame($visible ? 1 : 0, $this->navigationLinkCount($response, '/academic/years', 'ปีการศึกษา'));
         self::assertSame($visible ? 2 : 0, substr_count($response->body(), 'href="/academic/years"'));
         self::assertStringNotContainsString('โรงเรียนอื่น B', $response->body());
+    }
+
+    private function navigationLinkCount(Response $response, string $path, string $label): int
+    {
+        $document = new DOMDocument();
+        $document->loadHTML('<?xml encoding="utf-8"?>' . $response->body(), LIBXML_NOERROR | LIBXML_NOWARNING);
+        $query = new DOMXPath($document);
+        return $query->query('//nav[@aria-label="เมนูหลัก"]//a[@href="' . $path . '" and normalize-space(.)="' . $label . '"]')->length;
     }
 
     private function authenticate(): void

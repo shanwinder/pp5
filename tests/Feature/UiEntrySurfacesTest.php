@@ -83,7 +83,13 @@ final class UiEntrySurfacesTest extends TestCase
         self::assertSame(1, substr_count($body, '<!doctype html>'));
         $x = $this->xpath($body);
         foreach (['html', 'head', 'body', 'main', 'h1'] as $tag) { self::assertSame(1, $x->query('//'.$tag)->length); }
-        self::assertSame(1, $x->query('//link[@href="/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css').'"]')->length);
+        if ($x->query('//body[contains(@class,"pp5-tabler-spike")]')->length === 1) {
+            self::assertSame(1, $x->query('//link[@href="/assets/vendor/tabler/tabler-1.6.1.min.css"]')->length);
+            self::assertSame(1, $x->query('//link[@href="/assets/tabler-spike.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-spike.css').'"]')->length);
+            self::assertSame(0, $x->query('//link[contains(@href,"bootstrap-5.3.8") or contains(@href,"/assets/app.css")]')->length);
+        } else {
+            self::assertSame(1, $x->query('//link[@href="/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css').'"]')->length);
+        }
         self::assertSame(0, $x->query('//script[not(@src)]|//*[@style]|//*[@onclick]|//link[starts-with(@href,"http")]')->length);
         return $x;
     }

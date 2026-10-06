@@ -38,9 +38,10 @@ final class ClassroomRosterTest extends TestCase
         self::assertSame(1, $x->query('//h1')->length);
         self::assertSame('นักเรียน', $x->query('//nav[@aria-label="งานในห้องเรียน"]//a[@aria-current="page"]')->item(0)->textContent);
         self::assertSame(4, $x->query('//table[@id="classroom-roster"]//th[@scope="row"]')->length);
-        foreach (['โรงเรียนทดสอบ', 'ปีการศึกษา 2569', 'ห้องทดสอบ', 'รายชื่อนักเรียน <span>4 คน</span>'] as $label) {
+        foreach (['โรงเรียนทดสอบ', 'ปีการศึกษา 2569', 'ห้องทดสอบ'] as $label) {
             self::assertStringContainsString($label, $response->body());
         }
+        self::assertStringContainsString('4 คน', $x->evaluate('string(//*[@id="student-workspace-heading"])'));
         self::assertSame(4, $x->query('//table[@id="classroom-roster"]//details[@data-student-detail]/summary')->length);
         self::assertSame(4, $x->query('//table[@id="classroom-roster"]//details[@data-student-detail]//a[starts-with(@href,"/students/")]')->length);
         $forged = ['school_id' => $this->f['schoolB'], 'academic_year_id' => $this->f['yearB'],
