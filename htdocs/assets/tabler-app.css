@@ -63,6 +63,12 @@
 .pp5-student-detail-panel { min-width: 17rem; max-width: 22rem; white-space: normal; }
 .pp5-student-detail[open] summary { background: #e8f2ff; color: #206bc4; border-color: #206bc4; }
 .pp5-student-detail-actions a { line-height: 1.35; }
+.pp5-student-context-card { border-color: #b6d9fa; }
+.pp5-student-context-card .card-body { min-width: 0; }
+.pp5-student-facts dt, .pp5-student-facts dd { padding-block: .2rem; }
+.pp5-student-history li { padding: .35rem 0; border-bottom: 1px solid var(--tblr-border-color); }
+.pp5-student-action-card--move { border-top: 3px solid #0ea5e9; }
+.pp5-student-action-card--status { border-top: 3px solid #f59e0b; }
 .pp5-row-action { min-width: 2rem; min-height: 2rem; padding: .3rem; position: relative; }
 .pp5-row-action .icon { width: 1rem; height: 1rem; }
 /* CSS help works with mouse and keyboard. The open panel carries visible labels on touch. */

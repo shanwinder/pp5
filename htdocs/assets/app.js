@@ -3,6 +3,7 @@
   // Optional presentation only: unmarked forms and no-JS submissions stay native.
   document.querySelectorAll('form[data-confirm]').forEach(form => {
     form.addEventListener('submit', event => {
+      if (form.hasAttribute('hx-confirm')) return;
       if (!window.confirm(form.getAttribute('data-confirm'))) event.preventDefault();
     });
   });

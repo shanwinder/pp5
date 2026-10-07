@@ -29,6 +29,7 @@ final class ClassroomWorkspaceController
 
         return new Response(View::page('workspaces/classroom/students', $roster, [
             'ui' => $this->ui->build('workspaces.classrooms.students', false, $roster['workspace']),
+            'headAssets' => View::render('workspaces/classroom/student-assets'),
             'documentTitle' => 'นักเรียนในห้อง — ระบบ ปพ.5',
             'pageTitle' => 'นักเรียน · ' . $roster['workspace']['classroom']['name'],
             'bodyClass' => 'pp5-classroom-pilot',

@@ -9,7 +9,7 @@ $root = dirname(__DIR__, 2);
 $assets = ['/assets/app.css'=>'htdocs/assets/app.css', '/assets/app.js'=>'htdocs/assets/app.js',
     '/assets/vendor/tabler/tabler-1.6.1.min.css'=>'htdocs/assets/vendor/tabler/tabler-1.6.1.min.css',
     '/assets/tabler-app.css'=>'htdocs/assets/tabler-app.css', '/assets/app-compat.css'=>'htdocs/assets/app-compat.css',
-    '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
+    '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/student-workspace.js'=>'htdocs/assets/student-workspace.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/assets/gradebook-grid.css'=>'htdocs/assets/gradebook-grid.css',
     '/assets/vendor/tabulator/tabulator.min.js'=>'htdocs/assets/vendor/tabulator/tabulator.min.js',
     '/assets/vendor/tabulator/tabulator.min.css'=>'htdocs/assets/vendor/tabulator/tabulator.min.css',
@@ -21,6 +21,21 @@ if (isset($assets[$path])) {
 // This matrix owns focus/scroll checks, so suppress the older fixtures' self-checks.
 if ($path === '/checks.js') { header('Content-Type: text/javascript'); exit; }
 if (str_starts_with($path, '/hx/gradebook/')) { require __DIR__.'/gradebook-autosave.php'; exit; }
+if (preg_match('~^/hx/workspaces/classrooms/1/students/([1-8])$~', $path, $match)) {
+    require $root.'/htdocs/vendor/autoload.php';
+    $id = (int) $match[1];
+    $readonly = str_contains($_SERVER['HTTP_REFERER'] ?? '', 'roster-readonly');
+    echo App\Support\View::render('workspaces/classroom/student-panel', [
+        'roster' => ['workspace' => ['classroom' => ['id' => 1]], 'canManage' => !$readonly, 'openYear' => true],
+        'student' => ['studentId' => $id, 'enrollmentId' => $id, 'code' => sprintf('S%03d', $id), 'name' => 'นักเรียนทดสอบ'],
+        'enrollment' => ['status' => 'ACTIVE', 'classroom_name' => 'ป.4/1', 'year_be' => 2569,
+            'grade_level_name' => 'ประถมศึกษาปีที่ 4', 'entry_date' => '2026-05-16'],
+        'placementHistory' => [['classroom_name' => 'ป.4/1', 'started_at' => '2026-05-16', 'ended_at' => null]],
+        'enrollmentHistory' => [], 'rooms' => [['id' => 2, 'name_th' => 'ป.4/2']],
+        'csrfToken' => 'synthetic-only', 'error' => null,
+    ]);
+    exit;
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: text/plain; charset=UTF-8');
     echo 'Synthetic POST receipt: '.$path; exit;

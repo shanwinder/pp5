@@ -86,6 +86,18 @@ return static function (RouteCollector $r): void {
         'action' => 'workspaces.classrooms.students', 'protected' => true, 'context' => AccessContext::SCHOOL,
         'permission' => 'STUDENT_VIEW',
     ]);
+    $r->addRoute('GET', '/hx/workspaces/classrooms/{classroomId:\d+}/students/{enrollmentId:\d+}', [
+        'action' => 'workspaces.classrooms.studentPanel', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'STUDENT_VIEW',
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/students/{enrollmentId:\d+}/placement', [
+        'action' => 'workspaces.classrooms.studentPlacement', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'ENROLLMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/students/{enrollmentId:\d+}/status', [
+        'action' => 'workspaces.classrooms.studentStatus', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'ENROLLMENT_MANAGE',
+    ]);
     $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}/subjects', [
         'action' => 'workspaces.classrooms.subjects', 'protected' => true, 'context' => AccessContext::SCHOOL,
     ]);

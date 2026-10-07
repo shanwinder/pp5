@@ -15,6 +15,17 @@ final class ClassroomRosterTest extends TestCase
         return '/workspaces/classrooms/' . $this->f['room' . $room] . '/students';
     }
 
+    private function studentPath(string $room = 'A', string $student = 'current'): string
+    {
+        return '/hx' . $this->rosterPath($room) . '/' . $this->f['enrollment_' . $student];
+    }
+
+    private function hx(string $method, string $path, array $post = []): App\Http\Response
+    {
+        return (new App\Application($this->pdo))->handle(new App\Http\Request($method, $path, [], $post,
+            ['REMOTE_ADDR' => '127.0.0.1', 'HTTP_HX_REQUEST' => 'true']));
+    }
+
     private function grant(string $permission): void
     {
         $this->pdo->prepare("INSERT INTO role_permissions (role_id,permission_id) SELECT r.id,p.id FROM roles r CROSS JOIN permissions p WHERE r.code='VIEWER' AND p.code=?")->execute([$permission]);
@@ -41,8 +52,7 @@ final class ClassroomRosterTest extends TestCase
         foreach (['โรงเรียนทดสอบ', 'ปีการศึกษา 2569', 'ห้องทดสอบ', 'รายชื่อนักเรียน <span class="badge bg-blue-lt text-blue ms-2">4 คน</span>'] as $label) {
             self::assertStringContainsString($label, $response->body());
         }
-        self::assertSame(4, $x->query('//table[@id="classroom-roster"]//details[@data-student-detail]/summary')->length);
-        self::assertSame(4, $x->query('//table[@id="classroom-roster"]//details[@data-student-detail]//a[starts-with(@href,"/students/")]')->length);
+        self::assertSame(4, $x->query('//table[@id="classroom-roster"]//a[@data-student-trigger and @hx-get]')->length);
         $forged = ['school_id' => $this->f['schoolB'], 'academic_year_id' => $this->f['yearB'],
             'classroom_id' => $this->f['roomB'], 'workspace_classroom_id' => $this->f['roomB'], 'grade_level_id' => 999];
         self::assertSame($response->body(), $this->request('GET', $this->rosterPath(), $forged, $forged)->body());
@@ -73,8 +83,13 @@ final class ClassroomRosterTest extends TestCase
         self::assertSame(200, $response->status());
         self::assertCount(4, $this->codes($response->body()));
         $x = $this->xpath($response->body());
-        self::assertSame(4, $x->query('//table[@id="classroom-roster"]//a[starts-with(@href,"/students/")]')->length);
+        self::assertSame(4, $x->query('//table[@id="classroom-roster"]//a[@data-student-trigger and starts-with(@href,"/students/")]')->length);
         self::assertSame(0, $x->query('//main//a[contains(@href,"/edit") or contains(@href,"/create") or contains(@href,"student-import")]')->length);
+        $panel = $this->request('GET', $this->studentPath());
+        self::assertSame(200, $panel->status());
+        self::assertSame(0, $this->xpath($panel->body())->query('//form')->length);
+        self::assertSame(403, $this->hx('POST', $this->studentPath() . '/status',
+            ['_token' => $this->token(), 'status' => 'WITHDRAWN', 'exit_date' => '2026-06-01'])->status());
         self::assertSame(403, $this->request('GET', '/academic/enrollments/' . $this->f['enrollment_current'] . '/edit')->status());
         self::assertSame(403, $this->request('GET', '/academic/student-import')->status());
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='VIEWER' AND p.code='STUDENT_VIEW'");
@@ -142,8 +157,7 @@ final class ClassroomRosterTest extends TestCase
         $this->login();
         $body = $this->request('GET', $this->rosterPath())->body();
         $x = $this->xpath($body);
-        self::assertSame(4, $x->query('//table//a[contains(@href,"#move-classroom")]')->length);
-        self::assertSame(4, $x->query('//table//a[contains(@href,"#student-status")]')->length);
+        self::assertSame(4, $x->query('//table//a[@data-student-trigger and @hx-get and contains(@href,"/edit")]')->length);
         self::assertSame(0, $x->query('//main//form')->length);
         $id = $this->f['enrollment_current'];
         $form = $this->request('GET', '/academic/enrollments/' . $id . '/edit');
@@ -158,15 +172,113 @@ final class ClassroomRosterTest extends TestCase
         $this->grant('STUDENT_VIEW'); $this->grant('ENROLLMENT_MANAGE');
         $this->login('VIEWER');
         $body = $this->request('GET', $this->rosterPath())->body();
-        self::assertStringContainsString('#move-classroom', $body);
+        self::assertStringContainsString('/hx/workspaces/classrooms/', $body);
         self::assertStringNotContainsString('href="/academic/student-import"', $body);
         $this->grant('STUDENT_IMPORT');
         self::assertStringContainsString('href="/academic/student-import"', $this->request('GET', $this->rosterPath())->body());
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='VIEWER' AND p.code IN ('ENROLLMENT_MANAGE','STUDENT_IMPORT')");
         $body = $this->request('GET', $this->rosterPath())->body();
-        self::assertStringNotContainsString('#move-classroom', $body);
+        self::assertSame(0, $this->xpath($body)->query('//table//a[@data-student-trigger and contains(@href,"/edit")]')->length);
         self::assertStringNotContainsString('href="/academic/student-import"', $body);
         self::assertSame(403, $this->request('POST', '/academic/enrollments/' . $id . '/placement', ['_token' => $this->token(), 'classroom_id' => $this->f['roomOther']])->status());
+    }
+
+    public function testStudentPanelIsScopedAndProvidesHistoryAndEligibleActions(): void
+    {
+        $this->login();
+        $panel = $this->request('GET', $this->studentPath());
+        self::assertSame(200, $panel->status());
+        $x = $this->xpath($panel->body());
+        self::assertSame(1, $x->query('//h3[@id="student-context-heading" and @tabindex="-1"]')->length);
+        self::assertSame(1, $x->query('//form[@hx-post and contains(@action,"/placement")]//select[@name="classroom_id"]/option[@value="' . $this->f['roomOther'] . '"]')->length);
+        self::assertSame(0, $x->query('//select[@name="classroom_id"]/option[@value="' . $this->f['roomA'] . '"]')->length);
+        self::assertSame(1, $x->query('//form[@hx-confirm and contains(@action,"/status")]//input[@name="exit_date" and @required]')->length);
+        self::assertStringContainsString('ประวัติห้องเรียน', $panel->body());
+        self::assertStringNotContainsString(self::NATIONAL_MARKER, $panel->body());
+        self::assertStringNotContainsString('ENROLLMENT_MANAGE', $panel->body());
+        foreach ([$this->studentPath('B', 'foreign'), $this->studentPath('A', 'foreign'),
+            $this->studentPath('Other', 'current'), $this->studentPath('A', 'moved')] as $path) {
+            self::assertSame(404, $this->request('GET', $path)->status());
+        }
+        self::assertSame(404, $this->hx('POST', $this->studentPath('Other', 'current') . '/placement',
+            ['_token' => $this->token(), 'classroom_id' => (string) $this->f['roomA']])->status());
+    }
+
+    public function testWorkspaceMoveUpdatesRosterAndAuditWithoutLeavingContext(): void
+    {
+        $this->login();
+        $before = count($this->rows('SELECT * FROM audit_logs'));
+        $response = $this->hx('POST', $this->studentPath() . '/placement',
+            ['_token' => $this->token(), 'classroom_id' => (string) $this->f['roomOther']]);
+        self::assertSame(200, $response->status());
+        self::assertStringContainsString('ย้าย', $response->body());
+        self::assertNotContains('01-CURRENT', $this->codes($response->body()));
+        self::assertContains('01-CURRENT', $this->codes($this->request('GET', $this->rosterPath('Other'))->body()));
+        self::assertSame($this->f['roomOther'], (int) $this->rows('SELECT classroom_id FROM student_classroom_placements WHERE enrollment_id=? AND status="ACTIVE"', [$this->f['enrollment_current']])[0]['classroom_id']);
+        self::assertSame(['STUDENT_CLASSROOM_PLACEMENT_CHANGED'], array_column(array_slice($this->rows('SELECT * FROM audit_logs ORDER BY id'), $before), 'action'));
+        self::assertSame(404, $this->hx('POST', $this->studentPath() . '/placement',
+            ['_token' => $this->token(), 'classroom_id' => (string) $this->f['roomA']])->status());
+    }
+
+    public function testWorkspacePostWithoutHtmxRedirectsToTheSameRoster(): void
+    {
+        $this->login();
+        $response = $this->request('POST', $this->studentPath() . '/placement',
+            ['_token' => $this->token(), 'classroom_id' => (string) $this->f['roomOther']]);
+        self::assertSame(302, $response->status());
+        self::assertNotContains('01-CURRENT', $this->codes($this->request('GET', $this->rosterPath())->body()));
+    }
+
+    public function testWorkspaceRejectsInvalidTargetsCsrfAndClosedYear(): void
+    {
+        $this->login();
+        $path = $this->studentPath() . '/placement';
+        $before = $this->readSnapshot();
+        foreach ([0, $this->f['roomA'], $this->f['roomNext'], $this->f['roomB'], $this->f['roomClosed']] as $target) {
+            $response = $this->hx('POST', $path, ['_token' => $this->token(), 'classroom_id' => (string) $target]);
+            self::assertSame(422, $response->status());
+            self::assertStringContainsString('บันทึกไม่สำเร็จ', $response->body());
+        }
+        foreach ([[], ['_token' => 'invalid']] as $payload) {
+            self::assertSame(419, $this->hx('POST', $path, $payload + ['classroom_id' => (string) $this->f['roomOther']])->status());
+        }
+        self::assertSame($before, $this->readSnapshot());
+        $this->pdo->prepare("UPDATE academic_years SET status='CLOSED' WHERE id=?")->execute([$this->f['yearA']]);
+        $panel = $this->request('GET', $this->studentPath());
+        self::assertSame(200, $panel->status());
+        self::assertStringNotContainsString('name="classroom_id"', $panel->body());
+        self::assertSame(403, $this->hx('POST', $path, ['_token' => $this->token(), 'classroom_id' => (string) $this->f['roomOther']])->status());
+    }
+
+    public function testWorkspaceStatusValidatesAndRechecksPermissionAndStaleState(): void
+    {
+        $this->login();
+        $path = $this->studentPath() . '/status';
+        $before = $this->readSnapshot();
+        foreach (['INVALID', 'ACTIVE', 'WITHDRAWN'] as $status) {
+            $date = $status === 'WITHDRAWN' ? '' : '2026-06-01';
+            self::assertSame(422, $this->hx('POST', $path,
+                ['_token' => $this->token(), 'status' => $status, 'exit_date' => $date])->status());
+        }
+        self::assertSame($before, $this->readSnapshot());
+        $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='SCHOOL_ADMIN' AND p.code='ENROLLMENT_MANAGE'");
+        self::assertSame(403, $this->hx('POST', $path,
+            ['_token' => $this->token(), 'status' => 'WITHDRAWN', 'exit_date' => '2026-06-01'])->status());
+    }
+
+    public function testWorkspaceStatusSuccessEndsPlacementAndWritesExistingAuditEvents(): void
+    {
+        $this->login();
+        $before = count($this->rows('SELECT * FROM audit_logs'));
+        $response = $this->hx('POST', $this->studentPath() . '/status',
+            ['_token' => $this->token(), 'status' => 'WITHDRAWN', 'exit_date' => '2026-06-01']);
+        self::assertSame(200, $response->status());
+        self::assertNotContains('01-CURRENT', $this->codes($response->body()));
+        self::assertSame('WITHDRAWN', $this->row('student_enrollments', $this->f['enrollment_current'])['status']);
+        self::assertSame(['STUDENT_ENROLLMENT_STATUS_CHANGED', 'STUDENT_CLASSROOM_PLACEMENT_CHANGED'],
+            array_column(array_slice($this->rows('SELECT * FROM audit_logs ORDER BY id'), $before), 'action'));
+        self::assertSame(404, $this->hx('POST', $this->studentPath() . '/status',
+            ['_token' => $this->token(), 'status' => 'WITHDRAWN', 'exit_date' => '2026-06-01'])->status());
     }
 
     private function postEnrollment(string $action, array $values = [], string $key = 'current'): App\Http\Response
@@ -197,7 +309,7 @@ final class ClassroomRosterTest extends TestCase
     {
         $this->login();
         $before = $this->studentState();
-        self::assertStringContainsString('#move-classroom', $this->request('GET', $this->rosterPath())->body());
+        self::assertStringContainsString('/hx/workspaces/classrooms/', $this->request('GET', $this->rosterPath())->body());
         $response = $this->postEnrollment('placement', ['classroom_id' => $this->f['roomOther']]);
         self::assertSame(302, $response->status());
         self::assertNotContains('01-CURRENT', $this->codes($this->request('GET', $this->rosterPath())->body()));
@@ -312,7 +424,7 @@ final class ClassroomRosterTest extends TestCase
         $this->pdo->prepare("UPDATE classrooms SET status='INACTIVE' WHERE id=?")->execute([$this->f['roomA']]);
         $body = $this->request('GET', $this->rosterPath())->body();
         self::assertCount(4, $this->codes($body));
-        self::assertStringContainsString('#move-classroom', $body);
+        self::assertSame(200, $this->request('GET', $this->studentPath())->status());
         self::assertSame(0, $this->xpath($body)->query('//main//a[contains(@href,"/create") or contains(@href,"student-import")]')->length);
         self::assertSame(302, $this->postEnrollment('placement', ['classroom_id' => $this->f['roomOther']])->status());
     }

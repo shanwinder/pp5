@@ -70,13 +70,16 @@ final class EnrollmentAdministrationService
         });
     }
 
-    public function changePlacement(int $schoolId, int $actorUserId, int $enrollmentId, ?int $classroomId, ?string $ipAddress = null): void
+    public function changePlacement(int $schoolId, int $actorUserId, int $enrollmentId, ?int $classroomId, ?string $ipAddress = null, ?int $expectedClassroomId = null): void
     {
-        $this->transaction(function (int $yearId) use ($schoolId, $actorUserId, $enrollmentId, $classroomId, $ipAddress): void {
+        $this->transaction(function (int $yearId) use ($schoolId, $actorUserId, $enrollmentId, $classroomId, $ipAddress, $expectedClassroomId): void {
             $this->lockSchool($schoolId);
             $this->openYear($schoolId, $yearId);
             $target = $this->target($schoolId, $enrollmentId, $yearId);
             $current = $this->placements->lockActiveForEnrollment($schoolId, $enrollmentId);
+            if ($expectedClassroomId !== null && ($current === null || (int) $current['classroom_id'] !== $expectedClassroomId)) {
+                throw new DomainException('ข้อมูลห้องเรียนเปลี่ยนไป กรุณาโหลดรายชื่อใหม่');
+            }
             if ($target['status'] !== 'ACTIVE') {
                 throw new DomainException('เปลี่ยนห้องเรียนได้เฉพาะการลงทะเบียนที่ยังใช้งานอยู่');
             }
@@ -98,13 +101,19 @@ final class EnrollmentAdministrationService
         }, fn (): int => $this->preReadYear($schoolId, $enrollmentId));
     }
 
-    public function changeStatus(int $schoolId, int $actorUserId, int $enrollmentId, string $status, ?string $exitDate, ?string $ipAddress = null): void
+    public function changeStatus(int $schoolId, int $actorUserId, int $enrollmentId, string $status, ?string $exitDate, ?string $ipAddress = null, ?int $expectedClassroomId = null): void
     {
-        $this->transaction(function (int $yearId) use ($schoolId, $actorUserId, $enrollmentId, $status, $exitDate, $ipAddress): void {
+        $this->transaction(function (int $yearId) use ($schoolId, $actorUserId, $enrollmentId, $status, $exitDate, $ipAddress, $expectedClassroomId): void {
             $this->lockSchool($schoolId);
             $year = $this->openYear($schoolId, $yearId);
             $target = $this->target($schoolId, $enrollmentId, $yearId);
             $current = $this->placements->lockActiveForEnrollment($schoolId, $enrollmentId);
+            if ($expectedClassroomId !== null && ($current === null || (int) $current['classroom_id'] !== $expectedClassroomId)) {
+                throw new DomainException('ข้อมูลห้องเรียนเปลี่ยนไป กรุณาโหลดรายชื่อใหม่');
+            }
+            if ($expectedClassroomId !== null && $target['status'] !== 'ACTIVE') {
+                throw new DomainException('ข้อมูลสถานะเปลี่ยนไป กรุณาโหลดรายชื่อใหม่');
+            }
             if (!in_array($status, ['ACTIVE', 'TRANSFERRED_OUT', 'WITHDRAWN'], true)) {
                 throw new DomainException('สถานะการลงทะเบียนไม่ถูกต้อง');
             }

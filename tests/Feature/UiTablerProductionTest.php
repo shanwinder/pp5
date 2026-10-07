@@ -31,18 +31,22 @@ final class UiTablerProductionTest extends TestCase
         $student = ['code'=>'S01','name'=>'นักเรียนทดสอบ','status'=>'ACTIVE','studentId'=>4,'enrollmentId'=>5];
         $data = ['workspace'=>$workspace, 'students'=>[$student], 'canAdd'=>false, 'canImport'=>false, 'canManage'=>false, 'openYear'=>true];
         $readonly = $this->xpath(View::render('workspaces/classroom/students', $data));
-        self::assertSame(1, $readonly->query('//details[@data-student-detail]/summary[@aria-label and @title and @data-tooltip]')->length);
-        self::assertSame(1, $readonly->query('//details[@data-student-detail]/summary/svg[@aria-hidden="true" and @focusable="false"]')->length);
-        self::assertSame(1, $readonly->query('//details[@data-student-detail]//a[contains(@href,"/students/") and contains(.,"ดูข้อมูลและประวัติ")]')->length);
-        self::assertSame(0, $readonly->query('//details[@data-student-detail]//a[contains(@href,"/edit")]')->length);
+        self::assertSame(1, $readonly->query('//a[@data-student-trigger and @aria-label and @title and @data-tooltip and @hx-get]')->length);
+        self::assertSame(1, $readonly->query('//a[@data-student-trigger]/svg[@aria-hidden="true" and @focusable="false"]')->length);
+        self::assertSame(1, $readonly->query('//a[@data-student-trigger and contains(@href,"/students/")]')->length);
+        self::assertSame(0, $readonly->query('//a[@data-student-trigger and contains(@href,"/edit")]')->length);
         $data['canManage'] = true;
         $managed = $this->xpath(View::render('workspaces/classroom/students', $data));
-        self::assertSame(2, $managed->query('//details[@data-student-detail]//a[contains(@href,"/edit") and normalize-space(.)!=""]')->length);
-        $js = file_get_contents(dirname(__DIR__, 2).'/htdocs/assets/app.js');
-        self::assertStringContainsString("event.key !== 'Escape'", $js);
-        self::assertStringContainsString("detail.querySelector('summary').focus()", $js);
-        self::assertStringContainsString("target.addEventListener('focus'", $js);
-        self::assertStringContainsString("target.setAttribute('aria-describedby'", $js);
+        self::assertSame(1, $managed->query('//a[@data-student-trigger and contains(@href,"/edit")]')->length);
+        self::assertSame(0, $managed->query('//table//form')->length);
+        $shellJs = file_get_contents(dirname(__DIR__, 2).'/htdocs/assets/app.js');
+        $studentJs = file_get_contents(dirname(__DIR__, 2).'/htdocs/assets/student-workspace.js');
+        $assets = View::render('workspaces/classroom/student-assets');
+        self::assertStringContainsString('/assets/student-workspace.js?v=', $assets);
+        self::assertStringContainsString("event.key !== 'Escape'", $studentJs);
+        self::assertStringContainsString('studentTrigger.focus()', $studentJs);
+        self::assertStringContainsString("target.addEventListener('focus'", $shellJs);
+        self::assertStringContainsString("target.setAttribute('aria-describedby'", $shellJs);
     }
 
     private function xpath(string $html): DOMXPath

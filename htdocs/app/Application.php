@@ -11,6 +11,7 @@ use App\Controllers\AcademicYearController;
 use App\Controllers\AuthController;
 use App\Controllers\ClassroomController;
 use App\Controllers\ClassroomWorkspaceController;
+use App\Controllers\ClassroomStudentWorkflowController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
 use App\Controllers\SubjectController;
@@ -53,6 +54,8 @@ use App\Services\AppUiContextService;
 use App\Services\AuthorizationService;
 use App\Services\ClassroomAdministrationService;
 use App\Services\ClassroomWorkspaceReadService;
+use App\Services\ClassroomStudentContextReadService;
+use App\Services\ClassroomRosterReadService;
 use App\Services\SchoolUserAdministrationService;
 use App\Services\SubjectAdministrationService;
 use App\Services\StudentAdministrationService;
@@ -152,9 +155,10 @@ final class Application
         );
         $grades = new GradeLevelRepository($pdo);
         $teachingAssignments = new TeachingAssignmentRepository($pdo);
+        $rosterRead = new ClassroomRosterReadService($workspaceRead, new StudentEnrollmentRepository($pdo), new AuthorizationService($authorization));
         $classroomWorkspace = new ClassroomWorkspaceController(
             $workspaceRead, $session, $ui,
-            new \App\Services\ClassroomRosterReadService($workspaceRead, new StudentEnrollmentRepository($pdo), new AuthorizationService($authorization)),
+            $rosterRead,
             new \App\Services\ClassroomSubjectsReadService($workspaceRead, $offerings, $teachingAssignments, new AuthorizationService($authorization), $gradebookComponents)
         );
         $classroomController = new ClassroomController(
@@ -208,9 +212,14 @@ final class Application
             $enrollments,
             $placements, $ui
         );
+        $enrollmentAdministration = new EnrollmentAdministrationService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements, new AuditLogRepository($pdo));
         $enrollmentController = new EnrollmentController(
-            new EnrollmentAdministrationService($pdo, $schools, $years, $students, $grades, $classrooms, $enrollments, $placements, new AuditLogRepository($pdo)),
+            $enrollmentAdministration,
             $enrollments, $placements, $students, $years, $grades, $classrooms, $session, $csrf, new AuthorizationService($authorization), $ui
+        );
+        $studentWorkflow = new ClassroomStudentWorkflowController(
+            new ClassroomStudentContextReadService($rosterRead, $enrollments, $placements, $classrooms),
+            $rosterRead, $enrollmentAdministration, $session, $csrf, $ui
         );
         $importBatches = new \App\Repositories\StudentImportBatchRepository($pdo);
         $importRows = new \App\Repositories\StudentImportRowRepository($pdo);
@@ -231,6 +240,9 @@ final class Application
         $enrollmentId = $enrollmentId === false ? 0 : $enrollmentId;
         $next = match ($handler['action']) {
             'workspaces.classrooms.students' => static fn (Request $request): Response => $classroomWorkspace->students($classroomId),
+            'workspaces.classrooms.studentPanel' => static fn (Request $request): Response => $studentWorkflow->panel($classroomId, $enrollmentId),
+            'workspaces.classrooms.studentPlacement' => static fn (Request $request): Response => $studentWorkflow->placement($request, $classroomId, $enrollmentId),
+            'workspaces.classrooms.studentStatus' => static fn (Request $request): Response => $studentWorkflow->status($request, $classroomId, $enrollmentId),
             'workspaces.classrooms.subjects' => static fn (Request $request): Response => $classroomWorkspace->subjects($classroomId),
             'workspaces.classrooms.show' => static fn (Request $request): Response => $classroomWorkspace->show($classroomId),
             'gradebook.scores.batch' => static fn (Request $request): Response => $scoreController->storeBatch($request, $offeringId),

@@ -238,6 +238,26 @@ final class EnrollmentAdministrationTest extends TestCase
         self::assertCount(1,$this->placementRepo()->listForEnrollment($this->school,$id));
     }
 
+    public function test_workspace_expected_classroom_rejects_stale_moves_and_status_noops_under_lock(): void
+    {
+        $id = $this->fixture(true);
+        $service = $this->service();
+        $before = $this->snapshot();
+        $this->deny(fn () => $service->changePlacement($this->school, $this->actor, $id, $this->rooms['b'], null, $this->rooms['b']));
+        $this->deny(fn () => $service->changeStatus($this->school, $this->actor, $id, 'WITHDRAWN', '2026-06-01', null, $this->rooms['b']));
+        self::assertSame($before, $this->snapshot());
+
+        $service->changePlacement($this->school, $this->actor, $id, $this->rooms['b'], null, $this->rooms['a']);
+        $afterMove = $this->snapshot();
+        $this->deny(fn () => $service->changeStatus($this->school, $this->actor, $id, 'WITHDRAWN', '2026-06-01', null, $this->rooms['a']));
+        self::assertSame($afterMove, $this->snapshot());
+
+        $service->changeStatus($this->school, $this->actor, $id, 'WITHDRAWN', '2026-06-01', null, $this->rooms['b']);
+        $afterExit = $this->snapshot();
+        $this->deny(fn () => $service->changeStatus($this->school, $this->actor, $id, 'WITHDRAWN', '2026-06-01', null, $this->rooms['b']));
+        self::assertSame($afterExit, $this->snapshot());
+    }
+
     public function test_foreign_and_missing_enrollment_targets_are_indistinguishable(): void
     {
         $foreign=$this->insert('student_enrollments',['school_id'=>$this->foreignSchool,'academic_year_id'=>$this->foreignYear,'student_id'=>$this->foreignStudent,'grade_level_id'=>$this->grade]);
