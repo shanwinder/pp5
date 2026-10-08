@@ -1,3 +1,4 @@
+<link rel="stylesheet" href="/assets/gradebook-workspace.css?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/gradebook-workspace.css') ?>">
 <meta name="htmx-config" content='{"allowEval":false,"allowScriptTags":false,"defaultSettleDelay":0,"timeout":15000}'>
 <link rel="stylesheet" href="/assets/vendor/tabulator/tabulator.min.css">
 <link rel="stylesheet" href="/assets/gradebook-grid.css?v=<?= filemtime(dirname(__DIR__, 2) . '/assets/gradebook-grid.css') ?>">

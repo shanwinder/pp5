@@ -10,6 +10,7 @@ $assets = ['/assets/app.css'=>'htdocs/assets/app.css', '/assets/app.js'=>'htdocs
     '/assets/vendor/tabler/tabler-1.6.1.min.css'=>'htdocs/assets/vendor/tabler/tabler-1.6.1.min.css',
     '/assets/tabler-app.css'=>'htdocs/assets/tabler-app.css', '/assets/app-compat.css'=>'htdocs/assets/app-compat.css',
     '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/student-workspace.js'=>'htdocs/assets/student-workspace.js', '/assets/subject-workspace.js'=>'htdocs/assets/subject-workspace.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
+    '/assets/gradebook-workspace.css' => 'htdocs/assets/gradebook-workspace.css',
     '/assets/gradebook-grid.css'=>'htdocs/assets/gradebook-grid.css',
     '/assets/vendor/tabulator/tabulator.min.js'=>'htdocs/assets/vendor/tabulator/tabulator.min.js',
     '/assets/vendor/tabulator/tabulator.min.css'=>'htdocs/assets/vendor/tabulator/tabulator.min.css',

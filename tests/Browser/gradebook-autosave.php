@@ -13,6 +13,7 @@ $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $assets = [
     '/assets/vendor/htmx-2.0.8.min.js' => '/htdocs/assets/vendor/htmx-2.0.8.min.js',
     '/assets/gradebook.js' => '/htdocs/assets/gradebook.js',
+    '/assets/gradebook-workspace.css' => '/htdocs/assets/gradebook-workspace.css',
     '/assets/gradebook-grid.css' => '/htdocs/assets/gradebook-grid.css',
     '/assets/vendor/tabulator/tabulator.min.js' => '/htdocs/assets/vendor/tabulator/tabulator.min.js',
     '/assets/vendor/tabulator/tabulator.min.css' => '/htdocs/assets/vendor/tabulator/tabulator.min.css',
@@ -23,6 +24,8 @@ $assets = [
     '/assets/app.css' => '/htdocs/assets/app.css',
     '/assets/vendor/bootstrap-5.3.8.min.css' => '/htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
+    '/workspace-tests.js' => '/tests/Browser/gradebook-workspace.js',
+    '/workspace-real-tests.js' => '/tests/Browser/gradebook-workspace-real.js',
     '/grid-tests.js' => '/tests/Browser/gradebook-tabulator.js',
     '/grid-error-tests.js' => '/tests/Browser/gradebook-tabulator-errors.js',
     '/grid-race-tests.js' => '/tests/Browser/gradebook-tabulator-races.js',
@@ -200,17 +203,17 @@ $ui = ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนข้อ�
         ['key'=>'gradebooks','label'=>'สมุดคะแนน','url'=>'/gradebooks','detail'=>null]]]]];
 $isSetup = in_array($mode, ['setup','empty-setup','inactive-setup','error-setup','closed-setup'], true);
 $testScript = [
-    'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
+    'workspace'=>'/workspace-tests.js', 'workspace-real'=>'/workspace-real-tests.js', 'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
     'workload'=>'/grid-workload-tests.js', 'parity'=>'/grid-parity-tests.js', 'golden'=>'/grid-golden-tests.js',
     'direct'=>'/grid-direct-tests.js', 'visual'=>'/grid-visual-tests.js',
 ][$_GET['tests'] ?? ''] ?? '/grid-tests.js';
 if (isset($assets[$testScript])) $testScript .= '?v='.filemtime(dirname(__DIR__, 2).$assets[$testScript]);
 $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
-    'canScore'=>$canScore,'canManageComponents'=>true,'csrfToken'=>'browser-fixture-token','gradebook'=>$gradebook,
+    'canScore'=>$canScore,'canManageComponents'=>$mode !== 'readonly','csrfToken'=>'browser-fixture-token','gradebook'=>$gradebook,
     'offering'=>$offering, 'components'=>$setupComponents, 'canMutate'=>$isSetup && $mode !== 'closed-setup',
     'summary'=>['active_count'=>$activeSetupCount, 'inactive_count'=>count($setupComponents)-$activeSetupCount, 'active_max_total'=>$setupTotal],
     'historyIds'=>[10=>true], 'workspace'=>null, 'error'=>$mode === 'error-setup' ? 'คะแนนเต็มต้องมากกว่า 0' : null,
-], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : 'สมุดคะแนน',
+], ['ui'=>$ui, 'pageTitle'=>$isSetup ? 'การเก็บคะแนน' : '',
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
     'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.$testScript.'" defer></script>' : '',
 ]);

@@ -41,13 +41,29 @@ final class GradebookController
         $canScore = $this->gradebooks->canEnterScores((int) $this->session->get('user_id'),
             (string) $this->session->get('context_type'), (int) $this->session->get('school_id'), $offering);
 
+        $workspace = $this->ui->classroomWorkspace((int) $offering['classroom_id']);
+        $subjectsUrl = null;
+        // This is the same scoped offering projection used by ClassroomSubjectsReadService.
+        // A Gradebook grant alone never implies school-wide subject administration.
+        if ($workspace !== null
+            && $workspace['academicYear']['id'] === (int) $offering['academic_year_id']
+            && in_array($offeringId, array_column($workspace['gradebooks'], 'id'), true)) {
+            foreach ($workspace['links'] as $link) {
+                if ($link['key'] === 'subjects') {
+                    $subjectsUrl = $link['url'] . '?offering_id=' . $offeringId;
+                    break;
+                }
+            }
+        }
+
         return new Response(View::page('gradebook/view', [
             'gradebook' => $gradebook, 'canScore' => $canScore,
+            'workspace' => $workspace, 'subjectsUrl' => $subjectsUrl,
             'canManageComponents' => $this->authorization->hasPermission($this->session->get('user_id'),
                 $this->session->get('context_type'), $this->session->get('school_id'), 'GRADEBOOK_COMPONENT_MANAGE'),
             'csrfToken' => $canScore ? $this->csrf->token($this->session) : null,
         ], [
-            'ui' => $this->ui->build('gradebooks', false, $this->ui->classroomWorkspace((int) $offering['classroom_id'])), 'documentTitle' => 'สมุดคะแนน — ระบบ ปพ.5', 'pageTitle' => 'สมุดคะแนน',
+            'ui' => $this->ui->build('gradebooks'), 'documentTitle' => 'สมุดคะแนน — ' . $offering['subject_name'] . ' — ระบบ ปพ.5', 'pageTitle' => '',
             'headAssets' => View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
         ]));
     }

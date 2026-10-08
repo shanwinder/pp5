@@ -62,14 +62,21 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
             self::assertSame(200, $response->status());
             $links = $this->links($response->body(), '//main//a[starts-with(@href,"/workspaces/classrooms/")]');
             self::assertNotEmpty($links);
-            foreach ($links as $link) { self::assertContains(explode('#', $link)[0], [$this->workspacePath(), $this->workspacePath() . '/subjects']); }
+            foreach ($links as $link) {
+                self::assertContains(parse_url($link, PHP_URL_PATH), [$this->workspacePath(), $this->workspacePath() . '/subjects']);
+                if (parse_url($link, PHP_URL_QUERY) !== null) {
+                    self::assertSame('offering_id=' . $this->f['offeringA'], parse_url($link, PHP_URL_QUERY));
+                }
+            }
             self::assertSame([], $this->links($response->body(), '//nav[@aria-label="งานในห้องเรียน"]//a[starts-with(@href,"/academic/")]'));
             self::assertStringNotContainsString($this->readPath('Other') . '"', $response->body());
         }
         $body = $this->request('GET', $this->readPath())->body();
         self::assertSame($body, $this->request('GET', $this->readPath(), [], ['workspace_classroom_id' => $this->f['roomB']])->body());
         self::assertStringNotContainsString('2570', $body);
-        self::assertSame([$this->workspacePath() . '#workspace-scores'], $this->links($body, '//nav[@aria-label="งานในห้องเรียน"]//a[@aria-current="page"]'));
+        self::assertSame([$this->workspacePath(), $this->workspacePath() . '/subjects?offering_id=' . $this->f['offeringA']],
+            $this->links($body, '//nav[@aria-label="งานสมุดคะแนน"]//a[starts-with(@href,"/workspaces/")]'));
+        self::assertSame('สมุดคะแนน — วิทยาศาสตร์', $this->xpath($body)->evaluate('string(//h1)'));
         self::assertSame(['/gradebooks'], $this->links($body, '//aside//a[@aria-current="page"]'));
         $this->scope($this->users['SUBJECT_TEACHER']['assignment'], 'Closed');
         self::assertSame([$this->f['roomA'], $this->f['roomClosed']], array_column($this->targets('SUBJECT_TEACHER'), 'id'));

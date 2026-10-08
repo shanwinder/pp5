@@ -1,0 +1,16 @@
+/* Context outside the locked grid boundary. No Tabulator, editor or score-cell rules. */
+.pp5-gradebook-context { border-color: #e6c393; }
+.pp5-gradebook-context-identity { min-width: 0; flex: 1 1 20rem; }
+.pp5-gradebook-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pp5-gradebook-toolbar .btn { white-space: normal; min-height: 2.75rem; }
+.pp5-gradebook-overview { padding: .5rem .75rem; border: 1px solid #e6c393; border-radius: .5rem; background: #fff; }
+.pp5-gradebook-overview > summary, .pp5-gradebook-help > summary { cursor: pointer; min-height: 2.75rem; align-content: center; }
+.pp5-gradebook-help { padding-inline: .75rem; border-bottom: 1px solid var(--tblr-border-color); font-size: .875rem; }
+.pp5-gradebook-component-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .5rem 1.5rem; }
+.pp5-gradebook-component-list > div { min-width: 0; border-bottom: 1px solid var(--tblr-border-color); padding-bottom: .25rem; }
+.pp5-gradebook-component-list dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pp5-gradebook-feedback { min-height: 3.25rem; }
+@media (max-width: 36rem) {
+  .pp5-gradebook-feedback { min-height: 5rem; }
+  .pp5-gradebook-context .page-title { font-size: 1.35rem; }
+}

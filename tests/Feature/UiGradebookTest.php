@@ -30,7 +30,7 @@ final class UiGradebookTest extends TestCase
         self::assertArrayHasKey('enrollmentId',$data['rows'][0]); self::assertArrayHasKey('id',$data['components'][0]);
         self::assertStringNotContainsString('national_id',$bootstrap);
         self::assertSame($score?1:0,$x->query('//meta[@name="htmx-config"]')->length);
-        self::assertSame($setup?1:0,$x->query('//main//a[@href="'.$this->path().'"]')->length);
+        self::assertSame($setup?1:0,$x->query('//nav[@aria-label="งานสมุดคะแนน"]//a[contains(.,"จัดการรายการคะแนน")]')->length);
         self::assertStringContainsString($score?'แก้ไขคะแนนได้':'อ่านอย่างเดียว',$r->body());
         self::assertSame(1,$x->query('//*[@class="pp5-table-scroll pp5-gradebook" and @role="region" and @aria-label and @tabindex="0"]')->length);
         self::assertSame(1,$x->query('//table/caption')->length);
@@ -95,9 +95,9 @@ final class UiGradebookTest extends TestCase
 
     public function testSetupLinkFollowsLivePermissionAndTeacherScopeRevocationStillDenies(): void
     {
-        $this->login(); self::assertStringContainsString('href="'.$this->path().'"',$this->request('GET',$this->readPath())->body());
+        $this->login(); self::assertStringContainsString('จัดการรายการคะแนน',$this->request('GET',$this->readPath())->body());
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='SCHOOL_ADMIN' AND p.code='GRADEBOOK_COMPONENT_MANAGE'");
-        self::assertStringNotContainsString('href="'.$this->path().'"',$this->request('GET',$this->readPath())->body());
+        self::assertSame(0,$this->xpath($this->request('GET',$this->readPath())->body())->query('//nav[@aria-label="งานสมุดคะแนน"]//a[contains(.,"จัดการรายการคะแนน")]')->length);
         self::assertSame(403,$this->request('GET',$this->path())->status());
         self::assertSame(403,$this->request('POST',$this->path('update'),$this->payload())->status());
         $this->login('SUBJECT_TEACHER'); self::assertSame(200,$this->request('GET',$this->readPath())->status());

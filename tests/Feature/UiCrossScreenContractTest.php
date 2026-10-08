@@ -79,7 +79,7 @@ final class UiCrossScreenContractTest extends TestCase
             $expectedStyles[]='/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css');
         }
         if ($x->query('//script[@id="gradebook-grid-data" and @type="application/json"]')->length === 1) {
-            array_push($expectedStyles, '/assets/vendor/tabulator/tabulator.min.css',
+            array_push($expectedStyles, '/assets/gradebook-workspace.css?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook-workspace.css'), '/assets/vendor/tabulator/tabulator.min.css',
                 '/assets/gradebook-grid.css?v='.filemtime(dirname(__DIR__,2).'/htdocs/assets/gradebook-grid.css'));
         }
         self::assertSame($expectedStyles,
