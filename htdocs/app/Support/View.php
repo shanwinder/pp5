@@ -30,7 +30,7 @@ final class View
     public static function page(string $template, array $data = [], array $pageContext = []): string
     {
         $workspace = $pageContext['ui']['workspace'] ?? null;
-        $legacyStyles = !in_array($template, ['dashboard/index', 'workspaces/classroom/overview', 'workspaces/classroom/students'], true);
+        $legacyStyles = !in_array($template, ['dashboard/index', 'workspaces/classroom/overview', 'workspaces/classroom/students', 'workspaces/classroom/subjects'], true);
         $content = ($workspace === null ? '' : self::render('workspaces/classroom/shell', ['workspace' => $workspace]))
             . self::render($template, $data + ['workspace' => $workspace]);
 

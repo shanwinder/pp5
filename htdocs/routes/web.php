@@ -101,6 +101,29 @@ return static function (RouteCollector $r): void {
     $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}/subjects', [
         'action' => 'workspaces.classrooms.subjects', 'protected' => true, 'context' => AccessContext::SCHOOL,
     ]);
+    $r->addRoute('GET', '/hx/workspaces/classrooms/{classroomId:\d+}/subjects/{offeringId:\d+}', [
+        'action' => 'workspaces.classrooms.subjectPanel', 'protected' => true, 'context' => AccessContext::SCHOOL,
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/subjects/{offeringId:\d+}/assignments', [
+        'action' => 'workspaces.classrooms.subjectAssignment', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/subjects/{offeringId:\d+}/assignments/{assignmentId:\d+}/status', [
+        'action' => 'workspaces.classrooms.subjectAssignmentStatus', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'TEACHING_ASSIGNMENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/subjects/{offeringId:\d+}/components', [
+        'action' => 'workspaces.classrooms.subjectComponent', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/subjects/{offeringId:\d+}/components/{componentId:\d+}', [
+        'action' => 'workspaces.classrooms.subjectComponentUpdate', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
+    $r->addRoute('POST', '/hx/workspaces/classrooms/{classroomId:\d+}/subjects/{offeringId:\d+}/components/{componentId:\d+}/status', [
+        'action' => 'workspaces.classrooms.subjectComponentStatus', 'protected' => true, 'context' => AccessContext::SCHOOL,
+        'permission' => 'GRADEBOOK_COMPONENT_MANAGE',
+    ]);
     // The overview composes generic permissions and offering-scoped access, as for Gradebook.
     $r->addRoute('GET', '/workspaces/classrooms/{classroomId:\d+}', [
         'action' => 'workspaces.classrooms.show', 'protected' => true, 'context' => AccessContext::SCHOOL,

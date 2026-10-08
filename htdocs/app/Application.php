@@ -12,6 +12,7 @@ use App\Controllers\AuthController;
 use App\Controllers\ClassroomController;
 use App\Controllers\ClassroomWorkspaceController;
 use App\Controllers\ClassroomStudentWorkflowController;
+use App\Controllers\ClassroomSubjectWorkflowController;
 use App\Controllers\DashboardController;
 use App\Controllers\SchoolUserController;
 use App\Controllers\SubjectController;
@@ -48,6 +49,7 @@ use App\Services\GradebookReadService;
 use App\Services\GradebookScoreService;
 use App\Services\TeachingAssignmentService;
 use App\Services\GradebookComponentService;
+use App\Services\ClassroomOfferingContextReadService;
 use App\Services\AcademicYearAdministrationService;
 use App\Services\AuthenticationService;
 use App\Services\AppUiContextService;
@@ -156,10 +158,17 @@ final class Application
         $grades = new GradeLevelRepository($pdo);
         $teachingAssignments = new TeachingAssignmentRepository($pdo);
         $rosterRead = new ClassroomRosterReadService($workspaceRead, new StudentEnrollmentRepository($pdo), new AuthorizationService($authorization));
+        $subjectRead = new \App\Services\ClassroomSubjectsReadService($workspaceRead, $offerings, $teachingAssignments,
+            new AuthorizationService($authorization), $gradebookComponents);
+        $offeringContexts = new ClassroomOfferingContextReadService($subjectRead, $offerings, $gradebookComponents);
+        $componentService = new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo));
+        $teachingService = new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo));
+        $subjectWorkflow = new ClassroomSubjectWorkflowController($offeringContexts, $teachingService, $componentService,
+            $session, $csrf, $ui);
         $classroomWorkspace = new ClassroomWorkspaceController(
             $workspaceRead, $session, $ui,
             $rosterRead,
-            new \App\Services\ClassroomSubjectsReadService($workspaceRead, $offerings, $teachingAssignments, new AuthorizationService($authorization), $gradebookComponents)
+            $subjectRead, $offeringContexts, $subjectWorkflow
         );
         $classroomController = new ClassroomController(
             new ClassroomAdministrationService($pdo, $schools, $years, $grades, $classrooms, new AuditLogRepository($pdo)),
@@ -188,11 +197,11 @@ final class Application
             $ui
         );
         $componentController = new GradebookComponentController(
-            new GradebookComponentService($pdo, $schools, $years, $offerings, $gradebookComponents, new AuditLogRepository($pdo)),
+            $componentService,
             $gradebookComponents, $offerings, $session, $csrf, $ui, $workspaceRead
         );
         $teachingController = new TeachingAssignmentController(
-            new TeachingAssignmentService($pdo, $schools, $years, $offerings, $teachingAssignments, new AuditLogRepository($pdo)),
+            $teachingService,
             $teachingAssignments, $years, $offerings, $session, $csrf, $ui
         );
         $students = new StudentRepository($pdo);
@@ -238,12 +247,20 @@ final class Application
         $componentId = $componentId === false ? 0 : $componentId;
         $enrollmentId = filter_var($routeInfo[2]['enrollmentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         $enrollmentId = $enrollmentId === false ? 0 : $enrollmentId;
+        $assignmentId = filter_var($routeInfo[2]['assignmentId'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        $assignmentId = $assignmentId === false ? 0 : $assignmentId;
         $next = match ($handler['action']) {
             'workspaces.classrooms.students' => static fn (Request $request): Response => $classroomWorkspace->students($classroomId),
             'workspaces.classrooms.studentPanel' => static fn (Request $request): Response => $studentWorkflow->panel($classroomId, $enrollmentId),
             'workspaces.classrooms.studentPlacement' => static fn (Request $request): Response => $studentWorkflow->placement($request, $classroomId, $enrollmentId),
             'workspaces.classrooms.studentStatus' => static fn (Request $request): Response => $studentWorkflow->status($request, $classroomId, $enrollmentId),
-            'workspaces.classrooms.subjects' => static fn (Request $request): Response => $classroomWorkspace->subjects($classroomId),
+            'workspaces.classrooms.subjects' => static fn (Request $request): Response => $classroomWorkspace->subjects($request, $classroomId),
+            'workspaces.classrooms.subjectPanel' => static fn (Request $request): Response => $subjectWorkflow->panel($classroomId, $offeringId),
+            'workspaces.classrooms.subjectAssignment' => static fn (Request $request): Response => $subjectWorkflow->assignment($request, $classroomId, $offeringId),
+            'workspaces.classrooms.subjectAssignmentStatus' => static fn (Request $request): Response => $subjectWorkflow->assignmentStatus($request, $classroomId, $offeringId, $assignmentId),
+            'workspaces.classrooms.subjectComponent' => static fn (Request $request): Response => $subjectWorkflow->component($request, $classroomId, $offeringId),
+            'workspaces.classrooms.subjectComponentUpdate' => static fn (Request $request): Response => $subjectWorkflow->componentUpdate($request, $classroomId, $offeringId, $componentId),
+            'workspaces.classrooms.subjectComponentStatus' => static fn (Request $request): Response => $subjectWorkflow->componentStatus($request, $classroomId, $offeringId, $componentId),
             'workspaces.classrooms.show' => static fn (Request $request): Response => $classroomWorkspace->show($classroomId),
             'gradebook.scores.batch' => static fn (Request $request): Response => $scoreController->storeBatch($request, $offeringId),
             'gradebook.scores.store' => static fn (Request $request): Response => $scoreController->store($request, $offeringId, $componentId, $enrollmentId),

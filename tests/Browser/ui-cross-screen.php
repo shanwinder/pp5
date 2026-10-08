@@ -9,7 +9,7 @@ $root = dirname(__DIR__, 2);
 $assets = ['/assets/app.css'=>'htdocs/assets/app.css', '/assets/app.js'=>'htdocs/assets/app.js',
     '/assets/vendor/tabler/tabler-1.6.1.min.css'=>'htdocs/assets/vendor/tabler/tabler-1.6.1.min.css',
     '/assets/tabler-app.css'=>'htdocs/assets/tabler-app.css', '/assets/app-compat.css'=>'htdocs/assets/app-compat.css',
-    '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/student-workspace.js'=>'htdocs/assets/student-workspace.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
+    '/assets/gradebook.js'=>'htdocs/assets/gradebook.js', '/assets/student-workspace.js'=>'htdocs/assets/student-workspace.js', '/assets/subject-workspace.js'=>'htdocs/assets/subject-workspace.js', '/assets/vendor/bootstrap-5.3.8.min.css'=>'htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/assets/gradebook-grid.css'=>'htdocs/assets/gradebook-grid.css',
     '/assets/vendor/tabulator/tabulator.min.js'=>'htdocs/assets/vendor/tabulator/tabulator.min.js',
     '/assets/vendor/tabulator/tabulator.min.css'=>'htdocs/assets/vendor/tabulator/tabulator.min.css',
@@ -33,6 +33,26 @@ if (preg_match('~^/hx/workspaces/classrooms/1/students/([1-8])$~', $path, $match
         'placementHistory' => [['classroom_name' => 'ป.4/1', 'started_at' => '2026-05-16', 'ended_at' => null]],
         'enrollmentHistory' => [], 'rooms' => [['id' => 2, 'name_th' => 'ป.4/2']],
         'csrfToken' => 'synthetic-only', 'error' => null,
+    ]);
+    exit;
+}
+if (preg_match('~^/hx/workspaces/classrooms/1/subjects/([1-2])$~', $path, $match)) {
+    require $root.'/htdocs/vendor/autoload.php';
+    $id = (int) $match[1];
+    $readonly = str_contains($_SERVER['HTTP_REFERER'] ?? '', 'subjects-readonly');
+    $limited = str_contains($_SERVER['HTTP_REFERER'] ?? '', 'subjects-limited');
+    $canManage = !$readonly && !$limited;
+    $offering = ['id' => $id, 'code' => 'ว14101', 'name' => 'วิทยาศาสตร์และเทคโนโลยี', 'term' => $id,
+        'status' => 'ACTIVE', 'teachers' => [['id' => 1, 'name' => 'ครูทดสอบ']], 'teacherNamesVisible' => true,
+        'scoreSummary' => ['active_count' => 1, 'inactive_count' => 1, 'active_max_total' => '20.00'],
+        'canEdit' => $canManage, 'canOpenGradebook' => true, 'canSetup' => $canManage];
+    echo App\Support\View::render('workspaces/classroom/subject-panel', [
+        'work' => ['workspace' => ['classroom' => ['id' => 1, 'name' => 'ป.4/1'], 'academicYear' => ['year_be' => 2569]],
+            'teacherChoices' => [['user_role_assignment_id' => 1, 'display_name' => 'ครูทดสอบ']]],
+        'offering' => $offering, 'components' => [['id' => 1, 'name_th' => 'สอบ', 'max_score' => '20.00', 'status' => 'ACTIVE'],
+            ['id' => 2, 'name_th' => 'เก่า', 'max_score' => '10.00', 'status' => 'INACTIVE']],
+        'historyIds' => [1 => true], 'canReadComponents' => true, 'canMutateComponents' => $canManage,
+        'canMutateAssignments' => $canManage, 'csrfToken' => 'synthetic-only', 'error' => null, 'success' => null, 'old' => [],
     ]);
     exit;
 }

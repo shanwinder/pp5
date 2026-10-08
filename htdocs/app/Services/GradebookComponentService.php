@@ -39,10 +39,11 @@ final class GradebookComponentService
     }
 
     /** Teacher form: allocate the internal code and append position while holding the offering lock. */
-    public function createScoreItem(int $schoolId, int $actorUserId, int $subjectOfferingId, string $nameTh, string $maxScore, ?string $ipAddress = null): int
+    public function createScoreItem(int $schoolId, int $actorUserId, int $subjectOfferingId, string $nameTh, string $maxScore, ?string $ipAddress = null,
+        ?int $expectedClassroomId = null): int
     {
-        return $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $nameTh, $maxScore, $ipAddress): int {
-            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId);
+        return $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $nameTh, $maxScore, $ipAddress, $expectedClassroomId): int {
+            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId, $expectedClassroomId);
             $existing = $this->components->listForOffering($schoolId, $subjectOfferingId);
             $codes = array_fill_keys(array_map(static fn (array $row): string => mb_strtolower($row['code'], 'UTF-8'), $existing), true);
             $index = 1;
@@ -60,10 +61,11 @@ final class GradebookComponentService
     }
 
     /** Teacher edit: preserve the persisted code and position without browser-supplied hidden fields. */
-    public function updateScoreItem(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $nameTh, string $maxScore, ?string $ipAddress = null): void
+    public function updateScoreItem(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $nameTh, string $maxScore, ?string $ipAddress = null,
+        ?int $expectedClassroomId = null): void
     {
-        $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $componentId, $nameTh, $maxScore, $ipAddress): void {
-            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId);
+        $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $componentId, $nameTh, $maxScore, $ipAddress, $expectedClassroomId): void {
+            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId, $expectedClassroomId);
             $target = $this->target($schoolId, $subjectOfferingId, $componentId, (int) $offering['academic_year_id']);
             $this->updateLocked($schoolId, $actorUserId, $subjectOfferingId, $componentId, $target,
                 $target['code'], $nameTh, $maxScore, $target['sort_order'], $ipAddress);
@@ -98,12 +100,16 @@ final class GradebookComponentService
         $this->audit->record($schoolId, $actorUserId, 'GRADEBOOK_COMPONENT_UPDATED', 'gradebook_components', $componentId, $old, $new, null, $ipAddress);
     }
 
-    public function changeStatus(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $status, ?string $ipAddress = null): void
+    public function changeStatus(int $schoolId, int $actorUserId, int $subjectOfferingId, int $componentId, string $status, ?string $ipAddress = null,
+        ?int $expectedClassroomId = null, ?string $expectedStatus = null): void
     {
-        $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $componentId, $status, $ipAddress): void {
-            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId);
+        $this->transaction(function () use ($schoolId, $actorUserId, $subjectOfferingId, $componentId, $status, $ipAddress, $expectedClassroomId, $expectedStatus): void {
+            $offering = $this->lockMutableOffering($schoolId, $subjectOfferingId, $expectedClassroomId);
             $target = $this->target($schoolId, $subjectOfferingId, $componentId, (int) $offering['academic_year_id']);
             if (!in_array($status, ['ACTIVE', 'INACTIVE'], true)) { throw new DomainException('สถานะองค์ประกอบคะแนนไม่ถูกต้อง'); }
+            if ($expectedStatus !== null && $target['status'] !== $expectedStatus) {
+                throw new DomainException('สถานะรายการคะแนนเปลี่ยนไป กรุณาโหลดหน้าใหม่');
+            }
             if ($target['status'] === $status) { return; }
             $this->components->updateStatus($schoolId, $subjectOfferingId, $componentId, $status);
             $this->audit->record($schoolId, $actorUserId, 'GRADEBOOK_COMPONENT_STATUS_CHANGED', 'gradebook_components', $componentId,
@@ -111,7 +117,7 @@ final class GradebookComponentService
         });
     }
 
-    private function lockMutableOffering(int $schoolId, int $offeringId): array
+    private function lockMutableOffering(int $schoolId, int $offeringId, ?int $expectedClassroomId = null): array
     {
         if ($this->schools->lockActiveById($schoolId) === null) { throw new DomainException('ไม่พบโรงเรียนที่เปิดใช้งาน'); }
         // Discovery only; the year and offering below are the authoritative locking reads.
@@ -125,6 +131,9 @@ final class GradebookComponentService
         $offering = $this->offerings->lockForSchool($schoolId, $offeringId);
         if ($offering === null || (int) $offering['academic_year_id'] !== $yearId || $offering['status'] !== 'ACTIVE') {
             throw new DomainException('ไม่พบรายวิชาที่เปิดใช้งานสำหรับแก้ไขโครงสร้างคะแนน');
+        }
+        if ($expectedClassroomId !== null && (int) $offering['classroom_id'] !== $expectedClassroomId) {
+            throw new DomainException('รายวิชาเปลี่ยนห้อง กรุณาโหลดหน้าใหม่');
         }
 
         return $offering;

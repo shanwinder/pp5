@@ -14,6 +14,11 @@ final class ClassroomSubjectsTest extends TestCase
         return '/workspaces/classrooms/' . $this->f['room' . $room] . '/subjects';
     }
 
+    private function panelPath(int $offeringId, string $room = 'A'): string
+    {
+        return '/hx/workspaces/classrooms/' . $this->f['room' . $room] . '/subjects/' . $offeringId;
+    }
+
     private function offeringIds(string $body): array
     {
         return array_map('intval', array_map(static fn ($node): string => $node->nodeValue,
@@ -60,19 +65,23 @@ final class ClassroomSubjectsTest extends TestCase
         $before = $this->readSnapshot();
         $this->pdo->queries = [];
         $response = $this->request('GET', $this->path());
+        $listQueries = $this->pdo->queries;
         self::assertSame(200, $response->status());
         self::assertSame([$this->f['offeringA'], $second, $this->f['offeringInactive']], $this->offeringIds($response->body()));
         self::assertStringContainsString('แต่ละภาคเรียนเป็นรายการแยกกัน', $response->body());
         $x = $this->xpath($response->body());
         self::assertSame('รายวิชาและครู', $x->query('//nav[@aria-label="งานในห้องเรียน"]//a[@aria-current="page"]')->item(0)->textContent);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//form[starts-with(@action,"/academic/teaching-assignments?")]//input[@name="subject_offering_id"]')->length);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//form[starts-with(@action,"/academic/teaching-assignments/' . $this->f['scopeA'] . '/status?")]')->length);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//a[@href="/gradebook/' . $this->f['offeringA'] . '/setup"]')->length);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
+        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//a[@data-subject-trigger="' . $this->f['offeringA'] . '"]')->length);
+        self::assertSame(0, $x->query('//table//form')->length);
+        $panel = $this->xpath($this->request('GET', $this->panelPath($this->f['offeringA']))->body());
+        self::assertSame(1, $panel->query('//form[@action="' . $this->panelPath($this->f['offeringA']) . '/assignments"]')->length);
+        self::assertSame(1, $panel->query('//form[@action="' . $this->panelPath($this->f['offeringA']) . '/assignments/' . $this->f['scopeA'] . '/status"]')->length);
+        self::assertSame(1, $panel->query('//a[@href="/gradebook/' . $this->f['offeringA'] . '/setup"]')->length);
+        self::assertSame(1, $panel->query('//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
         self::assertSame(1, $x->query('//main//a[@href="/academic/subjects/create"]')->length);
         self::assertSame(0, $x->query('//tr[@data-offering-id="' . $this->f['offeringInactive'] . '"]//form[@action="/academic/teaching-assignments"]')->length);
         self::assertSame($before, $this->readSnapshot());
-        self::assertCount(1, array_filter($this->pdo->queries,
+        self::assertCount(1, array_filter($listQueries,
             static fn (string $sql): bool => str_contains($sql, 'FROM permission_scopes ps') && str_contains($sql, 'subject_offering_id IN')));
         $this->assertReadSafe($response->body());
         foreach (['ชั่วโมงต่อปี', 'ชั่วโมงต่อสัปดาห์', 'หน่วยกิต', 'ภาระงานครู', 'หมวดหลักสูตร'] as $invented) {
@@ -90,7 +99,8 @@ final class ClassroomSubjectsTest extends TestCase
         $x = $this->xpath($response->body());
         self::assertSame(0, $x->query('//main//form')->length);
         self::assertSame(0, $x->query('//main//a[contains(@href,"/academic/") or contains(@href,"/setup")]')->length);
-        self::assertSame(1, $x->query('//main//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
+        self::assertSame(1, $this->xpath($this->request('GET', $this->panelPath($this->f['offeringA']))->body())
+            ->query('//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
         self::assertDoesNotMatchRegularExpression('/\b(students|student_enrollments|student_classroom_placements|gradebook_scores|national_id|birth_date)\b/i', implode("\n", $this->pdo->queries));
         $this->revoke('scope');
         self::assertSame(404, $this->request('GET', $this->path())->status());
@@ -113,7 +123,8 @@ final class ClassroomSubjectsTest extends TestCase
         $this->grant('SUBJECT_OFFERING_MANAGE');
         $manage = $this->request('GET', $this->path());
         self::assertSame(1, $this->xpath($manage->body())->query('//main//a[contains(@href,"/academic/offerings/create")]')->length);
-        self::assertSame(2, $this->xpath($manage->body())->query('//table//a[contains(@href,"/edit")]')->length);
+        self::assertSame(1, $this->xpath($this->request('GET', $this->panelPath($this->f['offeringA']))->body())
+            ->query('//a[@href="/academic/offerings/' . $this->f['offeringA'] . '/edit"]')->length);
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='VIEWER' AND p.code='ACADEMIC_SETUP_VIEW'");
         self::assertSame(200, $this->request('GET', $this->path())->status());
         $this->pdo->exec("DELETE rp FROM role_permissions rp JOIN roles r ON r.id=rp.role_id JOIN permissions p ON p.id=rp.permission_id WHERE r.code='VIEWER' AND p.code='SUBJECT_OFFERING_MANAGE'");
@@ -207,8 +218,10 @@ final class ClassroomSubjectsTest extends TestCase
         $response = $this->request('GET', $this->path());
         self::assertSame(200, $response->status());
         $x = $this->xpath($response->body());
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//form[starts-with(@action,"/academic/teaching-assignments?")]')->length);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//form[contains(@action,"/status?")]')->length);
+        self::assertSame(0, $x->query('//table//form')->length);
+        $panel = $this->xpath($this->request('GET', $this->panelPath($this->f['offeringA']))->body());
+        self::assertSame(1, $panel->query('//form[@action="' . $this->panelPath($this->f['offeringA']) . '/assignments"]')->length);
+        self::assertSame(1, $panel->query('//form[@action="' . $this->panelPath($this->f['offeringA']) . '/assignments/' . $this->f['scopeA'] . '/status"]')->length);
         self::assertSame(0, $x->query('//main//a[contains(@href,"/academic/offerings/create") or contains(@href,"/setup") or @href="/academic/subjects/create"]')->length);
         self::assertSame(0, $x->query('//main//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
         $this->revokeViewer('TEACHING_ASSIGNMENT_MANAGE');
@@ -230,12 +243,14 @@ final class ClassroomSubjectsTest extends TestCase
         $this->login('VIEWER');
         $initial = $this->xpath($this->request('GET', $this->path())->body());
         self::assertSame(1, $initial->query('//main//a[contains(@href,"/academic/offerings/create")]')->length);
-        self::assertSame(1, $initial->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//a[@href="/gradebook/' . $this->f['offeringA'] . '/setup"]')->length);
-        self::assertSame(0, $initial->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
+        $initialPanel = $this->xpath($this->request('GET', $this->panelPath($this->f['offeringA']))->body());
+        self::assertSame(1, $initialPanel->query('//a[@href="/gradebook/' . $this->f['offeringA'] . '/setup"]')->length);
+        self::assertSame(0, $initialPanel->query('//a[@href="/gradebook/' . $this->f['offeringA'] . '"]')->length);
         $this->revokeViewer('SUBJECT_OFFERING_MANAGE');
         $after = $this->xpath($this->request('GET', $this->path())->body());
         self::assertSame(0, $after->query('//main//a[contains(@href,"/academic/offerings/create") or contains(@href,"/edit")]')->length);
-        self::assertSame(1, $after->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//a[@href="/gradebook/' . $this->f['offeringA'] . '/setup"]')->length);
+        self::assertSame(1, $this->xpath($this->request('GET', $this->panelPath($this->f['offeringA']))->body())
+            ->query('//a[@href="/gradebook/' . $this->f['offeringA'] . '/setup"]')->length);
         $this->revokeViewer('GRADEBOOK_COMPONENT_MANAGE');
         $last = $this->request('GET', $this->path());
         self::assertSame(200, $last->status());
@@ -291,9 +306,11 @@ final class ClassroomSubjectsTest extends TestCase
             'user_role_assignment_id' => $this->users['SUBJECT_TEACHER']['assignment'],
             'assigned_by' => $this->users['SCHOOL_ADMIN']['user']]);
         $x = $this->xpath($this->request('GET', $this->path())->body());
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $termTwo . '"]//a[@href="/gradebook/' . $termTwo . '"]')->length);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $termTwo . '"]//a[@href="/gradebook/' . $termTwo . '/setup"]')->length);
-        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $termTwo . '"]//form[contains(@action,"/teaching-assignments/' . $twoScope . '/status")]')->length);
+        self::assertSame(1, $x->query('//tr[@data-offering-id="' . $termTwo . '"]//a[@data-subject-trigger="' . $termTwo . '"]')->length);
+        $panel = $this->xpath($this->request('GET', $this->panelPath($termTwo))->body());
+        self::assertSame(1, $panel->query('//a[@href="/gradebook/' . $termTwo . '"]')->length);
+        self::assertSame(1, $panel->query('//a[@href="/gradebook/' . $termTwo . '/setup"]')->length);
+        self::assertSame(1, $panel->query('//form[contains(@action,"/assignments/' . $twoScope . '/status")]')->length);
         self::assertSame(0, $x->query('//tr[@data-offering-id="' . $this->f['offeringA'] . '"]//form[contains(@action,"/teaching-assignments/' . $twoScope . '/status")]')->length);
         $this->pdo->prepare("UPDATE subject_offerings SET status='INACTIVE' WHERE id=?")->execute([$termTwo]);
         self::assertSame('ACTIVE', $this->row('subject_offerings', $this->f['offeringA'])['status']);

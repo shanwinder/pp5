@@ -84,7 +84,7 @@ echo View::page($roster ? 'workspaces/classroom/students' : ($subjectsPage ? 'wo
         'canManageAssignment' => $admin, 'canViewAll' => $admin, 'csrfToken' => 'synthetic-only'], [
     'documentTitle' => 'งานชั้นเรียน — ระบบ ปพ.5', 'pageTitle' => ($roster ? 'นักเรียน' : ($subjectsPage ? 'รายวิชาและครู' : 'งานชั้นเรียน')) . ' · ป.4/1',
     'bodyClass' => $subjectsPage ? '' : 'pp5-classroom-pilot',
-    'headAssets' => $roster ? View::render('workspaces/classroom/student-assets') : '',
+    'headAssets' => $roster ? View::render('workspaces/classroom/student-assets') : ($subjectsPage ? View::render('workspaces/classroom/subject-assets') : ''),
     'ui' => ['contextType' => 'SCHOOL', 'schoolName' => $workspace['school']['name'], 'displayName' => 'ผู้ใช้ทดสอบ',
         'workspace' => $workspace, 'csrfToken' => 'synthetic-only', 'currentKey' => $currentKey, 'sections' => $sections],
 ]);

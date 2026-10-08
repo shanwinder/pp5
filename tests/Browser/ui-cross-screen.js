@@ -71,14 +71,28 @@
     if (isSubjects) {
       const table = d.querySelector('table#classroom-subjects');
       const empty = frame.title.startsWith('subjects empty');
-      check(empty ? !table : !!table, 'subjects empty/table state');
+      check(!!table, 'subjects table state');
       check(!!d.querySelector('main a[href="/academic/subjects/create"]') === (broadWorkspace && !frame.title.startsWith('subjects readonly')), 'school subject creation follows permission and year');
       if (table) {
         check(table.querySelectorAll('thead th[scope="col"]').length === 6, 'semantic subject columns');
-        check(table.querySelectorAll('tr[data-offering-id]').length === (frame.title.startsWith('subjects normal') ? 2 : 1), 'subject term rows');
-        check(table.querySelectorAll('form[action^="/academic/teaching-assignments?"]').length === (frame.title.startsWith('subjects normal') ? 2 : 0), 'assignment actions follow authority');
-        check(table.textContent.includes('คะแนนเต็มรวม') || table.textContent.includes('ยังไม่ได้ตั้งค่าการเก็บคะแนน'), 'score setup summary visible');
+        check(table.querySelectorAll('tr[data-offering-id]').length === (empty ? 0 : frame.title.startsWith('subjects normal') ? 2 : 1), 'subject term rows');
+        check(table.querySelectorAll('form').length === 0, 'no forms in offering rows');
+        check(table.querySelectorAll('a[data-subject-trigger][hx-get]').length === (empty ? 0 : frame.title.startsWith('subjects normal') ? 2 : 1), 'one compact action per offering');
+        check(empty || table.textContent.includes('คะแนนเต็มรวม') || table.textContent.includes('ยังไม่ได้ตั้งค่าการเก็บคะแนน'), 'score setup summary visible');
         check(!table.querySelector('script'), 'teacher and subject names escaped');
+        const action = table.querySelector('[data-subject-trigger]');
+        if (action && !frame.hasAttribute('sandbox')) {
+          action.focus(); check(d.activeElement === action, 'subject action keyboard reachable');
+          action.click();
+          for (let n = 0; n < 20 && !d.querySelector('#subject-context-heading'); n++) await tick();
+          const context = d.querySelector('#subject-context');
+          check(context.textContent.includes('ครูผู้สอน') && context.textContent.includes('การเก็บคะแนน'), 'offering context loaded');
+          check(context.querySelectorAll('form').length === (frame.title.startsWith('subjects normal') ? 7 : 0), 'panel mutations follow authority');
+          check(d.activeElement === context.querySelector('#subject-context-heading'), 'subject focus moves to heading');
+          check(context.getBoundingClientRect().right <= w.innerWidth + 1, 'subject panel contained');
+          context.querySelector('[data-subject-close]').click();
+          check(!context.textContent.trim() && d.activeElement === action, 'subject close restores row focus');
+        }
       }
     }
     if (isScoreSetup) {

@@ -38,11 +38,12 @@ final class TeachingAssignmentService
         int $actorUserId,
         int $userRoleAssignmentId,
         int $subjectOfferingId,
-        ?string $ipAddress = null
+        ?string $ipAddress = null,
+        ?int $expectedClassroomId = null
     ): int {
-        return $this->transaction(function () use ($schoolId, $actorUserId, $userRoleAssignmentId, $subjectOfferingId, $ipAddress): int {
+        return $this->transaction(function () use ($schoolId, $actorUserId, $userRoleAssignmentId, $subjectOfferingId, $ipAddress, $expectedClassroomId): int {
             $this->lockSchool($schoolId);
-            $offering = $this->lockOpenOffering($schoolId, $subjectOfferingId);
+            $offering = $this->lockOpenOffering($schoolId, $subjectOfferingId, $expectedClassroomId);
             $this->eligibleTeacher($schoolId, $userRoleAssignmentId, $offering);
             $existing = $this->assignments->lockPair($schoolId, $userRoleAssignmentId, $subjectOfferingId);
             if ($existing !== null) {
@@ -60,9 +61,10 @@ final class TeachingAssignmentService
     }
 
     /** School and actor IDs come from the authenticated, authorized server context. */
-    public function changeStatus(int $schoolId, int $actorUserId, int $teachingAssignmentId, string $status, ?string $ipAddress = null): void
+    public function changeStatus(int $schoolId, int $actorUserId, int $teachingAssignmentId, string $status, ?string $ipAddress = null,
+        ?int $expectedOfferingId = null, ?int $expectedClassroomId = null, ?string $expectedStatus = null): void
     {
-        $this->transaction(function () use ($schoolId, $actorUserId, $teachingAssignmentId, $status, $ipAddress): void {
+        $this->transaction(function () use ($schoolId, $actorUserId, $teachingAssignmentId, $status, $ipAddress, $expectedOfferingId, $expectedClassroomId, $expectedStatus): void {
             $this->lockSchool($schoolId);
             if (!in_array($status, ['ACTIVE', 'INACTIVE'], true)) {
                 throw new DomainException('สถานะการมอบหมายครูไม่ถูกต้อง');
@@ -70,7 +72,10 @@ final class TeachingAssignmentService
             // Discovery only. Re-read under locks after school -> year -> offering -> teacher.
             $hint = $this->assignments->findForSchool($schoolId, $teachingAssignmentId);
             if ($hint === null) { throw new DomainException('ไม่พบการมอบหมายครูในโรงเรียนนี้'); }
-            $offering = $this->lockOpenOffering($schoolId, (int) $hint['subject_offering_id']);
+            if ($expectedOfferingId !== null && $hint['subject_offering_id'] !== $expectedOfferingId) {
+                throw new DomainException('ไม่พบการมอบหมายครูในรายวิชานี้');
+            }
+            $offering = $this->lockOpenOffering($schoolId, (int) $hint['subject_offering_id'], $expectedClassroomId);
             if ($status === 'ACTIVE') {
                 $this->eligibleTeacher($schoolId, (int) $hint['user_role_assignment_id'], $offering);
             }
@@ -80,6 +85,9 @@ final class TeachingAssignmentService
                 || $target['academic_year_id'] !== (int) $offering['academic_year_id']
                 || $target['user_role_assignment_id'] !== $hint['user_role_assignment_id']) {
                 throw new DomainException('ไม่พบการมอบหมายครูในโรงเรียนนี้');
+            }
+            if ($expectedStatus !== null && $target['status'] !== $expectedStatus) {
+                throw new DomainException('สถานะการมอบหมายครูเปลี่ยนไป กรุณาโหลดหน้าใหม่');
             }
             // Turning OFF does not depend on the teacher/offering remaining active.
             $this->setStatus($schoolId, $actorUserId, $target, $status, $ipAddress);
@@ -93,7 +101,7 @@ final class TeachingAssignmentService
         }
     }
 
-    private function lockOpenOffering(int $schoolId, int $offeringId): array
+    private function lockOpenOffering(int $schoolId, int $offeringId, ?int $expectedClassroomId = null): array
     {
         $hint = $this->offerings->findForSchool($schoolId, $offeringId);
         if ($hint === null) { throw new DomainException('ไม่พบการเปิดรายวิชาในโรงเรียนนี้'); }
@@ -105,6 +113,9 @@ final class TeachingAssignmentService
         $offering = $this->offerings->lockForSchool($schoolId, $offeringId);
         if ($offering === null || (int) $offering['academic_year_id'] !== $yearId) {
             throw new DomainException('ไม่พบการเปิดรายวิชาในโรงเรียนนี้');
+        }
+        if ($expectedClassroomId !== null && ((int) $offering['classroom_id'] !== $expectedClassroomId || $offering['status'] !== 'ACTIVE')) {
+            throw new DomainException('รายวิชาเปลี่ยนห้องหรือสถานะ กรุณาโหลดหน้าใหม่');
         }
 
         return $offering;

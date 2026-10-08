@@ -9,6 +9,7 @@ use App\Services\AppUiContextService;
 use App\Services\ClassroomWorkspaceReadService;
 use App\Services\ClassroomRosterReadService;
 use App\Services\ClassroomSubjectsReadService;
+use App\Services\ClassroomOfferingContextReadService;
 use App\Support\View;
 
 final class ClassroomWorkspaceController
@@ -18,7 +19,9 @@ final class ClassroomWorkspaceController
         private Session $session,
         private AppUiContextService $ui,
         private ClassroomRosterReadService $rosters,
-        private ClassroomSubjectsReadService $subjects
+        private ClassroomSubjectsReadService $subjects,
+        private ClassroomOfferingContextReadService $offeringContexts,
+        private ClassroomSubjectWorkflowController $subjectWorkflow
     ) {}
 
     public function students(int $classroomId): Response
@@ -36,15 +39,25 @@ final class ClassroomWorkspaceController
         ]));
     }
 
-    public function subjects(int $classroomId): Response
+    public function subjects(\App\Http\Request $request, int $classroomId): Response
     {
         $subjectWork = $this->subjects->getSubjects($this->session->get('user_id'), $this->session->get('context_type'),
             $this->session->get('school_id'), $classroomId);
         if ($subjectWork === null) { return new Response(View::error(404), 404); }
 
+        $selectedPanel = null;
+        if ($request->query('offering_id') !== null) {
+            $id = filter_var($request->query('offering_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false) { return new Response(View::error(404), 404); }
+            $context = $this->offeringContexts->get((int) $this->session->get('user_id'),
+                (string) $this->session->get('context_type'), (int) $this->session->get('school_id'), $classroomId, $id);
+            if ($context === null) { return new Response(View::error(404), 404); }
+            $selectedPanel = $this->subjectWorkflow->panelHtml($context);
+        }
         $ui = $this->ui->build('workspaces.classrooms.subjects', false, $subjectWork['workspace']);
-        return new Response(View::page('workspaces/classroom/subjects', $subjectWork + ['csrfToken' => $ui['csrfToken']], [
+        return new Response(View::page('workspaces/classroom/subjects', $subjectWork + ['selectedPanel' => $selectedPanel], [
             'ui' => $ui,
+            'headAssets' => View::render('workspaces/classroom/subject-assets'),
             'documentTitle' => 'รายวิชาและครู — ระบบ ปพ.5',
             'pageTitle' => 'รายวิชาและครู · ' . $subjectWork['workspace']['classroom']['name'],
         ]));
