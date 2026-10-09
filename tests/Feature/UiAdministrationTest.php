@@ -40,7 +40,9 @@ final class UiAdministrationTest extends TestCase
         $r = $this->request('GET', $path, [], $year ? ['academic_year_id'=>(string)$this->f[$year]] : []);
         self::assertSame(200, $r->status(), $path);
         $x = $this->assertPage($r->body());
-        if ($path !== '/system/schools') { self::assertSame(0, $x->query('//form[@data-confirm]')->length, $path); }
+        foreach ($x->query('//main//form[contains(@action,"/status") or contains(@action,"/membership-status") or contains(@action,"/roles") or contains(@action,"/reset-password")]') as $form) {
+            self::assertNotSame('', $form->getAttribute('data-confirm'), $path);
+        }
         self::assertStringContainsString(htmlspecialchars($hostile,ENT_QUOTES,'UTF-8'),$r->body());
         self::assertStringNotContainsString($hostile,$r->body());
         if ($role === 'SYSTEM_ADMIN') { self::assertSame(0,$x->query('//nav[@aria-label="เมนูหลัก"]//a[starts-with(@href,"/academic") or @href="/dashboard" or @href="/gradebooks"]')->length); }
@@ -147,6 +149,48 @@ final class UiAdministrationTest extends TestCase
         self::assertStringNotContainsString('private-password-marker',$r->body());
     }
 
+    public function testCompactActionsHaveItemNamesTooltipsAndDecorativeIcons(): void
+    {
+        $this->login();
+        foreach (['/admin/users','/academic/years','/academic/classrooms','/academic/subjects','/academic/offerings'] as $path) {
+            $x = $this->xpath($this->request('GET', $path)->body());
+            $actions = $x->query('//main//tbody//a');
+            self::assertGreaterThan(0, $actions->length, $path);
+            foreach ($actions as $action) {
+                self::assertNotSame('', $action->getAttribute('aria-label'));
+                self::assertNotSame('', $action->getAttribute('title'));
+                self::assertNotSame('', $action->getAttribute('data-tooltip'));
+                self::assertSame(1, $x->query('.//svg[@aria-hidden="true" and @focusable="false"]', $action)->length);
+            }
+        }
+    }
+
+    public function testNativeStatusDisclosuresRetainConsequencesAndRealPostForms(): void
+    {
+        foreach (['/system/schools'=>'SYSTEM_ADMIN','/academic/teaching-assignments'=>'SCHOOL_ADMIN'] as $path=>$role) {
+            $this->login($role);
+            $x = $this->xpath($this->request('GET', $path)->body());
+            foreach ($x->query('//main//tbody//form') as $form) {
+                self::assertSame(1, $x->query('ancestor::details[@data-admin-detail and not(@open)]', $form)->length);
+                self::assertNotSame('', $form->getAttribute('data-confirm'));
+                self::assertSame('post', $form->getAttribute('method'));
+                self::assertGreaterThan(0, $x->query('.//p', $form)->length);
+                self::assertSame(1, $x->query('.//button[@type="submit"]', $form)->length);
+            }
+        }
+    }
+
+    public function testYearDateRulesAreLinkedAndPasswordsHaveVisibleMinimum(): void
+    {
+        $this->login();
+        $x = $this->xpath($this->request('GET','/academic/years/create')->body());
+        self::assertSame(2, $x->query('//input[@type="date" and @aria-describedby="year-date-hint"]')->length);
+        self::assertStringContainsString('543', $x->evaluate('string(//*[@id="year-date-hint"])'));
+        $html = $this->request('GET','/admin/users/create')->body();
+        self::assertStringContainsString('อย่างน้อย 12 ตัวอักษร', $html);
+        self::assertSame(0, $this->xpath($html)->query('//input[@type="password" and @value]')->length);
+    }
+
     public function testStatusVocabularyAndUnknownStatusEscaping(): void
     {
         foreach (['school','membership','user'] as $kind) { self::assertSame('ระงับ',StatusLabel::text('SUSPENDED',$kind)); }
@@ -159,8 +203,9 @@ final class UiAdministrationTest extends TestCase
     {
         $x=$this->xpath($html);
         self::assertSame(1,substr_count($html,'<!doctype html>'));
-        foreach (['//html[@lang="th"]','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//form[@action="/logout"]','//link[@href="/assets/app-compat.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app-compat.css').'"]','//link[@href="/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css').'"]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
+        foreach (['//html[@lang="th"]','//head','//body','//main','//h1','//*[@class="pp5-shell"]','//form[@action="/logout"]','//link[@href="/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css').'"]'] as $selector) { self::assertSame(1,$x->query($selector)->length,$selector); }
         self::assertSame(0,$x->query('//script[not(@src)]|//*[@style]|//link[starts-with(@href,"http")]|//script[starts-with(@src,"http")]')->length);
+        self::assertSame(0, $x->query('//link[contains(@href,"app-compat.css") or contains(@href,"bootstrap")]')->length);
         self::assertStringNotContainsString('กลับแดชบอร์ด',$html);
         return $x;
     }

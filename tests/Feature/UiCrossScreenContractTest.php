@@ -75,7 +75,7 @@ final class UiCrossScreenContractTest extends TestCase
             $expectedStyles=['/assets/vendor/bootstrap-5.3.8.min.css', '/assets/app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app.css')];
         } else {
             $expectedStyles=['/assets/vendor/tabler/tabler-1.6.1.min.css'];
-            if ($path !== '/dashboard') { $expectedStyles[]='/assets/app-compat.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app-compat.css'); }
+            if ($path !== '/dashboard' && !preg_match('~^/(admin/users|system/schools|academic/(years|classrooms|subjects|offerings|teaching-assignments))(?:/|$)~', $path)) { $expectedStyles[]='/assets/app-compat.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/app-compat.css'); }
             $expectedStyles[]='/assets/tabler-app.css?v='.filemtime(dirname(__DIR__, 2).'/htdocs/assets/tabler-app.css');
         }
         if ($x->query('//script[@id="gradebook-grid-data" and @type="application/json"]')->length === 1) {
@@ -136,7 +136,7 @@ final class UiCrossScreenContractTest extends TestCase
             if ($x->evaluate('string(.//input[@name="_token"]/@value)', $form) !== $this->token()) { $issues[] = 'CSRF token mismatch'; }
         }
         foreach ($x->query('//form[@data-confirm]') as $form) {
-            if (!preg_match('~^/(system/schools/\d+/status|students/\d+/status|academic/enrollments/\d+/status|academic/student-import/\d+/(apply|cancel))$~', $form->getAttribute('action'))) { $issues[] = 'unexpected confirmation'; }
+            if (!preg_match('~^/(system/schools/\d+/status|admin/users/\d+/(membership-status|roles|reset-password)|academic/(years|classrooms|subjects|offerings|teaching-assignments)/\d+/status|students/\d+/status|academic/enrollments/\d+/status|academic/student-import/\d+/(apply|cancel))$~', $form->getAttribute('action'))) { $issues[] = 'unexpected confirmation'; }
             if (str_contains($form->getAttribute('data-confirm'), $hostile) || trim($form->getAttribute('data-confirm')) === '') { $issues[] = 'non-static confirmation'; }
         }
         self::assertSame([], $issues, $path);

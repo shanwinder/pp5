@@ -9,7 +9,7 @@
   });
 
   // Keep one selected student in view. Native details still works without JavaScript.
-  const studentDetails = document.querySelectorAll('[data-student-detail]');
+  const studentDetails = document.querySelectorAll('[data-student-detail], [data-admin-detail]');
   studentDetails.forEach(detail => {
     detail.addEventListener('toggle', () => {
       if (!detail.open) return;

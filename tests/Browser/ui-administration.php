@@ -52,14 +52,36 @@ if ($path === '/frame') {
         'teachers'=>[$entity],'assignments'=>[$entity],'grades'=>[['id'=>1,'name_th'=>'ประถมศึกษาปีที่ 1']],
         'roles'=>[['code'=>'SUBJECT_TEACHER','name_th'=>'ครูประจำวิชา'],['code'=>'VIEWER','name_th'=>'ผู้ดูข้อมูล']],
         'roleCodes'=>['SUBJECT_TEACHER']];
-    echo View::page($page, $data, ['ui'=>$ui,'pageTitle'=>$pages[$page],
-        'scripts'=>'<script src="/checks.js" defer></script>']); exit;
+    if (($_GET['state'] ?? '') === 'readonly') {
+        foreach ($permissions as $key=>$allowed) $permissions[$key] = str_ends_with($key, '_VIEW');
+        $data['permissions'] = $permissions; $ui['permissions'] = $permissions;
+        foreach (['canCreate','canChangeStatus','canManageYears','canManageGradebookComponents'] as $key) $data[$key] = false;
+    }
+    if (($_GET['state'] ?? '') === 'empty') {
+        foreach (['schools','members','years','classrooms','subjects','offerings','teachers','assignments'] as $key) $data[$key] = [];
+        $data['canCreate'] = false; $data['selectedYear'] = null;
+    }
+    $html = View::page($page, $data, ['ui'=>$ui,'pageTitle'=>$pages[$page],
+        'scripts'=>'<script src="/checks.js" defer></script>']);
+    if (isset($_GET['noenhance'])) $html = preg_replace('~<script src="/assets/app.js[^"]*" defer></script>~', '', $html);
+    echo $html; exit;
 }
 if ($path !== '/') { http_response_code(404); exit; }
 ?>
 <!doctype html><html lang="th"><head><meta charset="utf-8"><title>PP5 administration checks</title></head><body>
 <h1>PP5 administration checks</h1><pre id="browser-results" role="status">Running…</pre>
-<?php foreach ($pages as $page=>$title): foreach ([390,768,1024,1440] as $width): ?>
-<iframe title="<?= $page ?> <?= $width ?>" src="/frame?page=<?= urlencode($page) ?>" width="<?= $width ?>" height="844"></iframe>
+<?php
+$cases = [];
+foreach ($pages as $page=>$title) {
+    $cases[] = [$page, []];
+    if (str_ends_with($page, '/index')) {
+        $cases[] = [$page, ['state'=>'readonly']];
+        $cases[] = [$page, ['state'=>'empty']];
+    }
+}
+$cases[] = ['admin/users/edit', ['state'=>'readonly']];
+foreach (['system/schools/index','academic/teaching-assignments/index'] as $page) $cases[] = [$page, ['noenhance'=>1]];
+foreach ($cases as [$page, $options]): foreach ([390,768,1024,1280,1440] as $width): ?>
+<iframe title="<?= $page.' '.http_build_query($options).' '.$width ?>" src="/frame?<?= htmlspecialchars(http_build_query(['page'=>$page]+$options), ENT_QUOTES, 'UTF-8') ?>" width="<?= $width ?>" height="844"></iframe>
 <?php endforeach; endforeach; ?>
 <script src="/checks.js" defer></script></body></html>

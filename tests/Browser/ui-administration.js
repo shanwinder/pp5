@@ -29,8 +29,24 @@
       assert(region.tabIndex === 0 && region.getAttribute('aria-label'), 'named keyboard scroll region');
       assert(region.getBoundingClientRect().right <= innerWidth + 1, 'table contained');
       region.scrollLeft = region.scrollWidth;
-      const action = region.querySelector('a,button');
+      const action = region.querySelector('a,summary,button');
       if (action) { action.focus(); assert(document.activeElement === action, 'action reachable'); }
+    }
+    for (const action of document.querySelectorAll('main tbody a,main tbody summary')) {
+      assert(action.getAttribute('aria-label') && action.getAttribute('title') && action.getAttribute('data-tooltip'), 'named row icon with help');
+    }
+    if (new URLSearchParams(location.search).get('state') === 'readonly') assert(!document.querySelector('main form[method="post"],main a[href*="/create"],main a[href*="/setup"]'), 'read-only has no mutation controls');
+    assert(!document.querySelector('link[href*="app-compat"],link[href*="bootstrap"]'), 'Tabler-only migrated body');
+    for (const detail of document.querySelectorAll('[data-admin-detail]')) {
+      const summary = detail.querySelector('summary');
+      summary.click();
+      assert(detail.open && detail.querySelector('form').offsetHeight > 0, 'native disclosure exposes POST');
+      const submit = detail.querySelector('button[type="submit"]');
+      submit.focus(); assert(document.activeElement === submit, 'opened action keyboard reachable');
+      if (document.querySelector('[data-tooltip-ready]')) {
+        submit.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true}));
+        assert(!detail.open && document.activeElement === summary, 'Escape restores summary focus');
+      } else { summary.click(); assert(!detail.open, 'native collapse without enhancement'); }
     }
     const first = document.querySelector('main input:not([type="hidden"]),main select,main a');
     if (first) { first.focus(); assert(document.activeElement === first && getComputedStyle(first).outlineStyle !== 'none', 'visible focus'); }

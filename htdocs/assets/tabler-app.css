@@ -113,3 +113,30 @@
   .pp5-subject-scroll .pp5-row-action { min-width: 2.75rem; min-height: 2.75rem; }
   .pp5-subject-scroll th:last-child, .pp5-subject-scroll td:last-child { position: sticky; right: 0; background: #fff; box-shadow: -1px 0 0 var(--tblr-border-color); }
 }
+
+/* Task 5: scoped administration density; legacy bodies keep app-compat.css. */
+.pp5-admin-tabler { min-width: 0; overflow-wrap: anywhere; }
+.pp5-admin-editor { max-width: 48rem; }
+.pp5-admin-tabler fieldset { min-width: 0; }
+.pp5-admin-tabler .form-label { display: block; }
+.pp5-admin-tabler .form-control, .pp5-admin-tabler .form-select { font-size: 1rem; }
+.pp5-admin-tabler .pp5-admin-filter .mb-3 { margin-bottom: 0 !important; }
+.pp5-admin-tabler .pp5-admin-filter select { max-width: 100%; }
+.pp5-admin-tabler .pp5-admin-filter > select { flex: 0 1 20rem; }
+.pp5-admin-tabler .pp5-table { min-width: 40rem; }
+.pp5-admin-tabler .pp5-table th, .pp5-admin-tabler .pp5-table td { max-width: 20rem; overflow-wrap: anywhere; padding: .25rem .75rem; }
+.pp5-admin-tabler .pp5-table thead th { white-space: nowrap; padding-block: .5rem; }
+.pp5-admin-tabler .pp5-table td:last-child, .pp5-admin-actions { width: 1%; white-space: nowrap; }
+.pp5-admin-row-panel { width: 18rem; max-width: 100%; white-space: normal; }
+.pp5-admin-row-panel .card { margin: 0 !important; padding: .75rem; }
+.pp5-admin-tabler summary.pp5-row-action { list-style: none; }
+.pp5-admin-tabler summary.pp5-row-action::-webkit-details-marker { display: none; }
+.pp5-admin-tabler .pp5-row-action { min-width: 2.25rem; min-height: 2.25rem; }
+@media (max-width: 36rem) {
+  .pp5-admin-tabler .pp5-row-action { min-width: 2.75rem; min-height: 2.75rem; }
+  .pp5-admin-tabler .card-body { padding: 1rem; }
+}
+.pp5-admin-tabler .pp5-assignment-table { min-width: 64rem; }
+.pp5-admin-tabler .pp5-assignment-table td:nth-child(2),
+.pp5-admin-tabler .pp5-assignment-table td:nth-child(3),
+.pp5-admin-tabler .pp5-assignment-table td:nth-child(4) { min-width: 12rem; }
