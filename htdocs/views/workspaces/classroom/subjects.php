@@ -10,7 +10,7 @@ $year = $workspace['academicYear'];
     <div class="card-body d-flex flex-wrap justify-content-between align-items-start gap-3">
       <div><div class="subheader mb-2">งานรายวิชา / <?= $escape($room['name']) ?></div>
         <h2 class="card-title h2 mb-2" id="subject-workspace-heading">จัดการรายวิชาในห้องนี้ <span class="badge bg-purple-lt text-purple ms-2"><?= $escape(count($offerings)) ?> รายการ</span></h2>
-        <p class="text-secondary mb-2">เลือกตัวเลือกในแถวรายวิชาเพื่อดูครูผู้สอนและการเก็บคะแนนในหน้านี้ แต่ละภาคเรียนเป็นรายการแยกกัน</p>
+        <p class="text-secondary mb-2">แต่ละภาคเรียนเป็นรายการแยกกัน</p>
         <p class="mb-0">ปีการศึกษา <?= View::render('ui/status', ['status' => $year['status'], 'kind' => 'academic-year']) ?> · ห้องเรียน <?= View::render('ui/status', ['status' => $room['status'], 'kind' => 'entity']) ?></p>
       </div>
       <div class="d-flex flex-wrap gap-2">

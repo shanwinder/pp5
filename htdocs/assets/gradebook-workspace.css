@@ -5,12 +5,16 @@
 .pp5-gradebook-toolbar .btn { white-space: normal; min-height: 2.75rem; }
 .pp5-gradebook-overview { padding: .5rem .75rem; border: 1px solid #e6c393; border-radius: .5rem; background: #fff; }
 .pp5-gradebook-overview > summary, .pp5-gradebook-help > summary { cursor: pointer; min-height: 2.75rem; align-content: center; }
-.pp5-gradebook-help { padding-inline: .75rem; border-bottom: 1px solid var(--tblr-border-color); font-size: .875rem; }
+.pp5-gradebook-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem; }
+.pp5-gradebook-help { min-width: 0; font-size: .875rem; }
+.pp5-gradebook-help[open] { grid-column: 1 / -1; padding-bottom: .5rem; border-bottom: 1px solid var(--tblr-border-color); }
 .pp5-gradebook-component-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .5rem 1.5rem; }
 .pp5-gradebook-component-list > div { min-width: 0; border-bottom: 1px solid var(--tblr-border-color); padding-bottom: .25rem; }
 .pp5-gradebook-component-list dd { margin: 0; font-variant-numeric: tabular-nums; }
-.pp5-gradebook-feedback { min-height: 3.25rem; }
+/* Keep the measured one/two-line status space after shortening the idle text.
+   Override the adapter's initial-text reservation; live messages remain visible. */
+.pp5-gradebook-feedback { min-height: 1.55em !important; }
 @media (max-width: 36rem) {
-  .pp5-gradebook-feedback { min-height: 5rem; }
+  .pp5-gradebook-feedback { min-height: 3.1em !important; }
   .pp5-gradebook-context .page-title { font-size: 1.35rem; }
 }

@@ -21,6 +21,24 @@
     details.querySelector('summary').click();
     assert(!details.open && !host.closest('details'), 'collapse keeps grid mounted and outside disclosure');
     assert(document.querySelectorAll('#gradebook-guidance').length === 1 && host.getAttribute('aria-describedby') === 'gradebook-guidance', 'stable help relationship');
+    const guidance = document.getElementById('gradebook-guidance');
+    const help = document.getElementById('gradebook-help');
+    assert(!help.open && help.querySelector('summary').textContent === 'วิธีกรอกคะแนน', 'one compact help entry, collapsed initially');
+    assert(!guidance.closest('details') && !guidance.hidden && !guidance.hasAttribute('aria-hidden')
+      && guidance.getBoundingClientRect().height <= 1 && guidance.textContent.includes('0.00 คือศูนย์ที่บันทึกแล้ว')
+      && guidance.textContent.includes('Escape นอกช่องแก้ไข'), 'complete visually hidden description independent of disclosure');
+    assert(help.querySelector('p').textContent === guidance.textContent, 'visible on-demand help matches accessible guidance');
+    help.querySelector('summary').click();
+    assert(help.open && !host.closest('details') && document.documentElement.scrollWidth <= innerWidth + 1,
+      'expanded help stays contained with grid mounted');
+    help.querySelector('summary').click();
+    assert(!help.open && document.getElementById('gradebook-range-status').getAttribute('aria-live') === 'polite', 'collapse preserves live range feedback');
+    if (data.canScore) {
+      const feedback = document.getElementById('gradebook-batch-status');
+      assert(!feedback.closest('details') && feedback.getAttribute('aria-live') === 'polite'
+        && feedback.getAttribute('aria-atomic') === 'true' && feedback.getBoundingClientRect().height >= 21,
+        'visible reserved live save feedback remains outside help');
+    }
     assert(![...document.querySelectorAll('link')].some(link => link.href.includes('bootstrap')), 'single Tabler foundation');
     assert(document.documentElement.scrollWidth <= innerWidth + 1, 'contained document width');
     assert(data.canScore || ![...document.querySelectorAll('main a')].some(link => link.textContent.includes('จัดการรายการคะแนน')), 'unauthorized setup hidden');

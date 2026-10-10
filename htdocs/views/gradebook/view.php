@@ -1,25 +1,36 @@
 <?php
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $offering = $gradebook['offering'];
+$guidance = ($canScore
+    ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า จากนั้นกดลูกศรเพื่อบันทึกและย้ายช่อง · ดับเบิลคลิก, Enter หรือ F2 เพื่อแก้ไขค่าเดิม โดยลูกศรซ้ายขวาจะย้ายเคอร์เซอร์ · Enter/Shift+Enter ย้ายลง/ขึ้น · Tab/Shift+Tab ย้ายขวา/ซ้ายและออกจากตารางได้ · Escape ในช่องแก้ไขยกเลิกโดยไม่บันทึก'
+    : 'แสดงข้อมูลแบบอ่านอย่างเดียว')
+    . ' · ลากเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอก'
+    . ($canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้แผงด้านล่างเพื่อใส่คะแนนช่วง' : '')
+    . ' · Escape นอกช่องแก้ไขล้างช่วงที่เลือก · ช่องว่างคือยังไม่มีคะแนน ส่วน 0.00 คือศูนย์ที่บันทึกแล้ว';
 ?>
 <div class="pp5-gradebook-page">
   <?= App\Support\View::render('gradebook/context', [
       'gradebook' => $gradebook, 'canScore' => $canScore, 'canManageComponents' => $canManageComponents,
       'workspace' => $workspace ?? null, 'subjectsUrl' => $subjectsUrl ?? null,
   ]) ?>
-  <details class="pp5-gradebook-help mb-2">
-    <summary>วิธีกรอกคะแนน · แป้นพิมพ์และการเลือกช่วง</summary>
-  <p id="gradebook-guidance"><?= $canScore ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า จากนั้นกดลูกศรเพื่อบันทึกและย้ายช่อง · ดับเบิลคลิก, Enter หรือ F2 เพื่อแก้ไขค่าเดิม โดยลูกศรซ้ายขวาจะย้ายเคอร์เซอร์ · Enter/Shift+Enter ย้ายขึ้นลง · Tab/Shift+Tab ย้ายซ้ายขวาและออกจากตารางได้' : 'แสดงข้อมูลแบบอ่านอย่างเดียว' ?> · ลากเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอก<?= $canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้แผงด้านล่างเพื่อใส่คะแนนช่วง' : '' ?> · Escape ล้างช่วงที่เลือก</p>
-    <p class="mb-0">ใช้ลูกศรหรือ Tab เพื่อนำทาง และ Shift+ลูกศรเพื่อขยายช่วงที่เลือก ช่องอ่านอย่างเดียวและประวัติยังเลือกและคัดลอกได้ แต่แก้ไขไม่ได้<?= $canScore ? ' · คำสั่งช่วงที่ส่งขณะกำลังบันทึกจะรอการบันทึกก่อนหน้า หากผลไม่แน่นอนให้โหลดหน้าใหม่เพื่อตรวจสอบก่อนแก้ไขต่อ' : '' ?></p>
-  </details>
-  <p class="small text-secondary mb-2"><?= $canScore ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า · Enter หรือ F2 เพื่อแก้ไขค่าเดิม' : 'เลือกช่องคะแนนเพื่อดูและคัดลอกได้' ?> · ช่องว่างคือยังไม่มีคะแนน ส่วน 0.00 คือศูนย์ที่บันทึกแล้ว</p>
+  <p id="gradebook-guidance" class="visually-hidden"><?= $guidance ?></p>
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
   <?php if ($canScore): ?>
-    <p id="gradebook-batch-status" class="pp5-gradebook-feedback small mb-2" role="status" aria-live="polite" aria-atomic="true">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากมุมซ้ายบนของช่วงที่เลือก · ช่องว่างในตารางที่วางจะล้างคะแนน</p>
+    <p id="gradebook-batch-status" class="pp5-gradebook-feedback small mb-2" role="status" aria-live="polite" aria-atomic="true">พร้อมกรอกคะแนน</p>
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
     <noscript><p>ต้องเปิดใช้งาน JavaScript เพื่อบันทึกคะแนนอัตโนมัติ</p></noscript>
   <?php endif; ?>
-  <h2 class="h3 mb-2">คะแนนรายหัวข้อ</h2>
+  <div class="pp5-gradebook-heading mb-2">
+    <h2 class="h3 mb-0">คะแนนรายหัวข้อ</h2>
+    <details class="pp5-gradebook-help" id="gradebook-help">
+      <summary>วิธีกรอกคะแนน</summary>
+      <div class="pt-2">
+        <p><?= $guidance ?></p>
+        <p>ใช้ลูกศรหรือ Tab เพื่อนำทาง และ Shift+ลูกศรเพื่อขยายช่วงที่เลือก ช่องอ่านอย่างเดียวและประวัติยังเลือกและคัดลอกได้ แต่แก้ไขไม่ได้<?= $canScore ? ' · คำสั่งช่วงที่ส่งขณะกำลังบันทึกจะรอการบันทึกก่อนหน้า หากผลไม่แน่นอนให้โหลดหน้าใหม่เพื่อตรวจสอบก่อนแก้ไขต่อ' : '' ?></p>
+        <?php if ($canScore): ?><p class="mb-0">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากมุมซ้ายบนของช่วงที่เลือก · ช่องว่างในตารางที่วางจะล้างคะแนน</p><?php endif; ?>
+      </div>
+    </details>
+  </div>
   <?php if ($gradebook['components'] === []): ?><p>ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน จึงยังไม่ถือว่าคะแนนครบ</p><?php endif; ?>
   <?php if ($canScore): ?>
     <form id="gradebook-range-actions" class="pp5-gradebook-range-actions" aria-label="ใส่คะแนนในช่วงที่เลือก" hidden>

@@ -71,6 +71,36 @@ final class GradebookWorkspaceTest extends TestCase
         self::assertSame(1, $x->query('//p[@id="gradebook-batch-status" and @role="status" and @aria-live="polite"]')->length);
     }
 
+    #[DataProvider('modes')]
+    public function testCompactHelpKeepsCompleteGuidanceAndVisibleLiveFeedback(string $role, bool $writable, bool $manage): void
+    {
+        $this->login($role);
+        $x = $this->xpath($this->request('GET', $this->readPath())->body());
+        self::assertSame(1, $x->query('//details[@id="gradebook-help" and not(@open)]')->length);
+        self::assertSame('วิธีกรอกคะแนน', $x->evaluate('string(//details[@id="gradebook-help"]/summary)'));
+        self::assertSame(1, $x->query('//*[@id="gradebook-guidance" and contains(@class,"visually-hidden") and not(@hidden) and not(@aria-hidden)]')->length);
+        self::assertSame(0, $x->query('//details//*[@id="gradebook-guidance" or @id="gradebook-range-status" or @id="gradebook-batch-status"]')->length);
+        $guidance = $x->evaluate('string(//*[@id="gradebook-guidance"])');
+        self::assertSame($guidance, $x->evaluate('string(//details[@id="gradebook-help"]//p[1])'));
+        foreach (['Ctrl+C', 'Cmd+C', 'Escape นอกช่องแก้ไขล้างช่วงที่เลือก', 'ช่องว่างคือยังไม่มีคะแนน', '0.00 คือศูนย์ที่บันทึกแล้ว'] as $text) {
+            self::assertStringContainsString($text, $guidance);
+        }
+        self::assertSame(1, $x->query('//*[@id="gradebook-range-status" and @role="status" and @aria-live="polite"]')->length);
+        if ($writable) {
+            foreach (['ดับเบิลคลิก, Enter หรือ F2', 'ลูกศรซ้ายขวาจะย้ายเคอร์เซอร์', 'Escape ในช่องแก้ไขยกเลิกโดยไม่บันทึก', 'Delete/Backspace เพื่อล้างช่วงที่เลือก'] as $text) {
+                self::assertStringContainsString($text, $guidance);
+            }
+            self::assertSame('พร้อมกรอกคะแนน', $x->evaluate('string(//*[@id="gradebook-batch-status"])'));
+            self::assertSame(1, $x->query('//*[@id="gradebook-batch-status" and @role="status" and @aria-live="polite" and @aria-atomic="true" and not(@hidden) and not(@aria-hidden) and not(contains(@class,"visually-hidden"))]')->length);
+            self::assertStringContainsString('ช่องว่างในตารางที่วางจะล้างคะแนน', $x->evaluate('string(//details[@id="gradebook-help"])'));
+        } else {
+            self::assertStringContainsString('อ่านอย่างเดียว', $guidance);
+            self::assertStringNotContainsString('Ctrl+V', $guidance);
+            self::assertSame(0, $x->query('//*[@id="gradebook-batch-status"]')->length);
+        }
+        self::assertSame(0, $x->query('//main/p[contains(.,"คลิกช่องคะแนนแล้วพิมพ์")]')->length);
+    }
+
     public static function frozen(): array { return [['year'], ['offering']]; }
     #[DataProvider('frozen')]
     public function testLifecycleAndHistoricalScoresStayReadOnly(string $kind): void

@@ -73,7 +73,8 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         }
         $body = $this->request('GET', $this->readPath())->body();
         self::assertSame($body, $this->request('GET', $this->readPath(), [], ['workspace_classroom_id' => $this->f['roomB']])->body());
-        self::assertStringNotContainsString('2570', $body);
+        self::assertStringContainsString('ปีการศึกษา 2569', $this->xpath($body)->evaluate('string(//header[@aria-labelledby="gradebook-context-title"])'));
+        self::assertStringNotContainsString('2570', $this->mainDisplayText($body));
         self::assertSame([$this->workspacePath(), $this->workspacePath() . '/subjects?offering_id=' . $this->f['offeringA']],
             $this->links($body, '//nav[@aria-label="งานสมุดคะแนน"]//a[starts-with(@href,"/workspaces/")]'));
         self::assertSame('สมุดคะแนน — วิทยาศาสตร์', $this->xpath($body)->evaluate('string(//h1)'));
@@ -89,6 +90,26 @@ final class ClassroomWorkspaceNavigationTest extends TestCase
         $remaining = $this->request('GET', '/dashboard')->body();
         self::assertNotContains($this->workspacePath(), $this->links($remaining, '//a[starts-with(@href,"/workspaces/classrooms/")]'));
         self::assertContains($this->workspacePath('Closed'), $this->links($remaining, '//a[starts-with(@href,"/workspaces/classrooms/")]'));
+    }
+
+    private function mainDisplayText(string $html): string
+    {
+        // Year leakage concerns displayed content, not digits in endpoint IDs or JSON.
+        return implode(' ', array_map(static fn ($node) => $node->textContent,
+            iterator_to_array($this->xpath($html)->query('//main//text()[not(ancestor::script) and not(ancestor::style)]'))));
+    }
+
+    public static function yearContent(): iterable
+    {
+        yield 'offering ID collision' => ['<main><a href="/subjects?offering_id=582570">ปีการศึกษา 2569</a><script type="application/json">{"id":2570}</script></main>', false];
+        yield 'next year in context' => ['<main><header>ปีการศึกษา <span>2570</span></header></main>', true];
+        yield 'next year in secondary content' => ['<main><header>ปีการศึกษา 2569</header><details><summary>ปีการศึกษา 2570</summary></details></main>', true];
+    }
+
+    #[DataProvider('yearContent')]
+    public function testYearAssertionDistinguishesDisplayedYearFromResourceIdentifiers(string $html, bool $leaked): void
+    {
+        self::assertSame($leaked, str_contains($this->mainDisplayText($html), '2570'));
     }
 
     public static function capabilities(): iterable
