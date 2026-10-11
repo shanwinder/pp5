@@ -5,13 +5,13 @@ $guidance = ($canScore
     ? 'คลิกช่องคะแนนแล้วพิมพ์เพื่อแทนค่า จากนั้นกดลูกศรเพื่อบันทึกและย้ายช่อง · ดับเบิลคลิก, Enter หรือ F2 เพื่อแก้ไขค่าเดิม โดยลูกศรซ้ายขวาจะย้ายเคอร์เซอร์ · Enter/Shift+Enter ย้ายลง/ขึ้น · Tab/Shift+Tab ย้ายขวา/ซ้ายและออกจากตารางได้ · Escape ในช่องแก้ไขยกเลิกโดยไม่บันทึก'
     : 'แสดงข้อมูลแบบอ่านอย่างเดียว')
     . ' · ลากเลือกช่วง แล้วกด Ctrl+C หรือ Cmd+C เพื่อคัดลอก'
-    . ($canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้แผงด้านล่างเพื่อใส่คะแนนช่วง' : '')
+    . ($canScore ? ' · Ctrl+V หรือ Cmd+V เพื่อวาง · Delete/Backspace เพื่อล้างช่วงที่เลือก · ใช้เครื่องมือช่วงคะแนนเพื่อใส่คะแนนช่วง' : '')
     . ' · Escape นอกช่องแก้ไขล้างช่วงที่เลือก · ช่องว่างคือยังไม่มีคะแนน ส่วน 0.00 คือศูนย์ที่บันทึกแล้ว';
 ?>
 <div class="pp5-gradebook-page">
   <?= App\Support\View::render('gradebook/context', [
       'gradebook' => $gradebook, 'canScore' => $canScore, 'canManageComponents' => $canManageComponents,
-      'workspace' => $workspace ?? null, 'subjectsUrl' => $subjectsUrl ?? null,
+      'workspace' => $workspace ?? null, 'subjectsUrl' => $subjectsUrl ?? null, 'guidance' => $guidance,
   ]) ?>
   <p id="gradebook-guidance" class="visually-hidden"><?= $guidance ?></p>
   <p id="gradebook-range-status" class="visually-hidden" role="status" aria-live="polite"></p>
@@ -20,29 +20,7 @@ $guidance = ($canScore
     <input type="hidden" id="gradebook-csrf" name="_token" value="<?= $escape($csrfToken) ?>">
     <noscript><p>ต้องเปิดใช้งาน JavaScript เพื่อบันทึกคะแนนอัตโนมัติ</p></noscript>
   <?php endif; ?>
-  <div class="pp5-gradebook-heading mb-2">
-    <h2 class="h3 mb-0">คะแนนรายหัวข้อ</h2>
-    <details class="pp5-gradebook-help" id="gradebook-help">
-      <summary>วิธีกรอกคะแนน</summary>
-      <div class="pt-2">
-        <p><?= $guidance ?></p>
-        <p>ใช้ลูกศรหรือ Tab เพื่อนำทาง และ Shift+ลูกศรเพื่อขยายช่วงที่เลือก ช่องอ่านอย่างเดียวและประวัติยังเลือกและคัดลอกได้ แต่แก้ไขไม่ได้<?= $canScore ? ' · คำสั่งช่วงที่ส่งขณะกำลังบันทึกจะรอการบันทึกก่อนหน้า หากผลไม่แน่นอนให้โหลดหน้าใหม่เพื่อตรวจสอบก่อนแก้ไขต่อ' : '' ?></p>
-        <?php if ($canScore): ?><p class="mb-0">วางคะแนนด้วย Ctrl+V หรือ Cmd+V เริ่มจากมุมซ้ายบนของช่วงที่เลือก · ช่องว่างในตารางที่วางจะล้างคะแนน</p><?php endif; ?>
-      </div>
-    </details>
-  </div>
   <?php if ($gradebook['components'] === []): ?><p>ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน จึงยังไม่ถือว่าคะแนนครบ</p><?php endif; ?>
-  <?php if ($canScore): ?>
-    <form id="gradebook-range-actions" class="pp5-gradebook-range-actions" aria-label="ใส่คะแนนในช่วงที่เลือก" hidden>
-      <p id="gradebook-range-summary">ยังไม่ได้เลือกช่วงคะแนน</p>
-      <label for="gradebook-fill-value">คะแนนสำหรับช่วงที่เลือก</label>
-      <div class="pp5-gradebook-range-controls">
-        <input id="gradebook-fill-value" class="form-control" type="text" inputmode="decimal" autocomplete="off" aria-describedby="gradebook-range-summary">
-        <button id="gradebook-fill-submit" class="btn btn-primary" type="submit" disabled>ใส่คะแนนให้ช่วงที่เลือก</button>
-        <button id="gradebook-clear-submit" class="btn btn-outline-secondary" type="button" disabled>ล้างคะแนนในช่วงที่เลือก</button>
-      </div>
-    </form>
-  <?php endif; ?>
   <?php
     $gridBootstrap = [
       'offeringId' => (int) $offering['id'], 'canScore' => (bool) $canScore,
@@ -69,7 +47,7 @@ $guidance = ($canScore
         <?php foreach ($gradebook['components'] as $component): ?>
           <th id="<?= $escape('component-' . $component['id']) ?>" scope="col" data-component-id="<?= $escape($component['id']) ?>"><strong><?= $escape($component['name_th']) ?></strong><br>เต็ม <?= $escape($component['max_score']) ?><br><small class="pp5-gradebook-code">รหัส <?= $escape($component['code']) ?></small></th>
         <?php endforeach; ?>
-        <th class="pp5-gradebook-summary" scope="col">คะแนนที่บันทึกรวม</th><th scope="col">คะแนนเต็มรวม</th><th scope="col">บันทึกแล้ว / องค์ประกอบทั้งหมด</th><th scope="col">ความครบถ้วน</th>
+        <th class="pp5-gradebook-summary" scope="col">คะแนนที่บันทึก</th>
       </tr></thead>
       <tbody>
         <?php foreach ($gradebook['rows'] as $rowIndex => $row): ?>
@@ -87,7 +65,7 @@ $guidance = ($canScore
             <?= \App\Support\View::render('gradebook/row-summary', ['offeringId' => $offering['id'], 'row' => $row]) ?>
           </tr>
         <?php endforeach; ?>
-        <?php if ($gradebook['rows'] === []): ?><tr><td colspan="<?= $escape(6 + $gradebook['active_component_count']) ?>">ไม่มีรายชื่อนักเรียนหรือประวัติคะแนนในรายวิชานี้</td></tr><?php endif; ?>
+        <?php if ($gradebook['rows'] === []): ?><tr><td colspan="<?= $escape(3 + $gradebook['active_component_count']) ?>">ไม่มีรายชื่อนักเรียนหรือประวัติคะแนนในรายวิชานี้</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

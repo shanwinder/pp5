@@ -121,3 +121,7 @@
 5. หาก gate ไม่ครบ ให้คงสถานะ pending และไม่สรุปว่า accepted
 
 **ข้อจำกัดของคำว่า LOCK:** เป็น policy/review lock ใน repository ซึ่ง agent ต้องปฏิบัติตาม ไม่ใช่ branch protection หรือการบังคับ GitHub CI อัตโนมัติ การป้องกันระดับระบบต้องตั้ง required checks/branch protection เพิ่มภายหลัง
+
+### คำชี้แจงที่เจ้าของผลิตภัณฑ์อนุมัติ — Task 6R, 2026-10-11
+
+ความกว้างคอลัมน์ปรับได้เมื่อ viewport/container เปลี่ยนขนาด โดยคง minimum ที่ใช้งานได้ เลื่อนแนวนอนภายใน holder และแสดงทุกหัวข้อคะแนนพร้อม frozen identity. ที่ความกว้างคงเดิม การกรอก/บันทึก/รับผล server/เลือกช่วง/เปิดปิดเครื่องมือต้องไม่เปลี่ยนความกว้างคอลัมน์หรือความสูงแถว. Resize ต้องรักษา active cell, selection, browser focus และ input เดิมพร้อมค่า/caret โดยไม่ save/cancel. นี่คือคำชี้แจงขอบเขต presentation ตาม authorization ของ Task 6R; ไม่เปลี่ยน 124 behavior IDs หรือ mappings ของ Golden A–M.

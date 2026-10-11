@@ -19,7 +19,7 @@
       const d = frame.contentDocument, w = frame.contentWindow;
       const mode = frame.title.split(' ')[0], width = w.innerWidth;
       const scaleId = ({ 390: 'GB-SCALE-004', 768: 'GB-SCALE-005',
-        1024: 'GB-SCALE-006', 1440: 'GB-SCALE-007' })[width];
+        1024: 'GB-SCALE-006', 1280: 'Task6R-1280', 1440: 'GB-SCALE-007' })[width];
       const host = d.getElementById('gradebook-tabulator');
       const fallback = d.querySelector('.pp5-gradebook');
       if (host && mode !== 'nojs') {
@@ -32,13 +32,26 @@
       if (host) {
         assert(host.getAttribute('aria-label') && fallback, 'named grid and semantic fallback exist');
         const data = JSON.parse(d.getElementById('gradebook-grid-data').textContent);
+        assert(fallback.querySelectorAll('thead th').length===data.components.length+3
+          && fallback.querySelectorAll('thead .pp5-gradebook-summary').length===1, 'fallback has exactly one summary header and correct column count');
+        if(data.rows.length===0) {
+          assert(fallback.querySelector('tbody td').colSpan===data.components.length+3, 'empty row colspan matches physical columns');
+        } else {
+          assert([...fallback.querySelectorAll('tbody tr[data-enrollment-id]')].every(row=>row.children.length===data.components.length+3
+            && row.querySelectorAll('td.pp5-gradebook-summary').length===1), 'fallback rows have no hidden redundant columns');
+        }
         assert(data.components.length === (mode === 'no-components' ? 0 : 2)
           && data.rows.length === (mode === 'empty' ? 0 : 4), 'bootstrap uses expected read model');
         assert(!d.getElementById('gradebook-grid-data').innerHTML.includes('<script>'), 'bootstrap escapes tags');
         if (mode === 'nojs') {
           assert(host.hidden && !fallback.hidden, 'GB-RUNTIME-006 — no-JS semantic fallback remains readable');
           assert(d.querySelector('noscript').textContent.includes('JavaScript'), 'no-JS save limitation visible');
-          assert(d.querySelector('table caption') && fallback.scrollWidth > fallback.clientWidth, 'fallback table scrolls internally');
+          assert(d.querySelector('table caption') && fallback.scrollWidth >= fallback.clientWidth, 'fallback retains caption and scroll container when narrower summary fits');
+          if (fallback.scrollWidth > fallback.clientWidth) {
+            fallback.scrollLeft = fallback.scrollWidth;
+            assert(fallback.scrollLeft > 0 && d.documentElement.scrollWidth <= width + 1, 'overflowing fallback scrolls internally without document overflow');
+            fallback.scrollLeft = 0;
+          }
         } else {
           assert(fallback.hidden && !host.hidden, 'Tabulator replaces fallback only after build');
           assert([...fallback.querySelectorAll('[data-score-input]')].every(input => input.disabled), 'fallback inputs cannot double-write');
@@ -56,6 +69,7 @@
             holder.scrollLeft = 0;
             if (mode === 'no-components') {
               assert(!host.querySelector('[tabulator-field^="score_"]'), 'no score columns when components are absent');
+              assert([...host.querySelectorAll('.tabulator-row [tabulator-field="summaryDisplay"]')].every(cell=>cell.textContent==='0/0'), 'no-component summary is 0/0 without asserting completion');
               assert(d.body.textContent.includes('ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน'), 'empty component guidance remains visible');
             } else {
               const first = host.querySelector('.tabulator-row [tabulator-field="score_10"]');
@@ -94,7 +108,14 @@
             assert(!host.querySelector('.tabulator-editable'), 'read-only grid has no editable cell');
           } else if (mode !== 'empty') {
             const panel = d.getElementById('gradebook-range-actions');
-            assert(panel && !panel.hidden && panel.getBoundingClientRect().right <= width + 1, 'range controls fit viewport');
+            const tool = d.getElementById('gradebook-range-tool');
+            assert(panel && !panel.hidden && tool && !tool.hidden && !tool.open && panel.getClientRects().length === 0, 'range form initialized inside closed compact tool');
+            const y = host.getBoundingClientRect().top;
+            tool.querySelector('summary').click();
+            const box = panel.getBoundingClientRect();
+            assert(tool.open && box.left >= 0 && box.right <= width + 1 && box.width > 200, 'open range panel contained and readable');
+            assert(Math.abs(host.getBoundingClientRect().top - y) < .5, 'opening tool does not move grid');
+            tool.querySelector('summary').click();
             assert(d.getElementById('gradebook-fill-value').labels.length === 1, 'fill control has native label');
           }
         }

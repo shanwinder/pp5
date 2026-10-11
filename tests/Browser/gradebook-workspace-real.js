@@ -3,7 +3,7 @@
 (async () => {
   const output = document.getElementById('browser-results');
   const host = document.getElementById('gradebook-tabulator');
-  const details = document.getElementById('gradebook-components');
+  const details = document.getElementById('gradebook-help');
   const events = [], passed = [];
   const assert = (okay, label) => { if (!okay) throw new Error(label); passed.push(label); };
   for (const type of ['pointerup', 'keydown', 'copy']) {
@@ -32,11 +32,11 @@
     const data = JSON.parse(document.getElementById('gradebook-grid-data').textContent);
     assert(document.querySelectorAll('h1').length === 1 && document.querySelector('h1').textContent.includes('วิชาทดสอบ'), 'subject heading');
     assert(document.getElementById('gradebook-mode').textContent === (data.canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว'), 'authoritative score mode');
-    await wait('Click score-component summary', () => details.open, 'pointerup');
+    await wait('Click compact help control', () => details.open, 'pointerup');
     for (const item of data.components) {
-      assert(details.textContent.includes(item.name) && details.textContent.includes(`เต็ม ${item.max} คะแนน`), `component ${item.id} name and maximum`);
+      assert(host.querySelector(`.tabulator-col[tabulator-field="score_${item.id}"]`).textContent.includes(item.name) && host.querySelector(`.tabulator-col[tabulator-field="score_${item.id}"]`).textContent.includes(`เต็ม ${item.max}`), `component ${item.id} name and maximum`);
     }
-    await wait('Press Enter to collapse score details', () => !details.open, 'keydown');
+    await wait('Press Enter to collapse help', () => !details.open, 'keydown');
     assert(document.activeElement === details.querySelector('summary'), 'disclosure retains keyboard focus');
     await wait('Click first row score 10', () => document.activeElement === first(), 'pointerup');
     const before = viewport();
@@ -54,7 +54,7 @@
       assert(!host.querySelector('input'), 'read-only navigation opens no editor');
     }
     assert(viewport().every((value, i) => Math.abs(value - before[i]) < .6), 'page, holder, row height and column width remain stable');
-    assert(!details.open, 'score interaction never expands contextual details');
+    assert(!details.open, 'score interaction never expands help');
     output.textContent = `PASS: ${passed.length} TRUSTED contextual workspace checks\n${passed.join('\n')}`;
     document.title = `PASS — trusted Gradebook workspace ${data.canScore ? 'writable' : 'read-only'}`;
   } catch (error) {

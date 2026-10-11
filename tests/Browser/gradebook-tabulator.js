@@ -64,7 +64,7 @@
     assert(cell(3, 'rowType').textContent.includes('ประวัติ'), 'Historical state is visible');
     assert(document.querySelectorAll('script[src^="http"],link[href^="http"]').length === 0, 'Runtime assets are local');
     assert(!document.body.textContent.includes('national_id'), 'No national ID appears in the page');
-    assert(cell(0, 'total').textContent === '0.00', 'Initial summary comes from read model');
+    assert(cell(0, 'summaryDisplay').textContent === '0/35.5', 'Initial summary comes from read model');
     if (!document.getElementById('gradebook-csrf')) {
       assert(!document.querySelector('#gradebook-tabulator .tabulator-editable'), 'Read-only page has no score editor');
       await choose(cell(0, 'score_10'));
@@ -94,7 +94,9 @@
     assert(document.activeElement === cell(1, 'score_10'), 'Enter focuses next enrollment in same component');
     await until(() => cell(0, 'score_10').textContent === '5.00');
     assert(requests.length === 1 && requests[0].url.endsWith('/components/10/enrollments/1/score'), 'Single edit uses stable component and enrollment IDs');
-    assert(cell(0, 'total').textContent === '19.25', 'GB-SERVER-003 GB-SERVER-004 — single score and summary use authoritative response');
+    assert(cell(0, 'summaryDisplay').textContent === '19.25/35.5', 'GB-SERVER-003 GB-SERVER-004 — single score and summary use authoritative response');
+    const singleSummary = window.__gradebookTiming.summaries()[0];
+    assert(singleSummary.total === '19.25' && singleSummary.max === '35.50' && singleSummary.count === '1 / 2' && singleSummary.complete === 'ยังไม่ครบ', 'All four authoritative single summary fields remain exact internally');
     await choose(cell(1, 'score_10')); key(cell(1, 'score_10'), 'Enter');
     const caret = grid.querySelector('input');
     assert(caret.value === '1.50', 'Enter opens the existing score for caret editing');
@@ -114,7 +116,7 @@
     await choose(cell(0, 'score_10'));
     assert(getComputedStyle(cell(0, 'score_10')).outlineStyle === 'dashed'
       && getComputedStyle(cell(0, 'score_10')).boxShadow === 'none', 'Active rejected cell has one dashed error boundary');
-    assert(cell(0, 'total').textContent === '19.25', 'Invalid score does not change authoritative summary');
+    assert(cell(0, 'summaryDisplay').textContent === '19.25/35.5', 'Invalid score does not change authoritative summary');
     assert(status.textContent.includes('คะแนนไม่ถูกต้อง'), 'Validation error is announced');
     await choose(cell(0, 'score_10')); key(cell(0, 'score_10'), '0'); key(grid.querySelector('input'), 'Enter');
     await until(() => cell(0, 'score_10').textContent === '0.00' && !cell(0, 'score_10').dataset.pp5Saving);
@@ -133,7 +135,8 @@
     const sent = JSON.parse(requests.at(-1).body.get('batch'));
     assert(JSON.stringify(sent.enrollment_ids) === '[1,2]' && JSON.stringify(sent.component_ids) === '[10,11]', 'Batch maps stable IDs');
     assert(JSON.stringify(sent.values) === JSON.stringify([['5','0'],['','12.5']]), 'TSV preserves blank and zero geometry');
-    assert(cell(0, 'total').textContent === '987.65' && cell(1, 'total').textContent === '987.65', 'Batch summaries use server values');
+    assert(cell(0, 'summaryDisplay').textContent === '987.65/432.1' && cell(1, 'summaryDisplay').textContent === '987.65/432.1', 'Batch summaries use server values');
+    assert(window.__gradebookTiming.summaries().slice(0,2).every(row => row.total === '987.65' && row.max === '432.10' && row.count === '2 / 2' && row.complete === 'ครบ'), 'All four authoritative batch summary fields remain exact internally');
     const copied = clipboard(cell(0, 'score_10'), 'copy');
     assert(copied.event.defaultPrevented && copied.text === '5.00\t0.00\n\t12.50', 'Copy emits exact rectangular TSV');
     assert(!copied.text.includes('STUDENT-'), 'Score copy excludes identity');

@@ -6,8 +6,8 @@
 .pp5-gradebook-tabulator .tabulator-header .tabulator-col { background: var(--pp5-primary-soft); border-right: 1px solid var(--pp5-border); }
 .pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="identity"],
 .pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="rowType"] { background: var(--pp5-table-header); }
-.pp5-gradebook-tabulator .tabulator-header .tabulator-col:is([tabulator-field="total"], [tabulator-field="max"], [tabulator-field="count"], [tabulator-field="complete"]) { background: var(--pp5-summary-soft); }
-.pp5-gradebook-tabulator .tabulator-header .tabulator-col-title { white-space: normal; line-height: 1.15; }
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="summaryDisplay"] { background: var(--pp5-summary-soft); }
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col .tabulator-col-content .tabulator-col-title { white-space: normal; overflow-wrap: anywhere; line-height: 1.15; }
 .pp5-gradebook-tabulator .tabulator-header small { color: var(--pp5-text-muted); font-weight: normal; }
 .pp5-gradebook-tabulator .tabulator-row { background: var(--pp5-surface); min-height: 2rem; }
 .pp5-gradebook-tabulator .tabulator-row.tabulator-row-even { background: var(--pp5-table-stripe); }

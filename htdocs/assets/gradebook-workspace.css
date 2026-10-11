@@ -1,16 +1,23 @@
 /* Context outside the locked grid boundary. No Tabulator, editor or score-cell rules. */
 .pp5-gradebook-context { border-color: #e6c393; }
 .pp5-gradebook-context-identity { min-width: 0; flex: 1 1 20rem; }
-.pp5-gradebook-toolbar { display: flex; flex-wrap: wrap; gap: .5rem; }
+.pp5-gradebook-toolbar { position: relative; display: flex; flex-wrap: wrap; gap: .5rem; }
 .pp5-gradebook-toolbar .btn { white-space: normal; min-height: 2.75rem; }
-.pp5-gradebook-overview { padding: .5rem .75rem; border: 1px solid #e6c393; border-radius: .5rem; background: #fff; }
-.pp5-gradebook-overview > summary, .pp5-gradebook-help > summary { cursor: pointer; min-height: 2.75rem; align-content: center; }
-.pp5-gradebook-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .5rem; }
-.pp5-gradebook-help { min-width: 0; font-size: .875rem; }
-.pp5-gradebook-help[open] { grid-column: 1 / -1; padding-bottom: .5rem; border-bottom: 1px solid var(--tblr-border-color); }
-.pp5-gradebook-component-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .5rem 1.5rem; }
-.pp5-gradebook-component-list > div { min-width: 0; border-bottom: 1px solid var(--tblr-border-color); padding-bottom: .25rem; }
-.pp5-gradebook-component-list dd { margin: 0; font-variant-numeric: tabular-nums; }
+.pp5-gradebook-tool { min-width: 0; font-size: .875rem; }
+.pp5-gradebook-tool[hidden] { display: none; }
+.pp5-gradebook-tool:not([open]) > .pp5-gradebook-tool-panel { display: none; }
+/* Native details content containment must not make the popup as narrow as its trigger. */
+.pp5-gradebook-tool::details-content { content-visibility: visible; }
+.pp5-gradebook-tool > summary { cursor: pointer; list-style: none; }
+.pp5-gradebook-tool > summary::-webkit-details-marker { display: none; }
+.pp5-gradebook-tool-panel {
+  position: absolute; inset-inline-end: 0; top: calc(100% + .25rem); z-index: 20;
+  width: min(24rem, 100%); max-height: min(24rem, 50vh); overflow: auto;
+  padding: .75rem; margin: 0; border: 1px solid var(--tblr-border-color);
+  border-radius: var(--tblr-border-radius); background: var(--tblr-bg-surface);
+  box-shadow: var(--tblr-box-shadow-dropdown); overflow-wrap: anywhere;
+}
+.pp5-gradebook-tool-panel .btn { min-height: 2.75rem; }
 /* Keep the measured one/two-line status space after shortening the idle text.
    Override the adapter's initial-text reservation; live messages remain visible. */
 .pp5-gradebook-feedback { min-height: 1.55em !important; }

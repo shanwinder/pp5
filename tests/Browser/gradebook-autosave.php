@@ -24,6 +24,9 @@ $assets = [
     '/assets/app.css' => '/htdocs/assets/app.css',
     '/assets/vendor/bootstrap-5.3.8.min.css' => '/htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
+    '/compact-tests.js' => '/tests/Browser/gradebook-compact.js',
+    '/responsive-tests.js' => '/tests/Browser/gradebook-responsive.js',
+    '/feedback-real-tests.js' => '/tests/Browser/gradebook-feedback-real.js',
     '/workspace-tests.js' => '/tests/Browser/gradebook-workspace.js',
     '/workspace-real-tests.js' => '/tests/Browser/gradebook-workspace-real.js',
     '/grid-tests.js' => '/tests/Browser/gradebook-tabulator.js',
@@ -42,7 +45,7 @@ if (isset($assets[$path])) {
         header('Cache-Control: no-store');
         // Fixture-only diagnostics expose private coordination state without changing production bytes.
         $source = file_get_contents($assetPath);
-        $source = str_replace('  let table;', '  window.__gradebookTiming = { snapshot: () => ({ pendingSingles: state.pendingSingles.size, editing: Boolean(state.editing), pendingBatch: state.pendingBatch, uncertain: state.uncertain }), readyRejections: [] };' . "\n" . '  let table;', $source);
+        $source = str_replace('  let table;', '  window.__gradebookTiming = { snapshot: () => ({ pendingSingles: state.pendingSingles.size, editing: Boolean(state.editing), pendingBatch: state.pendingBatch, uncertain: state.uncertain }), applySummary: (id, values, revision) => apply([], [{ id, values }], revision), summaries: () => rowData.map(({ id, total, max, count, complete, summaryDisplay }) => ({ id, total, max, count, complete, summaryDisplay })), readyRejections: [] };' . "\n" . '  let table;', $source);
         $readyStart = strpos($source, '  const readyForBatch = () => {');
         $readyEnd = $readyStart === false ? false : strpos($source, '  const parseTsv =', $readyStart);
         if ($readyStart === false || $readyEnd === false) { http_response_code(500); exit; }
@@ -73,6 +76,8 @@ if ($path === '/hx/gradebook/1/scores/batch') {
         http_response_code(['csrf'=>419,'revoked'=>422,'failure'=>500,'refresh'=>409][$first]);
         echo json_encode(['committed'=>$first==='refresh','message'=>$first==='revoked' ? 'สิทธิ์ถูกเพิกถอน' : 'ทดสอบการปฏิเสธ / โหลดหน้าใหม่เพื่อตรวจสอบคะแนน'], JSON_UNESCAPED_UNICODE); exit;
     }
+    $missingSummary = str_starts_with($first, 'missing-') ? substr($first, 8) : null;
+    if ($missingSummary !== null) $matrix['values'][0][0] = '5';
     $cells=[]; $rows=[];
     foreach ($matrix['enrollment_ids'] as $r=>$enrollment) {
         foreach ($matrix['component_ids'] as $c=>$component) {
@@ -87,6 +92,10 @@ if ($path === '/hx/gradebook/1/scores/batch') {
         }
         $rows[]=['enrollment_id'=>$enrollment,'entered_score_total'=>'987.65','configured_max_total'=>'432.10',
             'entered_component_count'=>2,'active_component_count'=>2,'complete'=>true];
+    }
+    if ($missingSummary !== null) {
+        $key = ['total'=>'entered_score_total','max'=>'configured_max_total','count'=>'entered_component_count','complete'=>'complete'][$missingSummary];
+        unset($rows[0][$key]);
     }
     header('X-Gradebook-Batch-Saved: 1');
     echo json_encode(['committed'=>true,'offering_id'=>1,'targeted_count'=>count($cells),'changed_count'=>count($cells),
@@ -103,6 +112,8 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11|12|13)/enrollments/(1|2|3|4)
     if ($score === 'failure') { http_response_code(500); echo 'Internal Server Error'; exit; }
     if ($score === 'refresh') { http_response_code(409); echo View::render('gradebook/score-error', ['message'=>'บันทึกแล้วแต่โหลดผลล่าสุดไม่สำเร็จ']); exit; }
     if ($score === 'malformed') { header('X-Gradebook-Saved: 1'); echo '<div>missing score and summary</div>'; exit; }
+    $missingSummary = str_starts_with($score, 'missing-') ? substr($score, 8) : null;
+    if ($missingSummary !== null) $score = '5';
     $normalized = ['' => '', '0' => '0.00', '5' => '5.00', '5.00' => '5.00', '6' => '6.00', '6.00' => '6.00', '7'=>'7.00', '8'=>'8.00',
         '1.50' => '1.50', '0.00' => '0.00', '01.50' => '1.50', '12.5' => '12.50', '12.50' => '12.50'];
     if (!array_key_exists($score, $normalized)) {
@@ -111,24 +122,33 @@ if (preg_match('~^/hx/gradebook/1/components/(10|11|12|13)/enrollments/(1|2|3|4)
     header('X-Gradebook-Saved: 1');
     echo View::render('gradebook/score-cell', ['offeringId' => 1, 'componentId' => (int) $ids[1], 'enrollmentId' => (int) $ids[2], 'score' => $normalized[$score], 'saved' => true]);
     // Deliberately recognizable server summary. Business totals are covered by real DB HTTP tests.
-    echo View::render('gradebook/row-summary', ['offeringId' => 1, 'outOfBand' => true, 'row' => [
+    $summaryHtml = View::render('gradebook/row-summary', ['offeringId' => 1, 'outOfBand' => true, 'row' => [
         'enrollment_id' => (int) $ids[2], 'entered_score_total' => '19.25', 'configured_max_total' => '35.50',
         'entered_component_count' => 1, 'active_component_count' => 2, 'complete' => false,
     ]]);
+    if ($missingSummary !== null) $summaryHtml = preg_replace('~<span id="row-1-' . $ids[2] . '-' . $missingSummary . '"[^>]*>[^<]*</span>~', '', $summaryHtml);
+    echo $summaryHtml;
     exit;
 }
-if (!in_array($path, ['/', '/frame', '/matrix'], true)) { http_response_code(404); exit; }
+if (!in_array($path, ['/', '/frame', '/matrix', '/responsive'], true)) { http_response_code(404); exit; }
+if ($path === '/responsive') {
+    echo '<!doctype html><html lang="th"><head><meta charset="utf-8"><title>Responsive Gradebook checks</title></head><body><pre id="browser-results">Running…</pre>';
+    foreach ([0,1,2,4,20] as $count) {
+        echo '<iframe title="'.$count.' components" src="/frame?mode=responsive&amp;components='.$count.'" width="1440" height="900"></iframe>';
+    }
+    echo '<script src="/responsive-tests.js" defer></script></body></html>'; exit;
+}
 if ($path === '/matrix') {
     echo '<!doctype html><html lang="th"><head><meta charset="utf-8"><title>Gradebook layout checks</title></head><body><h1>Gradebook layout checks</h1><pre id="browser-results">Running…</pre>';
     foreach (['editable','active','error','readonly','setup','empty-setup','inactive-setup','error-setup','closed-setup','empty','no-components','nojs'] as $mode) {
-        foreach ([390,768,1024,1440] as $width) {
+        foreach ([390,768,1024,1280,1440] as $width) {
             echo '<iframe title="'.$mode.' '.$width.'" src="/frame?mode='.$mode.'" width="'.$width.'" height="900"'.($mode === 'nojs' ? ' sandbox="allow-same-origin"' : '').'></iframe>';
         }
     }
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','direct','visual','golden','active','error','empty','no-components','nojs','large','workload','stress'], true);
+$canScore = in_array($mode, ['editable','direct','visual','golden','active','error','empty','no-components','nojs','fallback','large','workload','stress','responsive'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
     3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
@@ -146,6 +166,14 @@ foreach ([1, 2, 3, 4] as $id) {
     $rows[] = ['enrollment_id' => $id, 'student_code' => 'STUDENT-' . $id, 'display_name' => $long.' '.$id,
         'enrollment_status' => 'ACTIVE', 'row_type' => $id === 4 && $mode !== 'visual' ? 'HISTORICAL' : 'CURRENT', 'scores' => $fixtureScores[$id],
         'entered_score_total' => '0.00', 'configured_max_total' => '35.50', 'entered_component_count' => 1, 'active_component_count' => 2, 'complete' => false];
+}
+// Exact projection examples; fixture rows are deliberately independent of score arithmetic.
+if (($_GET['tests'] ?? '') === 'compact') {
+    $examples = [['42.00','50.00'], ['42.50','50.00'], ['25.75','35.50'], ['0.00','50.00'], ['0.00','0.00'],
+        ['12345678901234567890.25','12345678901234567890.50']];
+    foreach ($examples as $i => [$total, $max]) {
+        $rows[$i] = array_replace($rows[$i % 4], ['enrollment_id' => $i + 1, 'entered_score_total' => $total, 'configured_max_total' => $max]);
+    }
 }
 if ($mode === 'large') {
     $rows = [];
@@ -191,6 +219,23 @@ if (in_array($mode, ['workload','stress'], true)) {
             'entered_component_count'=>0,'active_component_count'=>$columnCount,'complete'=>false];
     }
 }
+if ($mode === 'responsive') {
+    $count = in_array((int)($_GET['components'] ?? 4), [0,1,2,4,20], true) ? (int)($_GET['components'] ?? 4) : 4;
+    $components = [];
+    for ($c = 0; $c < $count; $c++) {
+        $components[] = ['id'=>10+$c,'code'=>'R'.$c,'name_th'=>$c === 0 ? str_repeat('หัวข้อคะแนนภาษาไทยยาว', 5) : 'หัวข้อ '.($c+1),
+            'max_score'=>'20.00','sort_order'=>$c,'status'=>'ACTIVE'];
+    }
+    foreach ($rows as &$row) {
+        $row['scores'] = array_fill_keys(array_column($components, 'id'), '1.50');
+        $row['entered_score_total'] = $count ? '123456.75' : '0.00';
+        $row['configured_max_total'] = $count ? '1234567.50' : '0.00';
+        $row['entered_component_count'] = $count;
+        $row['active_component_count'] = $count;
+        $row['complete'] = $count > 0;
+    }
+    unset($row);
+}
 $setupComponents = $mode === 'empty-setup' ? [] : $components;
 if ($mode === 'inactive-setup') { $setupComponents[1]['status'] = 'INACTIVE'; }
 $activeSetupCount = count(array_filter($setupComponents, static fn (array $item): bool => $item['status'] === 'ACTIVE'));
@@ -203,7 +248,7 @@ $ui = ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนข้อ�
         ['key'=>'gradebooks','label'=>'สมุดคะแนน','url'=>'/gradebooks','detail'=>null]]]]];
 $isSetup = in_array($mode, ['setup','empty-setup','inactive-setup','error-setup','closed-setup'], true);
 $testScript = [
-    'workspace'=>'/workspace-tests.js', 'workspace-real'=>'/workspace-real-tests.js', 'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
+    'compact'=>'/compact-tests.js', 'feedback-real'=>'/feedback-real-tests.js', 'workspace'=>'/workspace-tests.js', 'workspace-real'=>'/workspace-real-tests.js', 'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
     'workload'=>'/grid-workload-tests.js', 'parity'=>'/grid-parity-tests.js', 'golden'=>'/grid-golden-tests.js',
     'direct'=>'/grid-direct-tests.js', 'visual'=>'/grid-visual-tests.js',
 ][$_GET['tests'] ?? ''] ?? '/grid-tests.js';
@@ -217,5 +262,6 @@ $html = View::page($isSetup ? 'gradebook/setup' : 'gradebook/view', [
     'headAssets'=>View::render($canScore ? 'gradebook/scoring-assets' : 'gradebook/selection-assets'),
     'scripts'=>$path === '/' ? '<pre id="browser-results" role="status">Running browser checks…</pre><script src="'.$testScript.'" defer></script>' : '',
 ]);
+if ($mode === 'fallback') $html = preg_replace('~<script src="/assets/vendor/tabulator/tabulator.min.js" defer></script>~', '', $html);
 if (($_GET['tests'] ?? '') === 'golden') $html = str_replace('/assets/gradebook.js?v=', '/assets/gradebook.js?fixture=timing&v=', $html);
 echo $html;

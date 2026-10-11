@@ -36,6 +36,8 @@
       'single-malformed':'malformed', 'single-409':'refresh', 'single-409-queued-clear':'refresh', 'single-500':'failure',
       'single-revoked':'revoked', 'single-network':'5', 'batch-invalid':'21',
       'batch-unmarked':'unmarked', 'batch-login':'login', 'batch-409':'refresh',
+      'single-missing-total':'missing-total', 'single-missing-max':'missing-max', 'single-missing-count':'missing-count', 'single-missing-complete':'missing-complete',
+      'batch-missing-total':'missing-total', 'batch-missing-max':'missing-max', 'batch-missing-count':'missing-count', 'batch-missing-complete':'missing-complete',
       'batch-500':'failure', 'batch-revoked':'revoked', 'batch-csrf':'csrf', 'batch-network':'5' };
     const value = values[scenario];
     assert(value !== undefined, 'Known error scenario');
@@ -68,13 +70,15 @@
       assert(cell().dataset.pp5Error === 'true', 'Cell is marked as an error');
       assert(!grid.querySelector('.tabulator-cell input') && document.querySelector('.pp5-gradebook').hidden,
         'Rejected value leaves no editor or visible fallback');
-      assert(cell().closest('.tabulator-row').querySelector('[tabulator-field="total"]').textContent === '0.00', 'No false summary reconciliation');
+      assert(cell().closest('.tabulator-row').querySelector('[tabulator-field="summaryDisplay"]').textContent === '0/35.5', 'No false summary reconciliation');
     } else {
       assert(cell().textContent === before, 'GB-SERVER-002 — batch failure does not speculatively mutate cell');
-      assert(cell().closest('.tabulator-row').querySelector('[tabulator-field="total"]').textContent === '0.00', 'Batch failure does not show false total');
+      assert(cell().closest('.tabulator-row').querySelector('[tabulator-field="summaryDisplay"]').textContent === '0/35.5', 'Batch failure does not show false total');
     }
+    const summary = window.__gradebookTiming.summaries()[0];
+    assert(summary.total === '0.00' && summary.max === '35.50' && summary.count === '1 / 2' && summary.complete === 'ยังไม่ครบ', 'Rejected response preserves all four authoritative summary fields');
     const uncertain = scenario.includes('unmarked') || scenario.includes('login') || scenario.includes('malformed')
-      || scenario.includes('-409') || scenario.endsWith('-500') || scenario.endsWith('-network');
+      || scenario.includes('missing-') || scenario.includes('-409') || scenario.endsWith('-500') || scenario.endsWith('-network');
     if (uncertain) {
       assert(status.textContent.includes('ไม่แน่นอน') && status.textContent.includes('โหลดหน้าใหม่'), 'GB-SERVER-009 — uncertain result asks for reload');
       if (scenario === 'single-unmarked' || scenario === 'batch-unmarked') {

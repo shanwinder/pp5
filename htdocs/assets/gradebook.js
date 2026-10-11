@@ -7,6 +7,9 @@
   const status = document.getElementById('gradebook-batch-status');
   const rangeStatus = document.getElementById('gradebook-range-status');
   const actions = document.getElementById('gradebook-range-actions');
+  const rangeTool = document.getElementById('gradebook-range-tool');
+  const formatSummary = value => value.includes('.') ? value.replace(/0+$/, '').replace(/\.$/, '') : value;
+  const summaryDisplay = (total, max) => `${formatSummary(total)}/${formatSummary(max)}`;
   const fillInput = document.getElementById('gradebook-fill-value');
   const fillButton = document.getElementById('gradebook-fill-submit');
   const clearButton = document.getElementById('gradebook-clear-submit');
@@ -22,6 +25,7 @@
     const mapped = { id: row.enrollmentId, enrollmentId: row.enrollmentId,
       identity: `${row.studentCode}\n${row.name}`, rowType: row.rowType === 'CURRENT' ? 'รายชื่อปัจจุบัน' : 'ประวัติ — อ่านอย่างเดียว',
       historical: row.rowType !== 'CURRENT', total: row.total, max: row.max,
+      summaryDisplay: summaryDisplay(row.total, row.max),
       count: `${row.entered} / ${row.componentCount}`, complete: row.complete ? 'ครบ' : 'ยังไม่ครบ' };
     for (const component of config.components) mapped[`score_${component.id}`] = row.scores[component.id] ?? '';
     return mapped;
@@ -35,6 +39,8 @@
   const escapeHtml = value => text(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
   const message = (value, state = 'idle') => {
     if (status) { status.textContent = value; status.dataset.batchState = state; }
+    const feedback = document.getElementById('gradebook-range-feedback');
+    if (feedback) feedback.textContent = rangeTool?.open && state === 'error' ? value : '';
   };
   // Keep the initial hint's space while short save messages and an empty success
   // message replace it. Otherwise document scroll anchoring moves the page.
@@ -195,9 +201,17 @@
       throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
     return { enrollmentIds, componentIds, targets, height, width };
   };
+  let rangeWasSelected = false;
   const updateControls = () => {
-    if (!actions) return;
     const choice = selected();
+    // Selection feedback belongs to every readable grid, independently of write controls.
+    const announcement = choice
+      ? `เลือก ${choice.matrix.length} แถว × ${choice.matrix[0].length} หัวข้อคะแนน`
+      : (rangeWasSelected ? 'ยกเลิกการเลือกช่วงคะแนน' : null);
+    rangeWasSelected = Boolean(choice);
+    if (rangeStatus && announcement !== null && rangeStatus.textContent !== announcement)
+      rangeStatus.textContent = announcement;
+    if (!actions) return;
     let okay = false, reason = '';
     if (choice) {
       try { selectedPlan(); okay = true; } catch (error) { reason = error.message; }
@@ -206,14 +220,8 @@
     document.getElementById('gradebook-range-summary').textContent = choice
       ? `เลือก ${choice.matrix.length} แถว × ${choice.matrix[0].length} หัวข้อคะแนน — ${count} ช่อง${reason ? ` · ${reason}` : ''}`
       : 'ยังไม่ได้เลือกช่วงคะแนน';
-    clearButton.textContent = `ล้างคะแนน ${count} ช่องที่เลือก`;
+    clearButton.textContent = 'ล้างคะแนน';
     fillButton.disabled = clearButton.disabled = !okay || state.pendingBatch || state.uncertain || state.permissionLost;
-    if (rangeStatus) {
-      const announcement = choice
-        ? `เลือก ${choice.matrix.length} แถว × ${choice.matrix[0].length} หัวข้อคะแนน`
-        : (rangeStatus.textContent ? 'ยกเลิกการเลือกช่วงคะแนน' : '');
-      if (rangeStatus.textContent !== announcement) rangeStatus.textContent = announcement;
-    }
   };
   const readyForBatch = () => {
     if (state.pendingBatch) { message('กำลังบันทึกตารางคะแนน กรุณารอสักครู่', 'saving'); return false; }
@@ -293,8 +301,9 @@
       for (const { id, values } of summaries) {
         if ((state.rowApplied.get(id) ?? -1) > revision) continue;
         state.rowApplied.set(id, revision);
-        Object.assign(rowById.get(id), values);
-        await table.getRow(id).update(values);
+        const projection = { ...values, summaryDisplay: summaryDisplay(values.total, values.max) };
+        Object.assign(rowById.get(id), projection);
+        await table.getRow(id).update(projection);
       }
     } finally {
       state.applying = false;
@@ -478,25 +487,32 @@
     onRendered(() => { input.focus(); if (!replace) input.setSelectionRange(input.value.length, input.value.length); });
     return input;
   };
+  // Reserve the server's longest possible total/max literal once, independently of later saves.
+  const summaryMeasure = document.createElement('canvas').getContext('2d');
+  const summaryFont = getComputedStyle(host);
+  summaryMeasure.font = `${summaryFont.fontWeight} ${summaryFont.fontSize} ${summaryFont.fontFamily}`;
+  const summaryMinWidth = Math.max(112, ...rowData.map(row => Math.ceil(summaryMeasure.measureText(
+    summaryDisplay(row.max, row.max)).width + 22)),
+    ...rowData.map(row => Math.ceil(summaryMeasure.measureText(row.summaryDisplay).width + 22)));
   const columns = [
-    { title: 'นักเรียน', field: 'identity', width: 190, frozen: true, variableHeight: true,
+    { title: 'นักเรียน', field: 'identity', minWidth: 190, widthGrow: 2, frozen: true, variableHeight: true,
       formatter: cell => escapeHtml(cell.getValue()).replace('\n', '<br>'), cssClass: 'pp5-grid-identity' },
-    { title: 'ประเภทแถว', field: 'rowType', width: 130, cssClass: 'pp5-grid-readonly' },
+    { title: 'ประเภทแถว', field: 'rowType', minWidth: 130, widthGrow: 1, cssClass: 'pp5-grid-readonly' },
     ...config.components.map(component => ({
       title: `${escapeHtml(component.name)}<br><small>เต็ม ${escapeHtml(component.max)}</small>`,
-      field: `score_${component.id}`, width: 92, hozAlign: 'right', editor,
+      field: `score_${component.id}`, minWidth: 92, widthGrow: 1, hozAlign: 'right', editor,
       editable: cell => isWritableScoreCell(cell) && !state.pendingBatch && !state.pendingSingles.has(cellKey(cell)),
       formatter: cell => escapeHtml(cell.getValue()), cssClass: 'pp5-grid-score',
     })),
-    ...[['total', 'คะแนนที่บันทึกรวม', 112], ['max', 'คะแนนเต็มรวม', 105],
-      ['count', 'บันทึกแล้ว / ทั้งหมด', 128], ['complete', 'ความครบถ้วน', 104]]
-      .map(([field, title, width]) => ({ title, field, width, cssClass: 'pp5-grid-readonly pp5-grid-summary' })),
+    { title: 'คะแนนที่บันทึก', field: 'summaryDisplay', minWidth: summaryMinWidth,
+      maxWidth: Math.max(192, summaryMinWidth), widthGrow: 1, hozAlign: 'right',
+      cssClass: 'pp5-grid-readonly pp5-grid-summary' },
   ];
   host.classList.add('pp5-grid-initializing');
   host.hidden = false;
   try {
     table = new Tabulator(host, {
-      data: rowData, index: 'id', columns, layout: 'fitData', height: 'min(64vh, 560px)',
+      data: rowData, index: 'id', columns, layout: 'fitColumns', height: 'min(64vh, 560px)',
       renderVertical: 'virtual', columnDefaults: { headerSort: false, resizable: false },
       selectableRange: false, editTriggerEvent: 'dblclick', clipboard: false,
       rowFormatter: row => {
@@ -512,12 +528,36 @@
     for (const input of fallback.querySelectorAll('input[data-score-input]')) input.disabled = true;
     fallback.hidden = true;
     host.classList.remove('pp5-grid-initializing');
-    if (actions) { actions.hidden = false; updateControls(); }
+    if (actions) { actions.hidden = false; if (rangeTool) rangeTool.hidden = false; updateControls(); }
     syncTabStops(null);
+  });
+  let renderedWidth = host.clientWidth, resizeFocus = null, resizeReveal = null;
+  table.on('renderStarted', () => {
+    const width = host.clientWidth;
+    // Native resize redraw detaches virtual rows. Preserve only focus owned by
+    // a score cell immediately before that redraw; never reclaim external focus.
+    resizeFocus = width !== renderedWidth && !state.editing
+      && state.active?.getElement() === document.activeElement ? state.active : null;
+    resizeReveal = width !== renderedWidth && host.contains(document.activeElement) ? state.active : null;
+    renderedWidth = width;
   });
   table.on('renderComplete', () => {
     syncTabStops(state.active ? liveCell(state.active)?.getElement() : null);
     paintSelection();
+    if (resizeFocus) {
+      const cell = resizeFocus;
+      resizeFocus = null;
+      activate(cell);
+    }
+    if (resizeReveal) {
+      const cell = resizeReveal;
+      resizeReveal = null;
+      // Native redraw restores its horizontal offset after renderComplete.
+      // Reveal after that synchronous work without moving focus or the caret.
+      queueMicrotask(() => {
+        if (state.active === cell && cell.getElement()?.contains(document.activeElement)) visible(cell);
+      });
+    }
   });
   let pointerDrag = false;
   table.on('cellClick', (_event, cell) => {
@@ -576,7 +616,7 @@
   document.addEventListener('mouseup', endPointerSelection, true);
   document.addEventListener('focusin', event => {
     if (host.contains(event.target)) state.focusOwner = 'grid';
-    else if (actions?.contains(event.target)) state.focusOwner = 'range';
+    else if (rangeTool?.contains(event.target) || actions?.contains(event.target)) state.focusOwner = 'range';
     else state.focusOwner = 'external';
   });
   host.addEventListener('focusin', event => {
@@ -666,6 +706,14 @@
       });
     } catch (error) { message(error.message, 'error'); }
   }, true);
+  if (rangeTool) {
+    rangeTool.addEventListener('keydown', event => {
+      if (event.key !== 'Escape' || !rangeTool.open) return;
+      event.preventDefault(); event.stopPropagation();
+      rangeTool.open = false;
+      rangeTool.querySelector('summary').focus({ preventScroll: true });
+    });
+  }
   if (actions) {
     fillInput.addEventListener('compositionstart', () => { state.fillComposing = true; });
     fillInput.addEventListener('compositionend', () => { state.fillComposing = false; });
@@ -678,7 +726,10 @@
         const topLeft = selected().matrix[0][0];
         submitBatch({ enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds,
           values: plan.enrollmentIds.map(() => plan.componentIds.map(() => value)) }, plan, sourceName,
-        restore => activate(topLeft, restore));
+        restore => {
+          if (restore && rangeTool) rangeTool.open = false;
+          activate(topLeft, restore);
+        });
       } catch (error) { message(error.message, 'error'); }
     };
     actions.addEventListener('submit', event => {

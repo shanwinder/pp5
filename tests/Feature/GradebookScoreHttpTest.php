@@ -59,7 +59,7 @@ final class GradebookScoreHttpTest extends TestCase
         self::assertSame($normalized, $x->evaluate('string(//input[@name="score"]/@value)'));
         self::assertSame(1, $x->query('//*[@data-save-state="saved"]')->length);
         self::assertStringContainsString('บันทึกแล้ว', $r->body());
-        self::assertSame(4, $x->query('//*[@hx-swap-oob]')->length);
+        self::assertSame(5, $x->query('//*[@hx-swap-oob]')->length);
         self::assertSame(0, $x->query('//table|//script')->length);
         $this->assertSummary($r, $normalized, '1 / 2', false);
     }
@@ -68,6 +68,8 @@ final class GradebookScoreHttpTest extends TestCase
     {
         $x = $this->xpath($response->body());
         $prefix = 'row-' . $this->f['offeringA'] . '-' . $this->f['enrollment_' . $enrollment] . '-';
+        self::assertSame(App\Support\GradebookSummaryPresentation::display($total, '35.50'), $x->evaluate('string(//*[@id="' . $prefix . 'display"])'));
+        self::assertSame(0, $x->query('//td')->length);
         foreach (['total' => $total, 'max' => '35.50', 'count' => $count, 'complete' => $complete ? 'ครบ' : 'ยังไม่ครบ'] as $suffix => $expected) {
             self::assertSame($expected, $x->evaluate('string(//*[@id="' . $prefix . $suffix . '"])'));
         }

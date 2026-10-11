@@ -42,13 +42,14 @@
   window.fetch = (...args) => { requests.push({ url: String(args[0]), body: args[1]?.body }); return originalFetch(...args); };
   try {
     await until(() => document.querySelector('.pp5-gradebook').hidden && cells().length === 4);
+    assert(document.getElementById('gradebook-range-status').textContent === '', 'No cancellation announcement before any selection');
     const script = [...document.scripts].find(item => item.src.includes('/assets/gradebook.js'));
     const css = [...document.querySelectorAll('link[rel="stylesheet"]')].find(item => item.href.includes('/assets/gradebook-grid.css'));
     assert(/\/gradebook\.js\?v=\d+$/.test(script?.src ?? '') && /\/gradebook-grid\.css\?v=\d+$/.test(css?.href ?? ''),
       'GB-RUNTIME-004 — First-party Gradebook assets have deterministic versioned URLs');
     assert(![...document.querySelectorAll('script[src],link[href]')].some(item => /https?:\/\//.test(item.getAttribute('src') ?? item.getAttribute('href') ?? '')),
       'Runtime assets remain local');
-    for (const field of ['identity', 'rowType', 'total']) {
+    for (const field of ['identity', 'rowType', 'summaryDisplay']) {
       const target = at(0, field);
       target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
@@ -74,7 +75,18 @@
       'GB-SEL-006 — Escape removes the range while keeping score focus');
     assert(document.getElementById('gradebook-range-status').textContent === 'ยกเลิกการเลือกช่วงคะแนน',
       'GB-SEL-006 — Escape announces that the range is no longer selected');
+    const clearedFocus = focused(), writeCount = requests.length;
+    let announcements = 0;
+    const observer = new MutationObserver(records => { announcements += records.length; });
+    observer.observe(document.getElementById('gradebook-range-status'), { childList: true, characterData: true, subtree: true });
+    key('Escape');
+    await sleep(0);
+    observer.disconnect();
+    assert(announcements === 0 && focused() === clearedFocus && requests.length === writeCount
+      && !grid.querySelector('input') && document.querySelectorAll('.tabulator-range-selected').length === 0,
+      'Repeated Escape with no range makes no announcement, write, editor or focus change');
     await choose(at(0, 'score_10'));
+    assert(document.getElementById('gradebook-range-status').textContent.includes('เลือก 1 แถว'), 'Selection live feedback works in writable and read-only modes');
     if (document.getElementById('gradebook-csrf')) {
     key('5'); assert(grid.querySelector('input')?.value === '5', 'Printable typing opens replace editor');
     key('Escape'); assert(!grid.querySelector('input') && focused() === at(0, 'score_10'), 'Editor Escape restores cell focus');

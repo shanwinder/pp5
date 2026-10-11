@@ -93,6 +93,7 @@
     key(cell(0, 'score_11'), '5'); key(grid.querySelector('input'), 'Enter');
     await sleep(0); // Let the editor's normal navigation finish before the external action.
     const outside = document.getElementById('gradebook-fill-value');
+    document.getElementById('gradebook-range-tool').open = true;
     outside.focus(); // Model a deliberate move outside while the delayed response is pending.
     assert(document.activeElement === outside && cell(0, 'score_11').dataset.pp5Saving === 'true',
       'User can leave the grid while a save is pending');

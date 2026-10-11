@@ -141,12 +141,17 @@
     } else if (journey === 'C') {
       await wait('Double-click row 2, score 10 (existing 12.50)', () => host.querySelector('.tabulator-cell input')?.value === '12.50', 'pointerup');
       assert(focus() === host.querySelector('.tabulator-cell input'), ['GB-EDIT-001'], 'existing-value editor owns focus');
-      for (const key of ['Left','Right','BackSpace']) {
-        const count = events.length;
-        await wait(`Press ${key} inside editor`, () => events.slice(count).some(item => item.type === 'keydown' && item.key === ({Left:'ArrowLeft',Right:'ArrowRight',BackSpace:'Backspace'}[key])), 'keydown');
-      }
-      assert(Boolean(host.querySelector('.tabulator-cell input')),
-        ['GB-EDIT-004','GB-EDIT-006'], 'caret and Backspace remain native editor operations');
+      const explicitInput = host.querySelector('.tabulator-cell input');
+      const caret = explicitInput.selectionStart;
+      const writes = requests.length;
+      await wait('Press Left inside editor', () => explicitInput.selectionStart === caret - 1, 'keydown');
+      assert(focus() === explicitInput && host.querySelector('input') === explicitInput && requests.length === writes
+        && selected()[0] === cell(1,10), ['GB-EDIT-004'], 'Left moves caret in same focused input, same cell and no POST');
+      await wait('Press Right inside editor', () => explicitInput.selectionStart === caret, 'keydown');
+      assert(focus() === explicitInput && host.querySelector('input') === explicitInput && requests.length === writes,
+        ['GB-EDIT-004'], 'Right restores caret in same input with no POST');
+      await wait('Press Backspace inside editor', () => explicitInput.value === '12.5', 'keydown');
+      assert(focus() === explicitInput && requests.length === writes, ['GB-EDIT-006'], 'native Backspace changes text without a grid clear');
       await move('Enter', 2, 10, ['GB-EDIT-005']);
       assert(cell(1,10)?.textContent !== '', ['GB-EDIT-009'], 'explicit edit commits without clearing the score');
     } else if (journey === 'D') {
@@ -179,8 +184,18 @@
         ['GB-PASTE-004','GB-PASTE-006','GB-PASTE-007','GB-PASTE-010'], 'one 2×2 batch uses stable IDs, blank and zero');
     } else if (journey === 'G') {
       await drag(0, 10, 2, 12, ['GB-RANGE-001']);
+      const tool = document.getElementById('gradebook-range-tool');
+      assert(!tool.open, ['GB-FILL-001'], 'selection does not automatically open range tools');
+      const rectangle = selected();
+      const position = host.getBoundingClientRect().top;
+      await wait('Click เครื่องมือช่วงคะแนน', () => tool.open, 'pointerup');
+      assert(selected().length === 9 && selected().every(element => rectangle.includes(element))
+        && Math.abs(host.getBoundingClientRect().top - position) < .6,
+        ['GB-RANGE-006','GB-FILL-001'], 'opening compact panel preserves exact score rectangle and grid position');
+      const fillInput = document.getElementById('gradebook-fill-value');
+      await wait('Click Fill input and type 5', () => focus() === fillInput && fillInput.value === '5', 'keydown');
       const start = batch().length;
-      await wait('Type 5 in the Fill control and click Fill',
+      await wait('Click ใส่คะแนน',
         () => batch().length === start + 1 && status().includes('ช่องแล้ว'), 'pointerup');
       const sent = matrix(batch().at(-1));
       assert(sent.values.length === 3 && sent.values.every(line => line.length === 3 && line.every(value => value === '5')),
@@ -188,8 +203,18 @@
       assert(focus() === cell(0,10), ['GB-FILL-004','GB-FILL-005'], 'Fill returns focus to top-left');
       await wait('Press Right then type 8 immediately', () => host.querySelector('.tabulator-cell input')?.value === '8', 'keydown');
       assert(focus()?.closest('.tabulator-row') === rows()[0], ['GB-FILL-004'], 'post-Fill typing works without click');
+      await wait('Press Escape to cancel 8', () => !host.querySelector('input') && focus() === cell(0,11), 'keydown');
+      await drag(0,10,2,12,['GB-RANGE-001']);
+      await wait('Click เครื่องมือช่วงคะแนน for Clear', () => tool.open, 'pointerup');
+      const clearStart=batch().length;
+      await wait('Click ล้างคะแนน', () => batch().length === clearStart+1 && !host.hasAttribute('aria-busy'), 'pointerup');
+      const cleared=matrix(batch().at(-1));
+      assert(cleared.values.length===3 && cleared.values.every(line=>line.length===3 && line.every(value=>value==='')),
+        ['GB-CLEAR-007'],'compact Clear sends one atomic 3×3 blank batch');
+      assert(selected().length===9 && focus()===cell(0,10) && !tool.open,
+        ['GB-CLEAR-008','GB-CLEAR-009'],'compact Clear keeps rectangle and top-left focus');
     } else if (journey === 'H') {
-      await wait('Focus the Fill input and press Tab into the Gradebook',
+      await wait('Click closed เครื่องมือช่วงคะแนน trigger, close if opened, then press Tab into the Gradebook',
         () => focus() === cell(0,10), 'keydown');
       assert(selected().length === 1 && cell(0,10)?.tabIndex === 0,
         ['GB-SEL-003','GB-SEL-005'], 'Tab entry selects the first score with one roving stop');

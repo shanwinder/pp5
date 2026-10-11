@@ -14,12 +14,12 @@
     assert(document.querySelector('h1').textContent.includes('วิชาทดสอบ'), 'subject in heading');
     assert(document.getElementById('gradebook-context-title').parentElement.textContent.includes('ภาคเรียน 1 · ปีการศึกษา 2569'), 'term and year in context');
     assert(document.getElementById('gradebook-mode').textContent === (data.canScore ? 'แก้ไขคะแนนได้' : 'อ่านอย่างเดียว'), 'authoritative mode');
-    assert(!details.open, 'score details collapsed initially');
-    details.querySelector('summary').click();
-    assert(details.open && details.textContent.includes('งาน') && details.textContent.includes('เต็ม 15.50 คะแนน')
-      && details.textContent.includes('สอบ') && details.textContent.includes('เต็ม 20.00 คะแนน'), 'one-page score names and maxima');
-    details.querySelector('summary').click();
-    assert(!details.open && !host.closest('details'), 'collapse keeps grid mounted and outside disclosure');
+    assert(!details && !document.querySelector('.pp5-gradebook-heading'), 'overview and heading strips absent');
+    for (const item of data.components) {
+      const header = host.querySelector(`.tabulator-col[tabulator-field="score_${item.id}"]`);
+      assert(header.textContent.includes(item.name) && header.textContent.includes(`เต็ม ${item.max}`), 'component name and authoritative maximum in score header');
+    }
+    assert(!host.closest('details'), 'grid outside compact disclosures');
     assert(document.querySelectorAll('#gradebook-guidance').length === 1 && host.getAttribute('aria-describedby') === 'gradebook-guidance', 'stable help relationship');
     const guidance = document.getElementById('gradebook-guidance');
     const help = document.getElementById('gradebook-help');

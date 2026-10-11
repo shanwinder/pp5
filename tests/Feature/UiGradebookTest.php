@@ -56,7 +56,8 @@ final class UiGradebookTest extends TestCase
             self::assertSame(1,$x->query('//label[@for="gradebook-fill-value"]')->length);
             self::assertSame(1,$x->query('//button[@id="gradebook-fill-submit" and @type="submit" and @disabled]')->length);
             self::assertSame(1,$x->query('//button[@id="gradebook-clear-submit" and @type="button" and @disabled]')->length);
-            self::assertStringContainsString('ล้างคะแนนในช่วงที่เลือก',$r->body());
+            self::assertSame('ล้างคะแนน',$x->evaluate('string(//button[@id="gradebook-clear-submit"])'));
+            self::assertSame(1,$x->query('//nav//details[@id="gradebook-range-tool" and not(@open)]')->length);
             self::assertStringContainsString('Delete/Backspace เพื่อล้างช่วงที่เลือก',$r->body());
             self::assertSame('/hx'.$this->readPath().'/scores/batch',$x->evaluate('string(//*[@data-batch-url]/@data-batch-url)'));
         } else {
