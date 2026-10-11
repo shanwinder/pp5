@@ -49,14 +49,14 @@
       'GB-RUNTIME-004 — First-party Gradebook assets have deterministic versioned URLs');
     assert(![...document.querySelectorAll('script[src],link[href]')].some(item => /https?:\/\//.test(item.getAttribute('src') ?? item.getAttribute('href') ?? '')),
       'Runtime assets remain local');
-    for (const field of ['identity', 'rowType', 'summaryDisplay']) {
+    for (const field of ['rowNumber', 'studentCode', 'name', 'summaryDisplay']) {
       const target = at(0, field);
       target.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
       target.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
       target.click();
     }
     assert(document.querySelectorAll('.tabulator-range-selected').length === 0,
-      'GB-SEL-004 — Identity, row type and summary clicks do not select scores');
+      'GB-SEL-004 — Ordinal, student code, name and summary clicks do not select scores');
     await choose(at(0, 'score_10'));
     assert(focused() === at(0, 'score_10') && document.querySelectorAll('.tabulator-cell[tabindex="0"]').length === 1,
       'Click establishes one active score tab stop without test focus repair');

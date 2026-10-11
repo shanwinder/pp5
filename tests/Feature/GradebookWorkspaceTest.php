@@ -56,12 +56,11 @@ final class GradebookWorkspaceTest extends TestCase
             self::assertStringContainsString($text, $headers);
         }
         self::assertSame(1, $x->query('//table/thead/tr/th[contains(.,"คะแนนที่บันทึก")]')->length);
-        self::assertSame(5, $x->query('//table/thead/tr/th')->length);
-        self::assertSame(1, $x->query('//nav//details[@id="gradebook-range-tool" and @hidden and not(@open)]//form[@id="gradebook-range-actions"]')->length);
+        self::assertSame(6, $x->query('//table/thead/tr/th')->length);
+        self::assertSame(0, $x->query('//*[@id="gradebook-range-tool" or @id="gradebook-range-actions" or @id="gradebook-fill-value" or @id="gradebook-fill-submit" or @id="gradebook-clear-submit"]')->length);
         self::assertSame(1, count(array_filter($this->pdo->queries, static fn ($sql) => str_contains($sql, 'FROM gradebook_components'))));
         foreach (['gradebook-guidance', 'gradebook-range-status', 'gradebook-batch-status', 'gradebook-grid-data',
-            'gradebook-tabulator', 'gradebook-range-actions', 'gradebook-range-summary', 'gradebook-fill-value',
-            'gradebook-fill-submit', 'gradebook-clear-submit'] as $id) {
+            'gradebook-tabulator'] as $id) {
             self::assertSame(1, $x->query('//*[@id="' . $id . '"]')->length, $id);
         }
         self::assertSame(0, $x->query('//details//*[@id="gradebook-tabulator" or @data-grid-score-cell]')->length);
@@ -71,16 +70,16 @@ final class GradebookWorkspaceTest extends TestCase
     }
 
     #[DataProvider('modes')]
-    public function testCompactHelpKeepsCompleteGuidanceAndVisibleLiveFeedback(string $role, bool $writable, bool $manage): void
+    public function testRetiredToolsKeepCompleteGuidanceAndVisibleLiveFeedback(string $role, bool $writable, bool $manage): void
     {
         $this->login($role);
         $x = $this->xpath($this->request('GET', $this->readPath())->body());
-        self::assertSame(1, $x->query('//details[@id="gradebook-help" and not(@open)]')->length);
-        self::assertSame('วิธีกรอกคะแนน', $x->evaluate('string(//details[@id="gradebook-help"]/summary)'));
+        self::assertSame(0, $x->query('//*[@id="gradebook-help" or @id="gradebook-range-tool" or @id="gradebook-range-actions"]')->length);
         self::assertSame(1, $x->query('//*[@id="gradebook-guidance" and contains(@class,"visually-hidden") and not(@hidden) and not(@aria-hidden)]')->length);
         self::assertSame(0, $x->query('//details//*[@id="gradebook-guidance" or @id="gradebook-range-status" or @id="gradebook-batch-status"]')->length);
         $guidance = $x->evaluate('string(//*[@id="gradebook-guidance"])');
-        self::assertSame($guidance, $x->evaluate('string(//details[@id="gradebook-help"]//p[1])'));
+        self::assertStringNotContainsString('เครื่องมือช่วงคะแนน', $guidance);
+        self::assertStringNotContainsString('วิธีกรอกคะแนน', $guidance);
         foreach (['Ctrl+C', 'Cmd+C', 'Escape นอกช่องแก้ไขล้างช่วงที่เลือก', 'ช่องว่างคือยังไม่มีคะแนน', '0.00 คือศูนย์ที่บันทึกแล้ว'] as $text) {
             self::assertStringContainsString($text, $guidance);
         }
@@ -91,7 +90,8 @@ final class GradebookWorkspaceTest extends TestCase
             }
             self::assertSame('พร้อมกรอกคะแนน', $x->evaluate('string(//*[@id="gradebook-batch-status"])'));
             self::assertSame(1, $x->query('//*[@id="gradebook-batch-status" and @role="status" and @aria-live="polite" and @aria-atomic="true" and not(@hidden) and not(@aria-hidden) and not(contains(@class,"visually-hidden"))]')->length);
-            self::assertStringContainsString('ช่องว่างในตารางที่วางจะล้างคะแนน', $x->evaluate('string(//details[@id="gradebook-help"])'));
+            self::assertStringContainsString('ช่องว่างที่วางจะล้างคะแนน', $guidance);
+            self::assertStringContainsString('วางรูปแบบซ้ำให้เต็มช่วง', $guidance);
         } else {
             self::assertStringContainsString('อ่านอย่างเดียว', $guidance);
             self::assertStringNotContainsString('Ctrl+V', $guidance);
@@ -101,6 +101,37 @@ final class GradebookWorkspaceTest extends TestCase
     }
 
     public static function frozen(): array { return [['year'], ['offering']]; }
+
+    public function testRosterOrderLiteralCodesNamesAndHistoricalIdentity(): void
+    {
+        $this->login();
+        $model = $this->gradebook();
+        $name = 'เด็กหญิง' . str_repeat('ชื่อไทยยาว', 12) . ' <script>hostile</script>';
+        $model['rows'][0]['student_code'] = '0000123';
+        $model['rows'][0]['display_name'] = $name;
+        $html = View::render('gradebook/view', ['gradebook' => $model, 'canScore' => true,
+            'canManageComponents' => false, 'csrfToken' => 'roster-test']);
+        $x = $this->xpath($html);
+        self::assertSame(['ลำดับ', 'เลขประจำตัว', 'ชื่อ-สกุล'], array_map(
+            static fn ($n) => $n->textContent, iterator_to_array($x->query('//thead/tr/th[position()<=3]'))));
+        self::assertSame(0, $x->query('//thead/tr/th[contains(.,"ประเภทแถว") or contains(.,"นักเรียน")]')->length);
+        self::assertSame('คะแนนที่บันทึก', $x->evaluate('string(//thead/tr/th[last()])'));
+        self::assertSame('0000123', $x->evaluate('string(//tbody/tr[1]/td[2])'));
+        self::assertSame($name, $x->evaluate('string(//tbody/tr[1]/th)'));
+        foreach ($x->query('//tbody/tr[@data-enrollment-id]') as $index => $row) {
+            self::assertSame((string) ($index + 1), $x->evaluate('string(td[1])', $row));
+            self::assertSame((string) $model['rows'][$index]['enrollment_id'], $row->getAttribute('data-enrollment-id'));
+            self::assertSame($model['rows'][$index]['row_type'], $row->getAttribute('data-row-type'));
+            self::assertSame($model['rows'][$index]['enrollment_status'], $row->getAttribute('data-enrollment-status'));
+        }
+        self::assertGreaterThan(0, $x->query('//tr[@data-row-type="HISTORICAL"]/th/span[contains(.,"แถวประวัติ อ่านอย่างเดียว")]')->length);
+        self::assertSame(0, $x->query('//tr[@data-row-type="HISTORICAL"]//*[@data-grid-editable="true"]')->length);
+        $data = json_decode($x->evaluate('string(//*[@id="gradebook-grid-data"])'), true, 16, JSON_THROW_ON_ERROR);
+        self::assertSame('0000123', $data['rows'][0]['studentCode']);
+        self::assertSame($name, $data['rows'][0]['name']);
+        self::assertStringNotContainsString('<script>hostile</script>', $html);
+    }
+
     #[DataProvider('frozen')]
     public function testLifecycleAndHistoricalScoresStayReadOnly(string $kind): void
     {
@@ -147,8 +178,8 @@ final class GradebookWorkspaceTest extends TestCase
         $html = View::render('gradebook/view', ['gradebook' => $model, 'canScore' => false, 'canManageComponents' => true]);
         $x = $this->xpath($html);
         self::assertSame(0, $x->query('//*[@id="gradebook-components"]')->length);
-        self::assertSame(3, $x->query('//thead/tr/th')->length);
-        self::assertSame('3', $x->evaluate('string(//tbody/tr/td/@colspan)'));
+        self::assertSame(4, $x->query('//thead/tr/th')->length);
+        self::assertSame('4', $x->evaluate('string(//tbody/tr/td/@colspan)'));
         self::assertStringContainsString('ยังไม่มีองค์ประกอบคะแนนที่เปิดใช้งาน', $html);
         self::assertStringContainsString('ไม่มีรายชื่อนักเรียน', $html);
         self::assertSame(1, $x->query('//nav[@aria-label="งานสมุดคะแนน"]//a[@href="' . $this->path() . '"]')->length);

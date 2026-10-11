@@ -4,8 +4,9 @@
 .pp5-gradebook-tabulator.tabulator { border: 1px solid var(--pp5-border); background: var(--pp5-surface); font-family: inherit; font-size: .875rem; }
 .pp5-gradebook-tabulator .tabulator-header { background: var(--pp5-table-header); color: var(--pp5-text); border-bottom: 1px solid var(--pp5-control-border); }
 .pp5-gradebook-tabulator .tabulator-header .tabulator-col { background: var(--pp5-primary-soft); border-right: 1px solid var(--pp5-border); }
-.pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="identity"],
-.pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="rowType"] { background: var(--pp5-table-header); }
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="rowNumber"],
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="studentCode"],
+.pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="name"] { background: var(--pp5-table-header); }
 .pp5-gradebook-tabulator .tabulator-header .tabulator-col[tabulator-field="summaryDisplay"] { background: var(--pp5-summary-soft); }
 .pp5-gradebook-tabulator .tabulator-header .tabulator-col .tabulator-col-content .tabulator-col-title { white-space: normal; overflow-wrap: anywhere; line-height: 1.15; }
 .pp5-gradebook-tabulator .tabulator-header small { color: var(--pp5-text-muted); font-weight: normal; }
@@ -55,6 +56,11 @@
 .pp5-gradebook-tabulator .tabulator-cell[data-pp5-error="true"][data-pp5-active="true"]:not(.tabulator-editing) { outline: 2px dashed var(--pp5-danger) !important; box-shadow: none; }
 .pp5-gradebook-tabulator .tabulator-tableholder { max-width: 100%; overscroll-behavior-inline: contain; }
 .pp5-gradebook[hidden], .pp5-gradebook-tabulator[hidden] { display: none !important; }
+/* The semantic fallback follows the same small frozen block as the renderer. */
+.pp5-gradebook .pp5-gradebook-identity { position: static; white-space: normal; overflow-wrap: anywhere; }
+.pp5-gradebook .pp5-gradebook-number { position: sticky; inset-inline-start: 0; z-index: 1; min-width: 56px; width: 56px; background: var(--pp5-surface); }
+.pp5-gradebook thead .pp5-gradebook-number { z-index: 3; background: var(--pp5-table-header); }
+.pp5-gradebook .pp5-historical > * { background: var(--pp5-surface-muted); }
 @media (max-width: 600px) {
   .pp5-gradebook-tabulator .pp5-grid-identity { white-space: normal; }
   .pp5-gradebook-tabulator .tabulator-cell { padding-inline: .3rem; }

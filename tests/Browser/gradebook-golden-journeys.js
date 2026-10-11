@@ -183,38 +183,47 @@
         && JSON.stringify(sent.values) === JSON.stringify([['5','0'],['','12.5']]),
         ['GB-PASTE-004','GB-PASTE-006','GB-PASTE-007','GB-PASTE-010'], 'one 2×2 batch uses stable IDs, blank and zero');
     } else if (journey === 'G') {
+      assert(!document.getElementById('gradebook-range-tool') && !document.getElementById('gradebook-range-actions')
+        && !document.getElementById('gradebook-help') && !document.getElementById('gradebook-fill-value'),
+        ['GB-FILL-001','GB-FILL-002','GB-FILL-003','GB-FILL-004','GB-FILL-005'],
+        'Task 6S retired Fill UI is absent; this is retirement evidence, not a button Fill PASS');
+      await click(0, 11);
+      await wait('Press native Copy shortcut on the saved zero', () => events.some(item => item.type === 'copy'), 'copy');
+      assert(events.filter(item => item.type === 'copy').at(-1).event.clipboardData.getData('text/plain') === '0.00',
+        ['GB-COPY-001'], 'scalar copy preserves zero');
       await drag(0, 10, 2, 12, ['GB-RANGE-001']);
-      const tool = document.getElementById('gradebook-range-tool');
-      assert(!tool.open, ['GB-FILL-001'], 'selection does not automatically open range tools');
-      const rectangle = selected();
-      const position = host.getBoundingClientRect().top;
-      await wait('Click เครื่องมือช่วงคะแนน', () => tool.open, 'pointerup');
-      assert(selected().length === 9 && selected().every(element => rectangle.includes(element))
-        && Math.abs(host.getBoundingClientRect().top - position) < .6,
-        ['GB-RANGE-006','GB-FILL-001'], 'opening compact panel preserves exact score rectangle and grid position');
-      const fillInput = document.getElementById('gradebook-fill-value');
-      await wait('Click Fill input and type 5', () => focus() === fillInput && fillInput.value === '5', 'keydown');
-      const start = batch().length;
-      await wait('Click ใส่คะแนน',
-        () => batch().length === start + 1 && status().includes('ช่องแล้ว'), 'pointerup');
+      const position = snapshot(), start = batch().length;
+      await wait('Press native Paste shortcut to repeat zero into 3×3',
+        () => batch().length === start + 1 && status().includes('ช่องแล้ว'), 'paste');
       const sent = matrix(batch().at(-1));
-      assert(sent.values.length === 3 && sent.values.every(line => line.length === 3 && line.every(value => value === '5')),
-        ['GB-FILL-001','GB-FILL-002'], 'one 3×3 atomic Fill batch');
-      assert(focus() === cell(0,10), ['GB-FILL-004','GB-FILL-005'], 'Fill returns focus to top-left');
-      await wait('Press Right then type 8 immediately', () => host.querySelector('.tabulator-cell input')?.value === '8', 'keydown');
-      assert(focus()?.closest('.tabulator-row') === rows()[0], ['GB-FILL-004'], 'post-Fill typing works without click');
-      await wait('Press Escape to cancel 8', () => !host.querySelector('input') && focus() === cell(0,11), 'keydown');
+      assert(sent.values.length === 3 && sent.values.every(line => line.length === 3 && line.every(value => value === '0.00')),
+        ['GB-PASTE-012','GB-PASTE-007'], 'one scalar paste tiles the full selected range in one atomic request');
+      assert(selected().length === 9 && focus() === cell(0,10) && sameViewport(position,snapshot()),
+        ['GB-PASTE-016'], 'tiled paste preserves rectangle, top-left focus and viewport');
+      await type('8');
+      assert(focus()?.closest('.tabulator-row') === rows()[0], ['GB-PASTE-016'], 'typing immediately follows tiled paste without click');
+      await wait('Press Escape to cancel 8', () => !host.querySelector('input') && focus() === cell(0,10), 'keydown');
+      await drag(2,12,0,10,['GB-RANGE-002']);
+      const reverseStart = batch().length;
+      await wait('Put 8\\t9\\n7\\t10 on clipboard, then press native Paste into reverse 3×3 selection',
+        () => batch().length === reverseStart + 1 && status().includes('ช่องแล้ว'), 'paste');
+      assert(JSON.stringify(matrix(batch().at(-1)).values) === JSON.stringify([['8','9','8'],['7','10','7'],['8','9','8']]),
+        ['GB-PASTE-013'], 'reverse partial-edge tiling repeats independently in both dimensions');
+      assert(selected().length === 9 && focus() === cell(0,10), ['GB-PASTE-016'], 'reverse tiled paste retains target and typing anchor');
       await drag(0,10,2,12,['GB-RANGE-001']);
-      await wait('Click เครื่องมือช่วงคะแนน for Clear', () => tool.open, 'pointerup');
-      const clearStart=batch().length;
-      await wait('Click ล้างคะแนน', () => batch().length === clearStart+1 && !host.hasAttribute('aria-busy'), 'pointerup');
-      const cleared=matrix(batch().at(-1));
-      assert(cleared.values.length===3 && cleared.values.every(line=>line.length===3 && line.every(value=>value==='')),
-        ['GB-CLEAR-007'],'compact Clear sends one atomic 3×3 blank batch');
-      assert(selected().length===9 && focus()===cell(0,10) && !tool.open,
-        ['GB-CLEAR-008','GB-CLEAR-009'],'compact Clear keeps rectangle and top-left focus');
+      const blankStart = batch().length;
+      await wait('Put \\t0\\n0.00\\t8 on clipboard, then press native Paste',
+        () => batch().length === blankStart + 1 && status().includes('ช่องแล้ว'), 'paste');
+      assert(JSON.stringify(matrix(batch().at(-1)).values) === JSON.stringify([['','0',''],['0.00','8','0.00'],['','0','']]),
+        ['GB-PASTE-017'], 'native repeating paste preserves literal blanks and both zero variants');
+      await drag(0,10,0,11,['GB-RANGE-001']);
+      const rejectStart = requests.length;
+      await wait('Put 8\\t9\\n7\\t10 on clipboard, then press native Paste into 1×2',
+        () => status().includes('เล็กกว่า'), 'paste');
+      assert(requests.length === rejectStart && selected().length === 2 && focus() === cell(0,11),
+        ['GB-PASTE-014'], 'too-small multi-cell destination rejects without POST, clipping or selection loss');
     } else if (journey === 'H') {
-      await wait('Click closed เครื่องมือช่วงคะแนน trigger, close if opened, then press Tab into the Gradebook',
+      await wait('Use keyboard Tab from the last toolbar link into the Gradebook',
         () => focus() === cell(0,10), 'keydown');
       assert(selected().length === 1 && cell(0,10)?.tabIndex === 0,
         ['GB-SEL-003','GB-SEL-005'], 'Tab entry selects the first score with one roving stop');

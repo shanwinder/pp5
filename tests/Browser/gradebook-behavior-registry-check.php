@@ -22,7 +22,7 @@ if (!is_array($registry['system_rules'] ?? null)
 $required = [
     'SEL' => range(1, 6), 'NAV' => range(1, 7), 'DIRECT' => range(1, 10),
     'EDIT' => range(1, 10), 'RANGE' => array_merge(range(1, 8), range(101, 105)),
-    'COPY' => range(1, 6), 'PASTE' => range(1, 11), 'CLEAR' => range(1, 12),
+    'COPY' => range(1, 6), 'PASTE' => range(1, 17), 'CLEAR' => range(1, 12),
     'FILL' => range(1, 5), 'SERVER' => range(1, 11), 'RO' => range(1, 6),
     'HIST' => range(1, 4), 'VIS' => range(1, 10), 'RUNTIME' => range(1, 6),
     'SCALE' => range(1, 7),
@@ -62,7 +62,18 @@ foreach ($registry['behaviors'] as $index => $behavior) {
             $errors[] = "$id has unknown evidence type";
         }
     }
-    if (($behavior['status'] ?? null) !== 'accepted') continue;
+    $retired = preg_match('/\AGB-FILL-00[1-5]\z/', $id) === 1;
+    if ($retired) {
+        $original = $behavior['retirement']['original'] ?? null;
+        if (($behavior['status'] ?? null) !== 'retired_ui' || !is_array($original)
+            || ($original['id'] ?? null) !== $id || ($original['status'] ?? null) !== 'accepted'
+            || !str_contains($behavior['retirement']['decision'] ?? '', 'Task 6S')
+            || empty($behavior['retirement']['replacement_behaviors'])) {
+            $errors[] = "$id has no explicit Task 6S retirement trace";
+        }
+    } elseif (($behavior['status'] ?? null) !== 'accepted') {
+        $errors[] = "$id is no longer accepted without an explicit gate change";
+    }
     $tests = $behavior['automated_tests'] ?? null;
     if (!is_array($tests) || $tests === []) $errors[] = "$id has no automated test mapping";
     else foreach ($tests as $path) {
@@ -89,7 +100,8 @@ foreach ($registry['behaviors'] as $index => $behavior) {
 }
 foreach ($requiredIds as $id) {
     if (!isset($seen[$id])) $errors[] = "Required accepted behavior missing: $id";
-    elseif ($statuses[$id] !== 'accepted') $errors[] = "Required behavior is no longer accepted without an explicit gate change: $id";
+    elseif ($statuses[$id] !== (str_starts_with($id, 'GB-FILL-') ? 'retired_ui' : 'accepted'))
+        $errors[] = "Required behavior has an unapproved disposition: $id";
 }
 // GB-RUNTIME-005: renderer assets must remain the audited local Tabulator 6.6.0 files.
 $vendorHashes = [
@@ -107,4 +119,4 @@ if ($errors !== []) {
     fwrite(STDERR, 'FAIL: '.count($errors)." registry coverage errors\n");
     exit(1);
 }
-echo 'PASS: '.count($seen)." accepted Gradebook behaviors have unique IDs and test mappings\n";
+echo 'PASS: '.count($seen)." Gradebook IDs (125 accepted, 5 retired Fill UI; all original 124 retained) have unique IDs and test mappings\n";

@@ -6,8 +6,9 @@
     for (let i = 0; i < 400; i++) { if (predicate()) return; await new Promise(r => setTimeout(r, 20)); }
     throw new Error('Timed out');
   };
-  const host = document.getElementById('gradebook-tabulator'), tool = document.getElementById('gradebook-range-tool');
-  const form = document.getElementById('gradebook-range-actions'), fill = document.getElementById('gradebook-fill-value');
+  const host = document.getElementById('gradebook-tabulator');
+  const paste = value => { const data = new DataTransfer(); data.setData('text/plain', value);
+    document.activeElement.dispatchEvent(new ClipboardEvent('paste', {clipboardData:data,bubbles:true,cancelable:true})); };
   const rows = () => [...host.querySelectorAll('.tabulator-row')];
   const at = (row, field) => rows()[row].querySelector(`[tabulator-field="${field}"]`);
   const key = value => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', {key:value,bubbles:true,cancelable:true}));
@@ -32,51 +33,41 @@
     });
     for (const row of document.querySelectorAll('.pp5-gradebook tbody tr')) {
       assert(row.querySelectorAll('td.pp5-gradebook-summary').length === 1, 'one fallback summary cell per row');
-      assert(row.children.length === 5, 'fallback header/cell count agrees');
+      assert(row.children.length === 6, 'fallback header/cell count agrees');
     }
     const bootstrap = JSON.parse(document.getElementById('gradebook-grid-data').textContent);
     assert(bootstrap.rows[0].scores[10]===null && at(0,'score_10').textContent==='', 'summary projection does not convert underlying NULL score to zero');
     for (const row of bootstrap.rows) for (const suffix of ['total','max','count','complete'])
       assert(document.getElementById(`row-1-${row.enrollmentId}-${suffix}`).closest('[hidden]'), `authoritative ${suffix} metadata remains non-column`);
-    assert(!tool.open && form.getClientRects().length === 0, 'no permanent range bar');
-    assert(document.getElementById('gradebook-fill-submit').disabled && document.getElementById('gradebook-clear-submit').disabled, 'no range disables both commands');
-    const y = host.getBoundingClientRect().top;
-    tool.querySelector('summary').click();
-    assert(tool.open && Math.abs(host.getBoundingClientRect().top-y) < .5, 'open panel overlays without moving grid');
-    assert(form.getBoundingClientRect().left >= 0 && form.getBoundingClientRect().right <= innerWidth, 'popup contained');
-    fill.value='5'; form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
-    assert(requests.length===0 && tool.open && document.getElementById('gradebook-range-feedback').textContent.includes('เลือกช่วง'), 'invalid no-range command sends no write and remains correctable');
-    fill.focus(); key('Escape');
-    assert(!tool.open && document.activeElement===tool.querySelector('summary'), 'Escape closes and restores trigger focus');
+    for (const id of ['gradebook-help','gradebook-range-tool','gradebook-range-actions','gradebook-fill-value','gradebook-fill-submit','gradebook-clear-submit'])
+      assert(!document.getElementById(id), `retired UI ${id} absent from DOM and tab order`);
+    assert(!document.getElementById('gradebook-guidance').textContent.includes('เครื่องมือช่วงคะแนน'), 'accessible guidance never advertises removed tools');
     await choose(0,'score_10'); key('5'); key('ArrowRight');
     await until(() => document.activeElement===at(0,'score_11') && window.__gradebookTiming.snapshot().pendingSingles===1);
     const before = at(0,'summaryDisplay').textContent;
-    tool.querySelector('summary').click(); fill.focus(); fill.value='5';
-    form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
-    assert(host.hasAttribute('aria-busy') && requests.filter(r=>r.url.endsWith('/scores/batch')).length===0, 'Fill waits behind pending single');
+    paste('5');
+    assert(host.hasAttribute('aria-busy') && requests.filter(r=>r.url.endsWith('/scores/batch')).length===0, 'Paste waits behind pending single');
     assert(at(0,'summaryDisplay').textContent===before, 'no optimistic summary');
     await until(() => !host.hasAttribute('aria-busy') && requests.length===2);
-    assert(requests[1].url.endsWith('/scores/batch') && requests[1].at>=requests[0].resolved, 'one Fill batch serialized after single');
+    assert(requests[1].url.endsWith('/scores/batch') && requests[1].at>=requests[0].resolved, 'one Paste batch serialized after single');
     assert(at(0,'summaryDisplay').textContent==='987.65/432.1', 'batch refresh replaces single summary deterministically');
-    assert(document.activeElement===at(0,'score_11') && !tool.open, 'Fill preserves typing anchor and closes panel only on success');
+    assert(document.activeElement===at(0,'score_11'), 'Paste preserves typing anchor and selected rectangle');
     const current = {...window.__gradebookTiming.summaries()[0]};
     await window.__gradebookTiming.applySummary(1,{total:'1.00',max:'2.00',count:'0 / 2',complete:'ยังไม่ครบ'},0);
     assert(JSON.stringify(window.__gradebookTiming.summaries()[0])===JSON.stringify(current) && at(0,'summaryDisplay').textContent==='987.65/432.1', 'fixture-only stale revision cannot overwrite any newer authoritative summary field');
-    key('8'); assert(host.querySelector('input')?.value==='8', 'typing immediately after Fill works'); key('Escape');
-    tool.querySelector('summary').click(); fill.focus(); fill.value='21';
-    form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+    key('8'); assert(host.querySelector('input')?.value==='8', 'typing immediately after Paste works'); key('Escape');
+    paste('21');
     await until(() => document.getElementById('gradebook-batch-status').dataset.batchState==='error');
-    assert(tool.open && document.getElementById('gradebook-range-feedback').textContent.includes('คะแนนไม่ถูกต้อง'), 'failed Fill remains open with correction reason');
-    assert(at(0,'summaryDisplay').textContent==='987.65/432.1', 'failed Fill keeps confirmed summary');
-    fill.value='5'; document.getElementById('gradebook-clear-submit').click();
+    assert(document.getElementById('gradebook-batch-status').textContent.includes('คะแนนไม่ถูกต้อง'), 'failed Paste exposes correction reason in live feedback');
+    assert(at(0,'summaryDisplay').textContent==='987.65/432.1', 'failed Paste keeps confirmed summary');
+    key('Delete');
     await until(() => !host.hasAttribute('aria-busy') && at(0,'score_11').textContent==='');
     assert(requests.length===4 && JSON.parse(requests[3].body.get('batch')).values[0][0]==='', 'Clear sends exactly one atomic blank batch');
     assert(document.activeElement===at(0,'score_11') && host.querySelectorAll('.tabulator-range-selected').length===1, 'Clear keeps selection and score focus');
-    tool.querySelector('summary').click(); fill.focus(); fill.value='5';
-    form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+    paste('5');
     const outside=document.querySelector('.pp5-gradebook-toolbar a'); outside.focus();
     await until(() => !host.hasAttribute('aria-busy') && requests.length===5);
-    assert(document.activeElement===outside && tool.open && host.querySelectorAll('.tabulator-range-selected').length===1,
+    assert(document.activeElement===outside && host.querySelectorAll('.tabulator-range-selected').length===1,
       'late batch response preserves deliberate external focus and usable selection');
     assert(document.documentElement.scrollWidth<=innerWidth+1, 'no document horizontal overflow');
     output.textContent=`PASS: ${checks.length} SYNTHETIC compact checks\n${checks.join('\n')}`; document.title='PASS — compact Gradebook';

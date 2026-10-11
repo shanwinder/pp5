@@ -32,12 +32,12 @@
       if (host) {
         assert(host.getAttribute('aria-label') && fallback, 'named grid and semantic fallback exist');
         const data = JSON.parse(d.getElementById('gradebook-grid-data').textContent);
-        assert(fallback.querySelectorAll('thead th').length===data.components.length+3
+        assert(fallback.querySelectorAll('thead th').length===data.components.length+4
           && fallback.querySelectorAll('thead .pp5-gradebook-summary').length===1, 'fallback has exactly one summary header and correct column count');
         if(data.rows.length===0) {
-          assert(fallback.querySelector('tbody td').colSpan===data.components.length+3, 'empty row colspan matches physical columns');
+          assert(fallback.querySelector('tbody td').colSpan===data.components.length+4, 'empty row colspan matches physical columns');
         } else {
-          assert([...fallback.querySelectorAll('tbody tr[data-enrollment-id]')].every(row=>row.children.length===data.components.length+3
+          assert([...fallback.querySelectorAll('tbody tr[data-enrollment-id]')].every(row=>row.children.length===data.components.length+4
             && row.querySelectorAll('td.pp5-gradebook-summary').length===1), 'fallback rows have no hidden redundant columns');
         }
         assert(data.components.length === (mode === 'no-components' ? 0 : 2)
@@ -63,7 +63,8 @@
             const identity = host.querySelector('.tabulator-row .pp5-grid-identity');
             assert(identity && identity.textContent.includes('hostile'), 'long name remains present as text');
             holder.scrollLeft = 300;
-            assert(Math.abs(identity.getBoundingClientRect().left - host.getBoundingClientRect().left) < 3, 'student identity stays frozen');
+            const ordinal = host.querySelector('.tabulator-row .pp5-grid-number');
+            assert(Math.abs(ordinal.getBoundingClientRect().left - host.getBoundingClientRect().left) < 3 && ordinal.getBoundingClientRect().width === 56, 'only the 56px ordinal remains frozen');
             const header = host.querySelector('.tabulator-header');
             assert(header && header.getBoundingClientRect().top >= host.getBoundingClientRect().top - 1, 'header remains aligned');
             holder.scrollLeft = 0;
@@ -75,7 +76,7 @@
               const first = host.querySelector('.tabulator-row [tabulator-field="score_10"]');
               const second = host.querySelector('.tabulator-row [tabulator-field="score_11"]');
               assert(first.textContent === '' && second.textContent === '0.00', 'blank and zero remain distinct');
-              assert(first.getBoundingClientRect().left >= identity.getBoundingClientRect().right - 1, 'frozen identity does not cover score');
+              assert(first.getBoundingClientRect().left >= ordinal.getBoundingClientRect().right - 1, 'frozen ordinal does not cover score');
               if (mode === 'editable') {
                 for (const target of [first, second]) {
                   target.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -107,16 +108,9 @@
             assert(!d.querySelector('main input,[hx-post],script[src*="htmx"]'), 'read-only page has no mutation inputs');
             assert(!host.querySelector('.tabulator-editable'), 'read-only grid has no editable cell');
           } else if (mode !== 'empty') {
-            const panel = d.getElementById('gradebook-range-actions');
-            const tool = d.getElementById('gradebook-range-tool');
-            assert(panel && !panel.hidden && tool && !tool.hidden && !tool.open && panel.getClientRects().length === 0, 'range form initialized inside closed compact tool');
-            const y = host.getBoundingClientRect().top;
-            tool.querySelector('summary').click();
-            const box = panel.getBoundingClientRect();
-            assert(tool.open && box.left >= 0 && box.right <= width + 1 && box.width > 200, 'open range panel contained and readable');
-            assert(Math.abs(host.getBoundingClientRect().top - y) < .5, 'opening tool does not move grid');
-            tool.querySelector('summary').click();
-            assert(d.getElementById('gradebook-fill-value').labels.length === 1, 'fill control has native label');
+            assert(!d.getElementById('gradebook-range-actions') && !d.getElementById('gradebook-range-tool') && !d.getElementById('gradebook-help'), 'removed tool UI has no hidden tab stops');
+            assert(d.getElementById('gradebook-guidance').classList.contains('visually-hidden') && host.getAttribute('aria-describedby') === 'gradebook-guidance', 'guidance remains accessible without a permanent bar');
+
           }
         }
       } else {

@@ -22,17 +22,12 @@
     assert(!host.closest('details'), 'grid outside compact disclosures');
     assert(document.querySelectorAll('#gradebook-guidance').length === 1 && host.getAttribute('aria-describedby') === 'gradebook-guidance', 'stable help relationship');
     const guidance = document.getElementById('gradebook-guidance');
-    const help = document.getElementById('gradebook-help');
-    assert(!help.open && help.querySelector('summary').textContent === 'วิธีกรอกคะแนน', 'one compact help entry, collapsed initially');
+    assert(!document.getElementById('gradebook-help') && !document.getElementById('gradebook-range-tool'), 'help and Fill/Clear UI entry points are retired');
     assert(!guidance.closest('details') && !guidance.hidden && !guidance.hasAttribute('aria-hidden')
       && guidance.getBoundingClientRect().height <= 1 && guidance.textContent.includes('0.00 คือศูนย์ที่บันทึกแล้ว')
-      && guidance.textContent.includes('Escape นอกช่องแก้ไข'), 'complete visually hidden description independent of disclosure');
-    assert(help.querySelector('p').textContent === guidance.textContent, 'visible on-demand help matches accessible guidance');
-    help.querySelector('summary').click();
-    assert(help.open && !host.closest('details') && document.documentElement.scrollWidth <= innerWidth + 1,
-      'expanded help stays contained with grid mounted');
-    help.querySelector('summary').click();
-    assert(!help.open && document.getElementById('gradebook-range-status').getAttribute('aria-live') === 'polite', 'collapse preserves live range feedback');
+      && guidance.textContent.includes('Escape นอกช่องแก้ไข'), 'complete visually hidden description remains accessible');
+    assert(!guidance.textContent.includes('เครื่องมือช่วงคะแนน') && !document.getElementById('gradebook-range-actions'), 'no instructions or form for inaccessible tools');
+    assert(document.getElementById('gradebook-range-status').getAttribute('aria-live') === 'polite', 'live range feedback retained');
     if (data.canScore) {
       const feedback = document.getElementById('gradebook-batch-status');
       assert(!feedback.closest('details') && feedback.getAttribute('aria-live') === 'polite'

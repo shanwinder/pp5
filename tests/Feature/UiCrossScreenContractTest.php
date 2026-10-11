@@ -183,7 +183,7 @@ final class UiCrossScreenContractTest extends TestCase
         self::assertSame(0, $x->query('//form[@method="post"]//select[@name="status" and not(@required)]')->length);
     }
 
-    public function testGradebookUsesSameStatusVocabularyAsOtherScreens(): void
+    public function testGradebookPreservesStatusMetadataWithoutVisibleTypeColumn(): void
     {
         $this->login(); $model = $this->gradebook();
         $model['teachers'] = [['display_name'=>'ครูทดสอบ', 'status'=>'ACTIVE']];
@@ -191,7 +191,10 @@ final class UiCrossScreenContractTest extends TestCase
         $html = View::render('gradebook/view', ['gradebook'=>$model, 'canScore'=>false, 'canManageComponents'=>false]);
         $x = $this->xpath($html);
         self::assertSame(1, $x->query('//li//*[@data-status="ACTIVE" and normalize-space(.)="ใช้งาน"]')->length);
-        self::assertSame(1, $x->query('//td//*[@data-status="TRANSFERRED_OUT" and normalize-space(.)="ย้ายออก"]')->length);
+        self::assertSame(1, $x->query('//tr[@data-enrollment-status="TRANSFERRED_OUT"]')->length);
+        self::assertSame(0, $x->query('//thead//th[contains(.,"ประเภทแถว")]')->length);
+        $bootstrap = json_decode($x->evaluate('string(//*[@id="gradebook-grid-data"])'), true, 16, JSON_THROW_ON_ERROR);
+        self::assertSame('TRANSFERRED_OUT', $bootstrap['rows'][0]['status']);
         $model['teachers'][0]['status'] = '<img onerror="bad">';
         $model['rows'][0]['enrollment_status'] = '<script>bad</script>';
         $html = View::render('gradebook/view', ['gradebook'=>$model, 'canScore'=>false, 'canManageComponents'=>false]);

@@ -1,9 +1,9 @@
 // Synthetic container-resize regression. Native viewport journeys are separate release evidence.
 (async () => {
   const results = [], measurements = [];
-  const until = async predicate => {
+  const until = async (predicate, label = 'condition') => {
     for (let i=0;i<500;i++) { if(predicate()) return; await new Promise(r=>setTimeout(r,20)); }
-    throw new Error('Timed out');
+    throw new Error(`Timed out: ${label}`);
   };
   for (const frame of document.querySelectorAll('iframe')) {
     let checks=0;
@@ -33,8 +33,8 @@
         }else assert(holder.scrollWidth>holder.clientWidth,'minimum content scrolls internally');
         const summary=table.getRows()[0].getCell('summaryDisplay').getElement();
         assert(summary.scrollWidth<=summary.clientWidth+1,'long decimal summary fully fits');
-        const identity=table.getRows()[0].getCell('identity').getElement();
-        assert(Math.abs(identity.getBoundingClientRect().left-host.getBoundingClientRect().left)<=3,'identity stays frozen');
+        const identity=table.getRows()[0].getCell('rowNumber').getElement();
+        assert(Math.abs(identity.getBoundingClientRect().left-host.getBoundingClientRect().left)<=3,'ordinal stays frozen');
         if(count){
           const title=host.querySelector('[tabulator-field="score_10"] .tabulator-col-title');
           assert(w.getComputedStyle(title).whiteSpace==='normal' && title.scrollHeight<=title.clientHeight+1,'long Thai heading wraps without truncation');
@@ -55,7 +55,7 @@
       };
       for(const width of [1440,1280,1024,768,390])await resize(width);
       if(count){
-        await resize(1440);cell().click();await until(()=>d.activeElement===cell());
+        await resize(1440);cell().click();await until(()=>d.activeElement===cell(), 'first score click owns focus');
         if(count>1)key('ArrowRight');
         const focus=d.activeElement,field=focus.getAttribute('tabulator-field');
         key('ArrowDown');key('ArrowUp');key('Shift');
@@ -66,8 +66,8 @@
           await resize(width);
           assert(d.activeElement===extent && d.activeElement.getAttribute('tabulator-field')===field,'resize retains score focus identity');
           assert(selected.every(c=>c.classList.contains('tabulator-range-selected')) && host.querySelectorAll('.tabulator-range-selected').length===selected.length,'range remains rectangular and unchanged');
-          const box=extent.getBoundingClientRect(),bounds=holder.getBoundingClientRect(),frozen=extent.closest('.tabulator-row').querySelector('.pp5-grid-identity').getBoundingClientRect();
-          assert(box.left>=frozen.right-.5 && box.right<=bounds.right+.5,'focused score revealed beside frozen identity');
+          const box=extent.getBoundingClientRect(),bounds=holder.getBoundingClientRect(),frozen=extent.closest('.tabulator-row').querySelector('.pp5-grid-number').getBoundingClientRect();
+          assert(box.left>=frozen.right-.5 && box.right<=bounds.right+.5,'focused score revealed beside frozen ordinal');
           assert(requests.length===0,'selection resize sends no mutation');
         }
         await resize(1440);cell().dispatchEvent(new w.MouseEvent('dblclick',{bubbles:true,cancelable:true}));
@@ -80,15 +80,14 @@
           assert(requests.length===0,'editor resize never saves or cancels');
         }
         key('Escape');assert(!host.querySelector('input') && requests.length===0,'cancel after resize sends no request');
-        await resize(1440);cell().click();await until(()=>d.activeElement===cell());
+        await resize(1440);cell().click();await until(()=>d.activeElement===cell(), 'post-editor score click owns focus');
         const fixed=widths(),rowHeight=cell().closest('.tabulator-row').getBoundingClientRect().height;
         key('5');key('ArrowDown');await until(()=>requests.length===1 && !host.querySelector('[data-pp5-saving]'));
         assert(JSON.stringify(widths())===JSON.stringify(fixed),'authoritative single summary reconciliation preserves widths');
         assert(cell().closest('.tabulator-row').getBoundingClientRect().height===rowHeight,'ordinary save preserves row height');
         assert(table.getRows()[0].getData().summaryDisplay==='19.25/35.5','single summary projects server values');
-        const tool=d.getElementById('gradebook-range-tool');tool.querySelector('summary').click();
-        assert(JSON.stringify(widths())===JSON.stringify(fixed),'compact tool does not resize grid');
-        tool.open=false;
+        assert(!d.getElementById('gradebook-range-tool') && !d.getElementById('gradebook-help'), 'retired tools have no resize or focus entry point');
+        assert(JSON.stringify(widths())===JSON.stringify(fixed),'stable widths after save and tool removal');
       }
       results.push(`${count} components: PASS ${checks} SYNTHETIC checks`);
     }catch(error){results.push(`${frame.title}: FAIL after ${checks}: ${error.message}`);}

@@ -125,3 +125,13 @@
 ### คำชี้แจงที่เจ้าของผลิตภัณฑ์อนุมัติ — Task 6R, 2026-10-11
 
 ความกว้างคอลัมน์ปรับได้เมื่อ viewport/container เปลี่ยนขนาด โดยคง minimum ที่ใช้งานได้ เลื่อนแนวนอนภายใน holder และแสดงทุกหัวข้อคะแนนพร้อม frozen identity. ที่ความกว้างคงเดิม การกรอก/บันทึก/รับผล server/เลือกช่วง/เปิดปิดเครื่องมือต้องไม่เปลี่ยนความกว้างคอลัมน์หรือความสูงแถว. Resize ต้องรักษา active cell, selection, browser focus และ input เดิมพร้อมค่า/caret โดยไม่ save/cancel. นี่คือคำชี้แจงขอบเขต presentation ตาม authorization ของ Task 6R; ไม่เปลี่ยน 124 behavior IDs หรือ mappings ของ Golden A–M.
+
+### ข้อวินิจฉัยที่เจ้าของผลิตภัณฑ์อนุมัติ — Task 6S, 2026-10-11
+
+คำขอ Task 6S อนุมัติคอลัมน์ ลำดับ | เลขประจำตัว | ชื่อ-สกุล | หัวข้อคะแนนเดิม | คะแนนที่บันทึก; ลำดับไม่ใช่ ID สำหรับบันทึก. ตรึงเฉพาะลำดับ 56 px ทั้ง renderer/fallback เพื่อให้มือถือเลื่อนถึงคะแนนได้. คงชื่อเต็ม/คำนำหน้า เลขศูนย์นำหน้า metadata CURRENT/HISTORICAL และสิทธิ์เดิม; แถวประวัติใช้พื้นสุภาพกับคำอธิบาย accessible อ่านอย่างเดียว.
+
+ถอดปุ่มวิธีกรอกคะแนน เครื่องมือช่วงคะแนน และ form Fill/Clear ทั้งหมด ไม่มีปุ่มแทน. คง gradebook-guidance แบบ visually hidden และ live save/error/selection feedback; ห้ามคำแนะนำอ้างถึงเครื่องมือที่ถอด. Fill ผ่าน UI GB-FILL-001–005 ถูก retired โดยเก็บประวัติ definition/mapping เดิมครบ; ไม่อ้างว่าผู้ใช้ยังใช้ปุ่มได้. Internal batch/legacy handler ยังอยู่ และ Delete/Backspace Clear คงเดิม.
+
+Paste ช่องเดียวขยายเท่าต้นทางหนึ่งครั้ง. Paste ลงกรอบหลายช่องใช้ top-left และทำซ้ำทั้งสองแกนจนเต็มกรอบ แม้ขนาดไม่ลงตัว; ถ้ากรอบหลายช่องเล็กกว่าต้นทางในแกนใดให้ปฏิเสธทั้งหมด ไม่มี POST/ตัดต้นทาง. ตรวจ batch limit 2,000 หลังขยาย และสิทธิ์/ประวัติ/ขอบเขตครบก่อน request; blank คงเป็น NULL ส่วน 0/0.00 คงเป็นศูนย์. Explicit editor ยังคง native text clipboard/caret.
+
+Registry คง 124 IDs เดิม (5 retired Fill UI) เพิ่ม GB-PASTE-012–017 รวม 130 records / 125 accepted. Golden G เปลี่ยนเป็น native repeating paste และการพิสูจน์ว่า UI retired; H ใช้ Tab จาก toolbar เดิม. Unaffected mappings ไม่เปลี่ยน. ข้อวินิจฉัยนี้แทนเฉพาะข้อความเก่าที่ขัดกับ roster/frozen/UI/paste ของ Task 6S; release gates และพฤติกรรมอื่นยัง binding. Product-owner visual acceptance PENDING.

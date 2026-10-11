@@ -21,25 +21,11 @@
     await new Promise(r=>requestAnimationFrame(r));observer.disconnect();
     assert(changes===0&&document.activeElement===cell&&writes.length===0,'no-range Escape does not emit new announcement or change focus/write');
     assert(host.querySelectorAll('.tabulator-cell[tabindex="0"]').length===1,'one roving score stop');
-    const tool=document.getElementById('gradebook-range-tool');
-    if(tool) {
-      const trigger=tool.querySelector('summary'),fill=document.getElementById('gradebook-fill-value');
-      const y=host.getBoundingClientRect().top;
-      assert(!tool.open,'tool remains closed after selection/cancellation');
-      await wait('Click เครื่องมือช่วงคะแนน',()=>tool.open,'pointerup');
-      assert(document.getElementById('gradebook-fill-submit').disabled&&document.getElementById('gradebook-clear-submit').disabled,'no range keeps commands disabled');
-      await wait('Press Escape to close tool',()=>!tool.open&&document.activeElement===trigger,'keydown');
-      await wait('Press Space to open tool',()=>tool.open,'keydown');
-      await wait('Press Tab to Fill input',()=>document.activeElement===fill,'keydown');
-      await wait('Press Escape from input',()=>!tool.open&&document.activeElement===trigger,'keydown');
-      await wait('Press Enter to open tool',()=>tool.open,'keydown');
-      await wait('Press Tab to Fill input',()=>document.activeElement===fill,'keydown');
-      await wait('Press Shift+Tab back to trigger',()=>document.activeElement===trigger,'keydown');
-      await wait('Press Space to close tool',()=>!tool.open,'keydown');
-      assert(Math.abs(host.getBoundingClientRect().top-y)<.5&&host.querySelectorAll('.tabulator-range-selected').length===0&&writes.length===0,'pointer/Space/Enter/Tab/Escape preserve grid position, selection and zero writes without keyboard trap');
-    } else {
-      assert(!document.getElementById('gradebook-range-actions')&&!host.querySelector('.tabulator-editable'),'read-only has no range tool or writable cells');
-    }
+    assert(!document.getElementById('gradebook-range-tool') && !document.getElementById('gradebook-help') && !document.getElementById('gradebook-range-actions'), 'removed tools create no keyboard traps or hidden tab stops');
+    const count=events.length;
+    await wait('Press Tab to next score',()=>events.slice(count).some(e=>e.key==='Tab'),'keydown');
+    assert(document.activeElement===host.querySelector('.tabulator-row [tabulator-field="score_11"]') && writes.length===0, 'Tab remains score navigation after tool removal');
+    assert(host.getAttribute('aria-describedby')==='gradebook-guidance', 'accessible guidance remains linked');
     output.textContent=`PASS: ${passed.length} TRUSTED live-feedback checks\n${passed.join('\n')}`;document.title='PASS — trusted live feedback';
   }catch(error){output.textContent=`FAIL: ${error.message}\n${passed.join('\n')}`;document.title='FAIL — trusted live feedback';}
   finally{window.fetch=originalFetch;}

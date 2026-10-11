@@ -19,7 +19,6 @@ $setupUrl = $subjectsUrl ?? '/gradebook/' . (int) $offering['id'] . '/setup';
       <?php if ($workspace !== null): ?><a class="btn btn-outline-primary btn-sm" href="/workspaces/classrooms/<?= (int) $workspace['classroom']['id'] ?>"><?= App\Support\View::render('ui/icon', ['name' => 'users']) ?>งานชั้นเรียน</a><?php endif; ?>
       <?php if ($subjectsUrl !== null): ?><a class="btn btn-outline-secondary btn-sm" href="<?= $escape($subjectsUrl) ?>"><?= App\Support\View::render('ui/icon', ['name' => 'books']) ?>รายวิชาและครู</a><?php endif; ?>
       <?php if ($canManageComponents): ?><a class="btn btn-outline-warning btn-sm" href="<?= $escape($setupUrl) ?>"><?= App\Support\View::render('ui/icon', ['name' => 'notebook']) ?>จัดการรายการคะแนน</a><?php endif; ?>
-      <?= App\Support\View::render('gradebook/tools', ['canScore' => $canScore, 'guidance' => $guidance]) ?>
     </nav>
   </div>
 </header>

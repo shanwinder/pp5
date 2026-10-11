@@ -21,9 +21,10 @@
 
   const fields = config.components.map(item => `score_${item.id}`);
   const componentByField = new Map(config.components.map(item => [`score_${item.id}`, item]));
-  const rowData = config.rows.map(row => {
+  const rowData = config.rows.map((row, index) => {
     const mapped = { id: row.enrollmentId, enrollmentId: row.enrollmentId,
-      identity: `${row.studentCode}\n${row.name}`, rowType: row.rowType === 'CURRENT' ? 'รายชื่อปัจจุบัน' : 'ประวัติ — อ่านอย่างเดียว',
+      rowNumber: index + 1, studentCode: String(row.studentCode), name: row.name,
+      identity: `${row.studentCode}\n${row.name}`, rowType: row.rowType, status: row.status,
       historical: row.rowType !== 'CURRENT', total: row.total, max: row.max,
       summaryDisplay: summaryDisplay(row.total, row.max),
       count: `${row.entered} / ${row.componentCount}`, complete: row.complete ? 'ครบ' : 'ยังไม่ครบ' };
@@ -174,13 +175,8 @@
     activate(extent, focus);
     updateControls();
   };
-  const selectedPlan = () => {
-    const choice = selected();
-    if (!choice) throw new Error('กรุณาเลือกช่วงคะแนนก่อน');
-    const { matrix } = choice;
+  const planRectangle = matrix => {
     const height = matrix.length, width = matrix[0].length;
-    if (state.active && !matrix.some(line => line.includes(state.active)))
-      throw new Error('กรุณาเลือกช่วงคะแนนใหม่ก่อนแก้ไข');
     if (height * width > config.batchLimit) throw new Error(`เลือกได้สูงสุด ${config.batchLimit} ช่องต่อครั้ง`);
     const enrollmentIds = [], componentIds = [], targets = new Map();
     for (let y = 0; y < height; y++) {
@@ -200,6 +196,13 @@
     if (new Set(enrollmentIds).size !== height || new Set(componentIds).size !== width)
       throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
     return { enrollmentIds, componentIds, targets, height, width };
+  };
+  const selectedPlan = () => {
+    const choice = selected();
+    if (!choice) throw new Error('กรุณาเลือกช่วงคะแนนก่อน');
+    if (state.active && !choice.matrix.some(line => line.includes(state.active)))
+      throw new Error('กรุณาเลือกช่วงคะแนนใหม่ก่อนแก้ไข');
+    return planRectangle(choice.matrix);
   };
   let rangeWasSelected = false;
   const updateControls = () => {
@@ -239,25 +242,22 @@
     if (values.length * values[0].length > config.batchLimit) throw new Error(`วางได้สูงสุด ${config.batchLimit} ช่องต่อครั้ง`);
     return values;
   };
-  const planPaste = (start, values) => {
-    const { x, y } = indices(start), end = cellAt(y + values.length - 1, x + values[0].length - 1);
+  const planPaste = (start, sourceValues, destination = null) => {
+    const sourceHeight = sourceValues.length, sourceWidth = sourceValues[0].length;
+    const height = destination?.height ?? sourceHeight, width = destination?.width ?? sourceWidth;
+    if (height < sourceHeight || width < sourceWidth)
+      throw new Error('วางไม่ได้: ช่วงที่เลือกเล็กกว่าตารางต้นทาง กรุณาเลือกช่วงใหญ่ขึ้นหรือเลือกช่องเดียวเป็นจุดเริ่มต้น');
+    if (height * width > config.batchLimit) throw new Error(`วางได้สูงสุด ${config.batchLimit} ช่องต่อครั้ง`);
+    const { x, y } = indices(start), end = cellAt(y + height - 1, x + width - 1);
     if (!end || y < 0 || x < 0) throw new Error('วางไม่ได้: ตารางเกินช่องคะแนนที่แก้ไขได้');
-    const enrollmentIds = [], componentIds = [], targets = new Map();
-    for (let row = 0; row < values.length; row++) {
-      for (let column = 0; column < values[0].length; column++) {
-        const cell = cellAt(y + row, x + column);
-        if (!isWritableScoreCell(cell)) throw new Error('วางไม่ได้: ตารางเกินช่องคะแนนที่แก้ไขได้หรือมีแถวประวัติ');
-        const rowId = cell.getRow().getData().enrollmentId, componentId = componentByField.get(cell.getField()).id;
-        if (!integer(rowId) || !integer(componentId) || rowId === 0 || componentId === 0)
-          throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
-        if (column === 0) enrollmentIds.push(rowId);
-        if (row === 0) componentIds.push(componentId);
-        if (enrollmentIds[row] !== rowId || componentIds[column] !== componentId || targets.has(`${rowId}:${componentId}`))
-          throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
-        targets.set(`${rowId}:${componentId}`, cell);
-      }
-    }
-    return { enrollmentIds, componentIds, targets, start, end, height: values.length, width: values[0].length };
+    const cells = Array.from({ length: height }, (_, row) =>
+      Array.from({ length: width }, (_, column) => cellAt(y + row, x + column)));
+    const plan = planRectangle(cells);
+    // Expand once, preserving literal blanks and zero variants. Validation and
+    // transport remain the existing atomic batch pipeline with stable IDs.
+    const values = Array.from({ length: height }, (_, row) =>
+      Array.from({ length: width }, (_, column) => sourceValues[row % sourceHeight][column % sourceWidth]));
+    return { ...plan, start, end, values };
   };
   const validateBatch = (data, matrix, plan) => {
     const bad = () => { throw new Error('บันทึกแล้ว แต่แสดงผลล่าสุดไม่สำเร็จ กรุณาโหลดหน้าใหม่เพื่อตรวจสอบคะแนน'); };
@@ -495,9 +495,14 @@
     summaryDisplay(row.max, row.max)).width + 22)),
     ...rowData.map(row => Math.ceil(summaryMeasure.measureText(row.summaryDisplay).width + 22)));
   const columns = [
-    { title: 'นักเรียน', field: 'identity', minWidth: 190, widthGrow: 2, frozen: true, variableHeight: true,
-      formatter: cell => escapeHtml(cell.getValue()).replace('\n', '<br>'), cssClass: 'pp5-grid-identity' },
-    { title: 'ประเภทแถว', field: 'rowType', minWidth: 130, widthGrow: 1, cssClass: 'pp5-grid-readonly' },
+    // Only the ordinal is frozen: a contiguous 56px left block leaves score
+    // space on 390px devices. Display order is fixed; enrollmentId owns writes.
+    { title: 'ลำดับ', field: 'rowNumber', width: 56, minWidth: 56, maxWidth: 56, frozen: true,
+      hozAlign: 'center', cssClass: 'pp5-grid-number' },
+    { title: 'เลขประจำตัว', field: 'studentCode', minWidth: 100, widthGrow: 1,
+      formatter: cell => escapeHtml(cell.getValue()), cssClass: 'pp5-grid-readonly' },
+    { title: 'ชื่อ-สกุล', field: 'name', minWidth: 190, widthGrow: 2, variableHeight: true,
+      formatter: cell => escapeHtml(cell.getValue()), cssClass: 'pp5-grid-identity' },
     ...config.components.map(component => ({
       title: `${escapeHtml(component.name)}<br><small>เต็ม ${escapeHtml(component.max)}</small>`,
       field: `score_${component.id}`, minWidth: 92, widthGrow: 1, hozAlign: 'right', editor,
@@ -516,11 +521,21 @@
       renderVertical: 'virtual', columnDefaults: { headerSort: false, resizable: false },
       selectableRange: false, editTriggerEvent: 'dblclick', clipboard: false,
       rowFormatter: row => {
-        if (row.getData().historical) row.getElement().classList.add('pp5-grid-historical');
-        for (const element of row.getElement().querySelectorAll('.tabulator-cell'))
+        const data = row.getData(), element = row.getElement();
+        element.classList.toggle('pp5-grid-historical', data.historical);
+        element.dataset.rowType = data.rowType;
+        element.dataset.enrollmentStatus = data.status;
+        element.setAttribute('aria-label', `ลำดับ ${data.rowNumber} เลขประจำตัว ${data.studentCode} ${data.name}${data.historical ? ' · แถวประวัติ อ่านอย่างเดียว' : ''}`);
+        for (const element of row.getElement().querySelectorAll('.tabulator-cell')) {
+          const component = componentByField.get(element.getAttribute('tabulator-field'));
+          if (component) {
+            element.setAttribute('aria-label', `${data.studentCode} ${data.name} · ${component.name}${data.historical ? ' · แถวประวัติ อ่านอย่างเดียว' : ''}`);
+            element.setAttribute('aria-readonly', String(!config.canScore || data.historical));
+          }
           element.tabIndex = componentByField.has(element.getAttribute('tabulator-field'))
             && state.active && row.getData().enrollmentId === state.active.getRow().getData().enrollmentId
             && element.getAttribute('tabulator-field') === state.active.getField() ? 0 : -1;
+        }
       },
     });
   } catch (_) { host.hidden = true; host.classList.remove('pp5-grid-initializing'); return; }
@@ -699,8 +714,9 @@
       ? choice.matrix[0][0] : state.active;
     if (!isWritableScoreCell(start)) { message('ช่องนี้ไม่สามารถวางคะแนนได้', 'error'); return; }
     try { const values = parseTsv(event.clipboardData.getData('text/plain'));
-      const plan = planPaste(start, values);
-      submitBatch({ enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds, values }, plan, 'บันทึกคะแนน', restore => {
+      const multi = choice && choice.matrix.length * choice.matrix[0].length > 1;
+      const plan = planPaste(start, values, multi ? { height: choice.matrix.length, width: choice.matrix[0].length } : null);
+      submitBatch({ enrollment_ids: plan.enrollmentIds, component_ids: plan.componentIds, values: plan.values }, plan, 'บันทึกคะแนน', restore => {
         select(plan.start, plan.end, restore);
         activate(plan.start, restore);
       });
@@ -734,7 +750,7 @@
     };
     actions.addEventListener('submit', event => {
       event.preventDefault(); if (state.fillComposing || event.isComposing) return;
-      if (fillInput.value === '') { message('กรุณากรอกคะแนน หรือใช้ปุ่มล้างคะแนน', 'error'); return; }
+      if (fillInput.value === '') { message('กรุณากรอกคะแนน หรือกด Delete/Backspace เพื่อล้างช่วงคะแนน', 'error'); return; }
       runRange(fillInput.value, 'ใส่คะแนน');
     });
     clearButton.addEventListener('click', () => runRange('', 'ล้างคะแนน'));

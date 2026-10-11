@@ -50,14 +50,10 @@ final class UiGradebookTest extends TestCase
         if ($score) {
             self::assertSame($this->token(),$x->evaluate('string(//input[@id="gradebook-csrf"]/@value)'));
             self::assertSame(1,$x->query('//noscript')->length);
-            self::assertSame(1,$x->query('//form[@id="gradebook-range-actions" and not(@action)]')->length);
-            self::assertSame('text',$x->evaluate('string(//input[@id="gradebook-fill-value"]/@type)'));
-            self::assertSame('decimal',$x->evaluate('string(//input[@id="gradebook-fill-value"]/@inputmode)'));
-            self::assertSame(1,$x->query('//label[@for="gradebook-fill-value"]')->length);
-            self::assertSame(1,$x->query('//button[@id="gradebook-fill-submit" and @type="submit" and @disabled]')->length);
-            self::assertSame(1,$x->query('//button[@id="gradebook-clear-submit" and @type="button" and @disabled]')->length);
-            self::assertSame('ล้างคะแนน',$x->evaluate('string(//button[@id="gradebook-clear-submit"])'));
-            self::assertSame(1,$x->query('//nav//details[@id="gradebook-range-tool" and not(@open)]')->length);
+            foreach (['gradebook-range-actions','gradebook-fill-value','gradebook-fill-submit','gradebook-clear-submit','gradebook-range-tool','gradebook-help'] as $retired) {
+                self::assertSame(0,$x->query('//*[@id="'.$retired.'"]')->length, $retired);
+            }
+            self::assertStringContainsString('วางรูปแบบซ้ำให้เต็มช่วง',$r->body());
             self::assertStringContainsString('Delete/Backspace เพื่อล้างช่วงที่เลือก',$r->body());
             self::assertSame('/hx'.$this->readPath().'/scores/batch',$x->evaluate('string(//*[@data-batch-url]/@data-batch-url)'));
         } else {

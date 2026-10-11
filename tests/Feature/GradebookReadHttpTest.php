@@ -40,8 +40,8 @@ final class GradebookReadHttpTest extends TestCase
         self::assertStringContainsString('ครบ',$this->rowText($x,'complete')); self::assertStringContainsString('ยังไม่ครบ',$this->rowText($x,'null'));
         self::assertStringContainsString('2 / 2',$this->rowText($x,'complete'));
         self::assertSame($role === 'EXECUTIVE' ? 0 : 8,$x->query('//input[@hx-post]')->length);
-        self::assertSame($role === 'EXECUTIVE' ? 0 : 1,$x->query('//form[@id="gradebook-range-actions" and @hidden and not(@action)]')->length);
-        self::assertSame(0,$x->query('//form[not(@action="/logout") and @id!="gradebook-range-actions"]|//textarea|//select|//script[not(@src) and not(@type="application/json")]|//*[@contenteditable]')->length);
+        self::assertSame(0,$x->query('//*[@id="gradebook-range-actions" or @id="gradebook-range-tool" or @id="gradebook-help"]')->length);
+        self::assertSame(0,$x->query('//form[not(@action="/logout")]|//textarea|//select|//script[not(@src) and not(@type="application/json")]|//*[@contenteditable]')->length);
         $bootstrap=json_decode($x->evaluate('string(//script[@id="gradebook-grid-data"])'),true,16,JSON_THROW_ON_ERROR);
         self::assertSame((int)$this->f['offeringA'],$bootstrap['offeringId']);
         self::assertCount(8,$bootstrap['rows']);

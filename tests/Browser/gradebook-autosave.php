@@ -24,6 +24,8 @@ $assets = [
     '/assets/app.css' => '/htdocs/assets/app.css',
     '/assets/vendor/bootstrap-5.3.8.min.css' => '/htdocs/assets/vendor/bootstrap-5.3.8.min.css',
     '/layout-tests.js' => '/tests/Browser/gradebook-layout.js',
+    '/tiling-tests.js' => '/tests/Browser/gradebook-paste-tiling.js',
+    '/tiling-real-tests.js' => '/tests/Browser/gradebook-paste-tiling-real.js',
     '/compact-tests.js' => '/tests/Browser/gradebook-compact.js',
     '/responsive-tests.js' => '/tests/Browser/gradebook-responsive.js',
     '/feedback-real-tests.js' => '/tests/Browser/gradebook-feedback-real.js',
@@ -148,7 +150,7 @@ if ($path === '/matrix') {
     echo '<script src="/layout-tests.js" defer></script></body></html>'; exit;
 }
 $mode = $_GET['mode'] ?? 'editable';
-$canScore = in_array($mode, ['editable','direct','visual','golden','active','error','empty','no-components','nojs','fallback','large','workload','stress','responsive'], true);
+$canScore = in_array($mode, ['editable','tiling','direct','visual','golden','active','error','empty','no-components','nojs','fallback','large','workload','stress','responsive'], true);
 $long = $path === '/frame' ? str_repeat('นักเรียนภาษาไทยชื่อยาว', 4).'<script>hostile</script>' : 'นักเรียนทดสอบ';
 $fixtureScores = [1 => [10 => null, 11 => '0.00'], 2 => [10 => '1.50', 11 => '6.00'],
     3 => [10 => '5.00', 11 => null], 4 => [10 => '7.25', 11 => null]];
@@ -236,6 +238,18 @@ if ($mode === 'responsive') {
     }
     unset($row);
 }
+if ($mode === 'tiling') {
+    $components = [];
+    for ($c = 0; $c < 5; $c++) $components[] = ['id'=>10+$c,'code'=>'T'.$c,'name_th'=>'หัวข้อ '.($c+1),'max_score'=>'20.00','sort_order'=>$c,'status'=>'ACTIVE'];
+    $rows = [];
+    for ($id = 1; $id <= 5; $id++) $rows[] = [
+        'enrollment_id'=>100+$id,'student_code'=>sprintf('%06d',$id),
+        'display_name'=>'เด็กหญิง'.str_repeat('ชื่อภาษาไทยยาว',4).' '.$id,
+        'enrollment_status'=>'ACTIVE','row_type'=>$id===5?'HISTORICAL':'CURRENT',
+        'scores'=>array_fill_keys(array_column($components,'id'),null),
+        'entered_score_total'=>'0.00','configured_max_total'=>'100.00',
+        'entered_component_count'=>0,'active_component_count'=>5,'complete'=>false];
+}
 $setupComponents = $mode === 'empty-setup' ? [] : $components;
 if ($mode === 'inactive-setup') { $setupComponents[1]['status'] = 'INACTIVE'; }
 $activeSetupCount = count(array_filter($setupComponents, static fn (array $item): bool => $item['status'] === 'ACTIVE'));
@@ -248,7 +262,7 @@ $ui = ['contextType'=>'SCHOOL','schoolName'=>'โรงเรียนข้อ�
         ['key'=>'gradebooks','label'=>'สมุดคะแนน','url'=>'/gradebooks','detail'=>null]]]]];
 $isSetup = in_array($mode, ['setup','empty-setup','inactive-setup','error-setup','closed-setup'], true);
 $testScript = [
-    'compact'=>'/compact-tests.js', 'feedback-real'=>'/feedback-real-tests.js', 'workspace'=>'/workspace-tests.js', 'workspace-real'=>'/workspace-real-tests.js', 'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
+    'tiling'=>'/tiling-tests.js','tiling-real'=>'/tiling-real-tests.js','compact'=>'/compact-tests.js', 'feedback-real'=>'/feedback-real-tests.js', 'workspace'=>'/workspace-tests.js', 'workspace-real'=>'/workspace-real-tests.js', 'errors'=>'/grid-error-tests.js', 'races'=>'/grid-race-tests.js',
     'workload'=>'/grid-workload-tests.js', 'parity'=>'/grid-parity-tests.js', 'golden'=>'/grid-golden-tests.js',
     'direct'=>'/grid-direct-tests.js', 'visual'=>'/grid-visual-tests.js',
 ][$_GET['tests'] ?? ''] ?? '/grid-tests.js';

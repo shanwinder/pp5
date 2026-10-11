@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "authority": "Product-owner accepted Gradebook interactions through Task 10.6f",
+  "authority": "Product-owner accepted Gradebook interactions through Task 6S (2026-10-11); original 124 IDs retained including five retired Fill UI behaviors",
   "system_rules": [
     {
       "id": "GB-COMMAND-001",
@@ -215,9 +215,17 @@
       "expected": "A valid 3x3 Delete command waits for the earlier single save, then executes exactly once without racing it or requiring the user to retry.",
       "mutates": true,
       "permission_mode": "writable_current",
-      "required_evidence": ["real_browser", "mamp_if_safe"],
-      "automated_tests": ["tests/Browser/gradebook-golden-journeys.js"],
-      "real_browser_journeys": ["J", "L"],
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "J",
+        "L"
+      ],
       "status": "accepted"
     },
     {
@@ -228,9 +236,17 @@
       "expected": "A valid 3x3 Backspace command waits for the earlier single save, then executes exactly once without racing it or requiring the user to retry.",
       "mutates": true,
       "permission_mode": "writable_current",
-      "required_evidence": ["real_browser", "mamp_if_safe"],
-      "automated_tests": ["tests/Browser/gradebook-golden-journeys.js"],
-      "real_browser_journeys": ["K", "M"],
+      "required_evidence": [
+        "real_browser",
+        "mamp_if_safe"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-golden-journeys.js"
+      ],
+      "real_browser_journeys": [
+        "K",
+        "M"
+      ],
       "status": "accepted"
     },
     {
@@ -733,7 +749,35 @@
       "real_browser_journeys": [
         "G"
       ],
-      "status": "accepted"
+      "status": "retired_ui",
+      "retirement": {
+        "decision": "Task 6S, 2026-10-11: remove all Fill/Clear UI entry points; no replacement buttons. Scalar repeating paste replaces the user workflow; batch infrastructure and keyboard Clear remain.",
+        "original": {
+          "id": "GB-FILL-001",
+          "title": "fill writable selected range",
+          "state": "fill",
+          "trigger": "range-action:Fill selected writable scores",
+          "expected": "Fill writable selected range.",
+          "mutates": true,
+          "permission_mode": "writable_current",
+          "required_evidence": [
+            "real_browser"
+          ],
+          "automated_tests": [
+            "tests/Browser/gradebook-golden-journeys.js"
+          ],
+          "real_browser_journeys": [
+            "G"
+          ],
+          "status": "accepted"
+        },
+        "replacement_behaviors": [
+          "GB-PASTE-012",
+          "GB-PASTE-013",
+          "GB-PASTE-016"
+        ],
+        "evidence": "Golden G asserts absence of all retired controls; it does not certify the original button Fill journey."
+      }
     },
     {
       "id": "GB-FILL-002",
@@ -752,7 +796,35 @@
       "real_browser_journeys": [
         "G"
       ],
-      "status": "accepted"
+      "status": "retired_ui",
+      "retirement": {
+        "decision": "Task 6S, 2026-10-11: remove all Fill/Clear UI entry points; no replacement buttons. Scalar repeating paste replaces the user workflow; batch infrastructure and keyboard Clear remain.",
+        "original": {
+          "id": "GB-FILL-002",
+          "title": "one atomic batch",
+          "state": "fill",
+          "trigger": "range-action:submit Fill",
+          "expected": "One atomic batch.",
+          "mutates": true,
+          "permission_mode": "writable_current",
+          "required_evidence": [
+            "real_browser"
+          ],
+          "automated_tests": [
+            "tests/Browser/gradebook-golden-journeys.js"
+          ],
+          "real_browser_journeys": [
+            "G"
+          ],
+          "status": "accepted"
+        },
+        "replacement_behaviors": [
+          "GB-PASTE-012",
+          "GB-PASTE-013",
+          "GB-PASTE-016"
+        ],
+        "evidence": "Golden G asserts absence of all retired controls; it does not certify the original button Fill journey."
+      }
     },
     {
       "id": "GB-FILL-003",
@@ -763,13 +835,41 @@
       "mutates": true,
       "permission_mode": "writable_current",
       "required_evidence": [
-        "synthetic"
+        "real_browser"
       ],
       "automated_tests": [
-        "tests/Browser/gradebook-tabulator.js"
+        "tests/Browser/gradebook-golden-journeys.js"
       ],
-      "real_browser_journeys": [],
-      "status": "accepted"
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "retired_ui",
+      "retirement": {
+        "decision": "Task 6S, 2026-10-11: remove all Fill/Clear UI entry points; no replacement buttons. Scalar repeating paste replaces the user workflow; batch infrastructure and keyboard Clear remain.",
+        "original": {
+          "id": "GB-FILL-003",
+          "title": "mixed non-writable rejects whole command",
+          "state": "fill",
+          "trigger": "range-action:Fill mixed current/history range",
+          "expected": "Mixed non-writable rejects whole command.",
+          "mutates": true,
+          "permission_mode": "writable_current",
+          "required_evidence": [
+            "synthetic"
+          ],
+          "automated_tests": [
+            "tests/Browser/gradebook-tabulator.js"
+          ],
+          "real_browser_journeys": [],
+          "status": "accepted"
+        },
+        "replacement_behaviors": [
+          "GB-PASTE-012",
+          "GB-PASTE-013",
+          "GB-PASTE-016"
+        ],
+        "evidence": "Golden G asserts absence of all retired controls; it does not certify the original button Fill journey."
+      }
     },
     {
       "id": "GB-FILL-004",
@@ -788,7 +888,35 @@
       "real_browser_journeys": [
         "G"
       ],
-      "status": "accepted"
+      "status": "retired_ui",
+      "retirement": {
+        "decision": "Task 6S, 2026-10-11: remove all Fill/Clear UI entry points; no replacement buttons. Scalar repeating paste replaces the user workflow; batch infrastructure and keyboard Clear remain.",
+        "original": {
+          "id": "GB-FILL-004",
+          "title": "top-left typing anchor after fill",
+          "state": "fill",
+          "trigger": "keyboard:focus after Fill",
+          "expected": "Top-left typing anchor after fill.",
+          "mutates": true,
+          "permission_mode": "writable_current",
+          "required_evidence": [
+            "real_browser"
+          ],
+          "automated_tests": [
+            "tests/Browser/gradebook-golden-journeys.js"
+          ],
+          "real_browser_journeys": [
+            "G"
+          ],
+          "status": "accepted"
+        },
+        "replacement_behaviors": [
+          "GB-PASTE-012",
+          "GB-PASTE-013",
+          "GB-PASTE-016"
+        ],
+        "evidence": "Golden G asserts absence of all retired controls; it does not certify the original button Fill journey."
+      }
     },
     {
       "id": "GB-FILL-005",
@@ -807,7 +935,35 @@
       "real_browser_journeys": [
         "G"
       ],
-      "status": "accepted"
+      "status": "retired_ui",
+      "retirement": {
+        "decision": "Task 6S, 2026-10-11: remove all Fill/Clear UI entry points; no replacement buttons. Scalar repeating paste replaces the user workflow; batch infrastructure and keyboard Clear remain.",
+        "original": {
+          "id": "GB-FILL-005",
+          "title": "focus returns after Gradebook-owned Fill action",
+          "state": "fill",
+          "trigger": "range-action:complete Fill from control",
+          "expected": "Focus returns after Gradebook-owned Fill action.",
+          "mutates": true,
+          "permission_mode": "writable_current",
+          "required_evidence": [
+            "real_browser"
+          ],
+          "automated_tests": [
+            "tests/Browser/gradebook-golden-journeys.js"
+          ],
+          "real_browser_journeys": [
+            "G"
+          ],
+          "status": "accepted"
+        },
+        "replacement_behaviors": [
+          "GB-PASTE-012",
+          "GB-PASTE-013",
+          "GB-PASTE-016"
+        ],
+        "evidence": "Golden G asserts absence of all retired controls; it does not certify the original button Fill journey."
+      }
     },
     {
       "id": "GB-HIST-001",
@@ -975,7 +1131,7 @@
       "title": "navigation never enters identity/summary",
       "state": "navigation",
       "trigger": "keyboard:Arrow at score boundary",
-      "expected": "Identity, row type, and summary cells are skipped.",
+      "expected": "Ordinal, student code, full name and summary cells are skipped.",
       "mutates": false,
       "permission_mode": "readable_score",
       "required_evidence": [
@@ -1026,7 +1182,7 @@
       "title": "forward selected-range paste starts top-left",
       "state": "paste",
       "trigger": "clipboard:paste from forward range",
-      "expected": "Forward selected-range paste starts top-left.",
+      "expected": "Forward selected-range paste starts top-left. Task 6S: the entire selected destination is tiled from that top-left; reject a multi-cell destination smaller in either dimension than the source.",
       "mutates": true,
       "permission_mode": "writable_current",
       "required_evidence": [
@@ -1043,7 +1199,7 @@
       "title": "reverse selected-range paste starts top-left",
       "state": "paste",
       "trigger": "clipboard:paste from reverse range",
-      "expected": "Reverse selected-range paste starts top-left.",
+      "expected": "Reverse selected-range paste starts top-left. Task 6S: the entire selected destination is tiled from that top-left; reject a multi-cell destination smaller in either dimension than the source.",
       "mutates": true,
       "permission_mode": "writable_current",
       "required_evidence": [
@@ -1187,7 +1343,7 @@
       "title": "paste above 2000-cell limit rejects before request",
       "state": "paste",
       "trigger": "clipboard:paste 2001-cell matrix",
-      "expected": "No server request or visible score mutation occurs; the limit is explained.",
+      "expected": "No request or visible score mutation when either source or expanded destination exceeds 2000 cells; the limit is explained.",
       "mutates": false,
       "permission_mode": "writable_current",
       "required_evidence": [
@@ -1849,10 +2005,10 @@
     },
     {
       "id": "GB-SEL-004",
-      "title": "identity / row type / summary are not score selections",
+      "title": "ordinal / student code / full name / summary are not score selections",
       "state": "selection",
-      "trigger": "pointer:click identity, row type, or summary",
-      "expected": "Identity / row type / summary are not score selections.",
+      "trigger": "pointer:click ordinal, student code, full name, or summary",
+      "expected": "Ordinal, student code, full name and summary cells never enter score selection.",
       "mutates": false,
       "permission_mode": "readable_score",
       "required_evidence": [
@@ -2247,10 +2403,10 @@
     },
     {
       "id": "GB-VIS-009",
-      "title": "frozen identity remains stable",
+      "title": "frozen ordinal remains stable",
       "state": "visual_stability",
-      "trigger": "horizontal-scroll:keep frozen identity",
-      "expected": "Frozen identity remains stable.",
+      "trigger": "horizontal-scroll:keep frozen ordinal",
+      "expected": "Task 6S: only the 56px ordinal column is frozen; full code and name remain available through internal horizontal scroll, leaving usable score space at 390px.",
       "mutates": false,
       "permission_mode": "any_authorized_page",
       "required_evidence": [
@@ -2284,6 +2440,134 @@
         "I"
       ],
       "status": "accepted"
+    },
+    {
+      "id": "GB-PASTE-012",
+      "title": "scalar paste tiles selected rectangle",
+      "state": "clipboard",
+      "trigger": "clipboard:scalar paste into larger score rectangle",
+      "expected": "A scalar fills every cell of the normalized selected destination in one atomic batch.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-paste-tiling.js",
+        "tests/Browser/gradebook-paste-tiling-real.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted",
+      "decision": "Task 6S product-owner request, 2026-10-11"
+    },
+    {
+      "id": "GB-PASTE-013",
+      "title": "two-dimensional partial-edge paste tiling",
+      "state": "clipboard",
+      "trigger": "clipboard:rectangular TSV into a larger forward or reverse selection",
+      "expected": "Repeat source independently by row and column modulo; 2x2 into 4x5 does not require exact multiples; stable IDs and one atomic batch.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-paste-tiling.js",
+        "tests/Browser/gradebook-paste-tiling-real.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted",
+      "decision": "Task 6S product-owner request, 2026-10-11"
+    },
+    {
+      "id": "GB-PASTE-014",
+      "title": "insufficient multi-cell destination rejects",
+      "state": "clipboard",
+      "trigger": "clipboard:source larger than multi-cell destination in either dimension",
+      "expected": "Reject all, explain selection too small, send no POST and truncate no source. A single destination still expands to the source footprint.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-paste-tiling.js",
+        "tests/Browser/gradebook-paste-tiling-real.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted",
+      "decision": "Task 6S product-owner request, 2026-10-11"
+    },
+    {
+      "id": "GB-PASTE-015",
+      "title": "expanded destination respects batch limit",
+      "state": "clipboard",
+      "trigger": "clipboard:scalar expanded beyond 2000 target scores",
+      "expected": "Validate the expanded target before allocating the repeated matrix or sending any mutation; reject 2040 destinations from a one-cell source.",
+      "mutates": false,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-paste-tiling.js"
+      ],
+      "real_browser_journeys": [],
+      "status": "accepted",
+      "decision": "Task 6S product-owner request, 2026-10-11"
+    },
+    {
+      "id": "GB-PASTE-016",
+      "title": "tiled paste retains target and focus ownership",
+      "state": "clipboard",
+      "trigger": "server:successful tiled paste",
+      "expected": "Preserve entire target rectangle, active top-left and immediate typing when Gradebook owns focus; external focus and newer summaries are preserved, with no unexpected page scrolling.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-paste-tiling.js",
+        "tests/Browser/gradebook-paste-tiling-real.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted",
+      "decision": "Task 6S product-owner request, 2026-10-11"
+    },
+    {
+      "id": "GB-PASTE-017",
+      "title": "repetition preserves blank and zero",
+      "state": "clipboard",
+      "trigger": "clipboard:tile mixed blank, 0 and 0.00 TSV",
+      "expected": "Empty fields repeat as blank requests for NULL; zero variants remain entered zero. Editor paste remains native text and never triggers tiling.",
+      "mutates": true,
+      "permission_mode": "writable_current",
+      "required_evidence": [
+        "synthetic",
+        "real_browser"
+      ],
+      "automated_tests": [
+        "tests/Browser/gradebook-paste-tiling.js",
+        "tests/Browser/gradebook-paste-tiling-real.js"
+      ],
+      "real_browser_journeys": [
+        "G"
+      ],
+      "status": "accepted",
+      "decision": "Task 6S product-owner request, 2026-10-11"
     }
   ]
 }
