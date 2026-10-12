@@ -102,8 +102,29 @@
   // Browser automation may route native clipboard shortcuts directly to a
   // clipboard event without a trusted keydown. The operator must use the browser
   // shortcut and independently read the browser clipboard for real evidence.
-  document.addEventListener('copy', event => { events.push({ type: 'copy', event }); }, true);
-  document.addEventListener('paste', event => { events.push({ type: 'paste', event }); }, true);
+  const copySnapshot = event => {
+    const item = { type: 'copy', trusted: event.isTrusted, text: '', types: [] };
+    const data = event.clipboardData;
+    if (!data) return item;
+    const write = data.setData;
+    const descriptor = Object.getOwnPropertyDescriptor(data, 'setData');
+    // The production capture handler stops propagation. Observe its native
+    // write synchronously inside dispatch; never retain ClipboardEvent/DataTransfer.
+    data.setData = function (...args) {
+      try {
+        const returned = write.apply(this, args);
+        item.text = this.getData('text/plain');
+        item.types = [...this.types];
+        return returned;
+      } finally {
+        if (descriptor) Object.defineProperty(this, 'setData', descriptor);
+        else delete this.setData;
+      }
+    };
+    return item;
+  };
+  document.addEventListener('copy', event => { events.push(copySnapshot(event)); }, true);
+  document.addEventListener('paste', event => { events.push({ type: 'paste', trusted: event.isTrusted }); }, true);
   const originalFetch = window.fetch;
   window.fetch = async (...args) => {
     const url = String(args[0]);
@@ -171,7 +192,7 @@
     } else if (journey === 'F') {
       await drag(0, 10, 1, 11, ['GB-RANGE-001']);
       await wait('Press native Copy shortcut', () => events.some(item => item.type === 'copy'), 'copy');
-      const copied = events.filter(item => item.type === 'copy').at(-1)?.event?.clipboardData?.getData('text/plain');
+      const copied = events.filter(item => item.type === 'copy').at(-1)?.text;
       assert(copied === '\t0.00\n12.50\t6.00',
         ['GB-COPY-002','GB-COPY-003','GB-COPY-004','GB-COPY-006'], 'native copy yields exact score-only TSV');
       await click(1, 12);
@@ -189,7 +210,7 @@
         'Task 6S retired Fill UI is absent; this is retirement evidence, not a button Fill PASS');
       await click(0, 11);
       await wait('Press native Copy shortcut on the saved zero', () => events.some(item => item.type === 'copy'), 'copy');
-      assert(events.filter(item => item.type === 'copy').at(-1).event.clipboardData.getData('text/plain') === '0.00',
+      assert(events.filter(item => item.type === 'copy').at(-1).text === '0.00',
         ['GB-COPY-001'], 'scalar copy preserves zero');
       await drag(0, 10, 2, 12, ['GB-RANGE-001']);
       const position = snapshot(), start = batch().length;

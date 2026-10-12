@@ -6,8 +6,29 @@
   const passed=[],events=[],requests=[];
   const originalFetch=window.fetch;
   window.fetch=async(...args)=>{const item={url:String(args[0]),body:args[1]?.body};requests.push(item);return originalFetch(...args);};
+  const copySnapshot = event => {
+    const item = { type: 'copy', trusted: event.isTrusted, text: '', types: [] };
+    const data = event.clipboardData;
+    if (!data) return item;
+    const write = data.setData;
+    const descriptor = Object.getOwnPropertyDescriptor(data, 'setData');
+    // The production capture handler stops propagation. Observe its native
+    // write synchronously inside dispatch; never retain ClipboardEvent/DataTransfer.
+    data.setData = function (...args) {
+      try {
+        const returned = write.apply(this, args);
+        item.text = this.getData('text/plain');
+        item.types = [...this.types];
+        return returned;
+      } finally {
+        if (descriptor) Object.defineProperty(this, 'setData', descriptor);
+        else delete this.setData;
+      }
+    };
+    return item;
+  };
   for(const type of ['pointerdown','pointermove','pointerup','keydown','copy','paste'])document.addEventListener(type,event=>{
-    if(event.isTrusted || type==='copy' || type==='paste')events.push({type,event});
+    if(event.isTrusted || type==='copy' || type==='paste')events.push(type==='copy'?copySnapshot(event):{type,trusted:event.isTrusted,key:event.key});
   },true);
   const wait=async(instruction,predicate,type=null)=>{
     const start=events.length;output.textContent=`WAIT: ${instruction}\n${passed.join('\n')}`;document.title=`WAIT — ${instruction}`;
@@ -44,13 +65,13 @@
     assert(!document.getElementById('gradebook-help')&&!document.getElementById('gradebook-range-actions'),'retired UI absent');
     await click(0,10);await paste('Put 8 on clipboard, then press native Paste',[['8']]);
     await wait('Press native Copy shortcut on saved 8.00',()=>events.some(e=>e.type==='copy'),'copy');
-    assert(events.filter(e=>e.type==='copy').at(-1).event.clipboardData.getData('text/plain')==='8.00','scalar native TSV copy');
+    assert(events.filter(e=>e.type==='copy').at(-1).text==='8.00','scalar native TSV copy');
     await drag(0,10,2,13);await paste('Press native Paste to repeat 8.00 into 3×4',Array.from({length:3},()=>Array(4).fill('8.00')));
     assert(sent().enrollment_ids.join(',')==='101,102,103'&&sent().component_ids.join(',')==='10,11,12,13','GB-PASTE-012 — scalar native repeat uses stable IDs');
     await click(0,10);await paste('Put 8\t9\n7\t10 on clipboard, then press native Paste',[['8','9'],['7','10']]);
     const copyStart=events.length;
     await wait('Press native Copy shortcut on selected 2×2',()=>events.slice(copyStart).some(e=>e.type==='copy'),'copy');
-    assert(events.filter(e=>e.type==='copy').at(-1).event.clipboardData.getData('text/plain')==='8.00\t9.00\n7.00\t10.00','exact native 2×2 TSV');
+    assert(events.filter(e=>e.type==='copy').at(-1).text==='8.00\t9.00\n7.00\t10.00','exact native 2×2 TSV');
     await drag(0,10,3,14);
     const pattern=[['8.00','9.00','8.00','9.00','8.00'],['7.00','10.00','7.00','10.00','7.00'],['8.00','9.00','8.00','9.00','8.00'],['7.00','10.00','7.00','10.00','7.00']];
     await paste('Press native Paste to tile copied 2×2 into 4×5',pattern);

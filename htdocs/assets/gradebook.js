@@ -61,15 +61,19 @@
   };
   reserveStatusHeight();
   window.addEventListener('resize', reserveStatusHeight);
+  const cellElement = cell => {
+    const element = cell?.getElement();
+    return element instanceof Element ? element : null;
+  };
   const markError = cell => {
-    const element = cell.getElement();
+    const element = cellElement(liveCell(cell));
     if (!element) return;
     element.dataset.pp5Error = 'true';
     element.setAttribute('aria-invalid', 'true');
     if (status) element.setAttribute('aria-describedby', status.id);
   };
   const clearError = cell => {
-    const element = cell.getElement();
+    const element = cellElement(liveCell(cell));
     element?.removeAttribute('data-pp5-error');
     element?.removeAttribute('aria-invalid');
     if (element?.getAttribute('aria-describedby') === status?.id) element.removeAttribute('aria-describedby');
@@ -98,10 +102,11 @@
   };
   const liveCell = cell => {
     if (!cell || !table) return null;
-    return table.getRow(cell.getRow().getData().enrollmentId)?.getCell(cell.getField()) || null;
+    const row = table.getRow(cell.getRow().getData().enrollmentId);
+    return row ? row.getCell(cell.getField()) || null : null;
   };
   const visible = cell => {
-    const element = cell?.getElement(), holder = host.querySelector('.tabulator-tableholder');
+    const element = cellElement(cell), holder = host.querySelector('.tabulator-tableholder');
     if (!element?.isConnected || !holder) return;
     const rect = element.getBoundingClientRect(), bounds = holder.getBoundingClientRect();
     let frozen = bounds.left;
@@ -114,7 +119,7 @@
     else if (rect.bottom > bounds.bottom + 0.5) holder.scrollTop += rect.bottom - bounds.bottom;
   };
   const syncTabStops = activeElement => {
-    const liveActive = activeElement?.isConnected ? activeElement : null;
+    const liveActive = activeElement instanceof Element && activeElement.isConnected ? activeElement : null;
     const holder = host.querySelector('.tabulator-tableholder');
     if (holder) holder.tabIndex = -1;
     for (const element of host.querySelectorAll('.tabulator-cell[tabindex="0"]'))
@@ -124,11 +129,29 @@
   };
   const activate = (cell, focus = true, reveal = true) => {
     if (!isNavigableScoreCell(cell)) return;
-    const current = liveCell(cell) || cell;
-    const element = current.getElement();
-    const previous = state.active?.getElement();
-    if (previous !== element) previous?.removeAttribute('data-pp5-active');
+    let current = liveCell(cell);
+    if (!current) return;
+    // Row/field identity survives virtualization; a pre-generated CellComponent
+    // does not. The pinned renderer's public scroll API renders synchronously.
+    // Resolve again AFTER rendering, before assigning active or giving focus.
+    if (focus && reveal && !state.editing && !state.composing && !cellElement(current)?.isConnected) {
+      const { y } = indices(current), { y: previousY } = state.active ? indices(state.active) : { y: -1 };
+      current.getRow().scrollTo(y < previousY ? 'top' : 'bottom', false);
+      current = liveCell(current);
+      if (!current) return;
+    }
+    const element = cellElement(current);
+    const previousElements = new Set([cellElement(state.active), cellElement(liveCell(state.active)),
+      ...host.querySelectorAll('[data-pp5-active]')]);
+    for (const previous of previousElements) {
+      if (previous && previous !== element) {
+        previous.removeAttribute('data-pp5-active');
+        previous.tabIndex = -1;
+      }
+    }
     state.active = current;
+    if (state.anchor) state.anchor = liveCell(state.anchor);
+    if (state.extent) state.extent = liveCell(state.extent);
     syncTabStops(element?.isConnected ? element : null);
     if (element?.isConnected) {
       if (element.dataset.pp5Active !== 'true') element.dataset.pp5Active = 'true';
@@ -139,6 +162,7 @@
     }
   };
   let paintedSelection = new Set();
+  let selectionRevision = 0;
   const paintSelection = () => {
     const anchor = state.anchor, extent = state.extent;
     const a = anchor && indices(anchor), b = extent && indices(extent);
@@ -146,7 +170,7 @@
     const left = a && b ? Math.min(a.x, b.x) : -1, right = a && b ? Math.max(a.x, b.x) : -1;
     const next = new Set();
     for (let y = top; y <= bottom; y++) for (let x = left; x <= right; x++) {
-      const element = cellAt(y, x)?.getElement();
+      const element = cellElement(cellAt(y, x));
       if (element?.isConnected) next.add(element);
     }
     for (const element of paintedSelection)
@@ -169,10 +193,13 @@
   };
   const select = (anchor, extent = anchor, focus = true) => {
     if (!isNavigableScoreCell(anchor) || !isNavigableScoreCell(extent)) return;
+    selectionRevision++;
     state.anchor = anchor;
     state.extent = extent;
     paintSelection();
     activate(extent, focus);
+    // Revealing an unrendered target may have recreated selection cells.
+    paintSelection();
     updateControls();
   };
   const planRectangle = matrix => {
@@ -292,7 +319,9 @@
     const restoreFocus = host.contains(document.activeElement);
     state.applying = true;
     try {
-      for (const { cell, value } of cells) {
+      for (const update of cells) {
+        const { value } = update, cell = liveCell(update.cell);
+        if (!cell) throw new Error('ตารางคะแนนเปลี่ยนแปลง กรุณาโหลดหน้าใหม่');
         if (cell.getValue() !== value) cell.setValue(value);
         authoritative.set(cellKey(cell), value);
         state.errors.delete(cellKey(cell));
@@ -389,7 +418,7 @@
     const key = cellKey(cell), rowId = cell.getRow().getData().enrollmentId, componentId = componentByField.get(cell.getField()).id;
     const revision = ++state.revision;
     state.pendingSingles.set(key, revision);
-    cell.getElement()?.setAttribute('data-pp5-saving', 'true');
+    cellElement(liveCell(cell))?.setAttribute('data-pp5-saving', 'true');
     message('กำลังบันทึกคะแนน', 'saving'); updateControls();
     const ahead = state.singleQueue;
     let release;
@@ -414,12 +443,12 @@
         throw new Error('ผลตอบกลับคะแนนไม่ถูกต้อง');
       const values = summaryFromFragment(fragment, rowId);
       // A later local edit or result owns the cell. The stale response may still carry a stale row summary.
-      if (state.pendingSingles.get(key) !== revision || cell.getValue() !== typed) return;
+      if (state.pendingSingles.get(key) !== revision || liveCell(cell)?.getValue() !== typed) return;
       await apply([{ cell, value: returned.value }], [{ id: rowId, values }], revision);
       if (!state.pendingBatch) message('', 'saved');
     } catch (error) {
       if (commitConfirmed || error.name === 'AbortError' || error instanceof TypeError || error instanceof SyntaxError) state.uncertain = true;
-      if (cell.getValue() === typed) {
+      if (liveCell(cell)?.getValue() === typed) {
         state.errors.set(key, typed);
         markError(cell);
       }
@@ -427,7 +456,7 @@
     } finally {
       release();
       if (state.pendingSingles.get(key) === revision) state.pendingSingles.delete(key);
-      cell.getElement()?.removeAttribute('data-pp5-saving'); updateControls();
+      cellElement(liveCell(cell))?.removeAttribute('data-pp5-saving'); updateControls();
     }
   };
   const neighbor = (cell, direction, writableOnly = false) => {
@@ -484,7 +513,7 @@
       if (direction) { event.preventDefault(); event.stopPropagation(); finish(true, direction, event.key === 'Tab'); }
     });
     input.addEventListener('blur', () => { if (!state.composing) finish(true); });
-    onRendered(() => { input.focus(); if (!replace) input.setSelectionRange(input.value.length, input.value.length); });
+    onRendered(() => { input.focus({ preventScroll: true }); if (!replace) input.setSelectionRange(input.value.length, input.value.length); });
     return input;
   };
   // Reserve the server's longest possible total/max literal once, independently of later saves.
@@ -545,6 +574,22 @@
     host.classList.remove('pp5-grid-initializing');
     if (actions) { actions.hidden = false; if (rangeTool) rangeTool.hidden = false; updateControls(); }
     syncTabStops(null);
+    // Incremental virtual scroll does not emit renderComplete. Reconcile row
+    // replacement without revealing again or taking focus from another control.
+    const holder = host.querySelector('.tabulator-tableholder');
+    new MutationObserver(records => {
+      if (!state.active) return;
+      const current = liveCell(state.active);
+      // A full virtual fill may remove AND reattach the same node before the
+      // observer runs. isConnected alone misses the browser's lost focus then.
+      const focusedCellRemoved = gridFocusedElement?.matches('.tabulator-cell')
+        && (!gridFocusedElement.isConnected || records.some(record =>
+          [...record.removedNodes].some(node => node === gridFocusedElement || node.contains(gridFocusedElement))));
+      const restore = state.focusOwner === 'grid' && document.activeElement === document.body
+        && focusedCellRemoved && cellElement(current)?.isConnected;
+      activate(current, Boolean(restore), false);
+      paintSelection();
+    }).observe(holder, { childList: true, subtree: true });
   });
   let renderedWidth = host.clientWidth, resizeFocus = null, resizeReveal = null;
   table.on('renderStarted', () => {
@@ -552,12 +597,13 @@
     // Native resize redraw detaches virtual rows. Preserve only focus owned by
     // a score cell immediately before that redraw; never reclaim external focus.
     resizeFocus = width !== renderedWidth && !state.editing
-      && state.active?.getElement() === document.activeElement ? state.active : null;
+      && cellElement(liveCell(state.active)) === document.activeElement ? state.active : null;
     resizeReveal = width !== renderedWidth && host.contains(document.activeElement) ? state.active : null;
     renderedWidth = width;
   });
   table.on('renderComplete', () => {
-    syncTabStops(state.active ? liveCell(state.active)?.getElement() : null);
+    if (state.active) activate(state.active, false, false);
+    else syncTabStops(null);
     paintSelection();
     if (resizeFocus) {
       const cell = resizeFocus;
@@ -570,17 +616,18 @@
       // Native redraw restores its horizontal offset after renderComplete.
       // Reveal after that synchronous work without moving focus or the caret.
       queueMicrotask(() => {
-        if (state.active === cell && cell.getElement()?.contains(document.activeElement)) visible(cell);
+        if (cellKey(state.active) === cellKey(cell) && cellElement(liveCell(cell))?.contains(document.activeElement)) visible(liveCell(cell));
       });
     }
   });
   let pointerDrag = false;
   table.on('cellClick', (_event, cell) => {
     if (!isNavigableScoreCell(cell) || pointerDrag) return;
-    activate(cell, false);
+    select(cell, cell, false);
     // Tabulator completes its pointer selection after the click callback.
+    const revision = selectionRevision;
     setTimeout(() => {
-      if (state.editing || !cell.getElement()?.isConnected) return;
+      if (revision !== selectionRevision || state.editing || !cellElement(liveCell(cell))?.isConnected) return;
       if (!pointerDrag) select(cell);
     }, 0);
   });
@@ -618,8 +665,9 @@
     const anchor = pointerAnchor, extent = isScoreCell(end) ? end : pointerExtent;
     pointerAnchor = null; pointerExtent = null;
     // Range extent is final only after pointerup; focusing during rangeChanged interrupts dragging.
+    const revision = selectionRevision;
     setTimeout(() => {
-      if (!anchor || state.editing) return;
+      if (revision !== selectionRevision || !anchor || state.editing) return;
       select(anchor, extent || anchor);
     }, 0);
   };
@@ -629,8 +677,9 @@
   host.addEventListener('mousemove', movePointerSelection, true);
   document.addEventListener('pointerup', event => { if (event.pointerType !== 'touch') endPointerSelection(event); }, true);
   document.addEventListener('mouseup', endPointerSelection, true);
+  let gridFocusedElement = null;
   document.addEventListener('focusin', event => {
-    if (host.contains(event.target)) state.focusOwner = 'grid';
+    if (host.contains(event.target)) { state.focusOwner = 'grid'; gridFocusedElement = event.target; }
     else if (rangeTool?.contains(event.target) || actions?.contains(event.target)) state.focusOwner = 'range';
     else state.focusOwner = 'external';
   });
@@ -645,9 +694,13 @@
   host.addEventListener('keydown', event => {
     if (state.composing || event.isComposing || state.editing || event.target instanceof HTMLInputElement) return;
     if (!host.contains(event.target)) return;
-    const active = state.active;
+    const active = liveCell(state.active);
     const shortcut = event.metaKey || event.ctrlKey;
     if (shortcut || event.altKey) return;
+    // A deferred pointer completion must not replace a newer keyboard command.
+    if (event.key === 'Escape' || event.key === 'Delete' || event.key === 'Backspace'
+      || event.key === 'Enter' || event.key === 'F2' || event.key === 'Tab'
+      || event.key.startsWith('Arrow') || event.key.length === 1) selectionRevision++;
     if (event.key === 'Escape') {
       event.preventDefault(); event.stopPropagation();
       state.anchor = null; state.extent = null; paintSelection();

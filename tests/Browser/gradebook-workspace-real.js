@@ -5,9 +5,30 @@
   const host = document.getElementById('gradebook-tabulator');
   const events = [], passed = [];
   const assert = (okay, label) => { if (!okay) throw new Error(label); passed.push(label); };
+  const copySnapshot = event => {
+    const item = { type: 'copy', trusted: event.isTrusted, text: '', types: [] };
+    const data = event.clipboardData;
+    if (!data) return item;
+    const write = data.setData;
+    const descriptor = Object.getOwnPropertyDescriptor(data, 'setData');
+    // The production capture handler stops propagation. Observe its native
+    // write synchronously inside dispatch; never retain ClipboardEvent/DataTransfer.
+    data.setData = function (...args) {
+      try {
+        const returned = write.apply(this, args);
+        item.text = this.getData('text/plain');
+        item.types = [...this.types];
+        return returned;
+      } finally {
+        if (descriptor) Object.defineProperty(this, 'setData', descriptor);
+        else delete this.setData;
+      }
+    };
+    return item;
+  };
   for (const type of ['pointerup', 'keydown', 'copy']) {
     document.addEventListener(type, event => {
-      if (event.isTrusted || type === 'copy') events.push({type, key: event.key, event});
+      if (event.isTrusted || type === 'copy') events.push(type === 'copy' ? copySnapshot(event) : {type, key: event.key, trusted:event.isTrusted});
     }, true);
   }
   const wait = async (instruction, predicate, type = null) => {
@@ -47,7 +68,7 @@
     } else {
       await wait('Press Right', () => document.activeElement === second(), 'keydown');
       await wait('Press native Copy shortcut', () => events.some(e => e.type === 'copy'), 'copy');
-      assert(events.find(e => e.type === 'copy').event.clipboardData.getData('text/plain') === '0.00', 'read-only zero is copyable');
+      assert(events.find(e => e.type === 'copy').text === '0.00', 'read-only zero is copyable');
       assert(![...document.querySelectorAll('main a')].some(a => a.textContent.includes('จัดการรายการคะแนน')), 'unauthorized setup absent');
       assert(!host.querySelector('input'), 'read-only navigation opens no editor');
     }
