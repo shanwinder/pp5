@@ -1,0 +1,28 @@
+-- REVIEW ONLY: B1 disposable database; not in the automatic migration glob.
+CREATE TABLE gradebook_score_sections (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    school_id BIGINT UNSIGNED NOT NULL,
+    academic_year_id BIGINT UNSIGNED NOT NULL,
+    subject_offering_id BIGINT UNSIGNED NOT NULL,
+    section_key CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    name_th VARCHAR(190) NOT NULL,
+    classification VARCHAR(20) NOT NULL,
+    sort_order SMALLINT UNSIGNED NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    created_by BIGINT UNSIGNED NOT NULL,
+    updated_by BIGINT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_section_key (subject_offering_id, section_key),
+    UNIQUE KEY uq_section_scope (id, school_id, academic_year_id, subject_offering_id),
+    KEY ix_section_offering (subject_offering_id, school_id, academic_year_id),
+    KEY ix_section_order (school_id, subject_offering_id, status, sort_order, id),
+    CONSTRAINT fk_section_link FOREIGN KEY (subject_offering_id, school_id, academic_year_id) REFERENCES gradebook_annual_course_offerings (subject_offering_id, school_id, academic_year_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    KEY ix_section_created_by (created_by),
+    CONSTRAINT fk_section_created_by FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    KEY ix_section_updated_by (updated_by),
+    CONSTRAINT fk_section_updated_by FOREIGN KEY (updated_by) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT ck_section_classification CHECK (classification IN ('COURSEWORK','FINAL_EXAM')),
+    CONSTRAINT ck_section_status CHECK (status IN ('ACTIVE','INACTIVE'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

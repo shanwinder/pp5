@@ -1,0 +1,28 @@
+-- REVIEW ONLY: B1 disposable database; not in the automatic migration glob.
+CREATE TABLE gradebook_structure_publish_receipts (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    school_id BIGINT UNSIGNED NOT NULL,
+    academic_year_id BIGINT UNSIGNED NOT NULL,
+    subject_offering_id BIGINT UNSIGNED NOT NULL,
+    draft_id BIGINT UNSIGNED NOT NULL,
+    actor_user_id BIGINT UNSIGNED NOT NULL,
+    idempotency_key CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    request_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    payload_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    draft_revision BIGINT UNSIGNED NOT NULL,
+    annual_revision BIGINT UNSIGNED NOT NULL,
+    result_annual_revision BIGINT UNSIGNED NOT NULL,
+    published_structure_revision BIGINT UNSIGNED NOT NULL,
+    result JSON NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_receipt_scope (id, school_id, academic_year_id, subject_offering_id),
+    UNIQUE KEY uq_receipt_idempotency (school_id, subject_offering_id, idempotency_key),
+    UNIQUE KEY uq_receipt_draft_revision (draft_id, draft_revision),
+    KEY ix_receipt_draft (draft_id, school_id, academic_year_id, subject_offering_id),
+    KEY ix_receipt_created (school_id, subject_offering_id, created_at),
+    CONSTRAINT fk_receipt_draft FOREIGN KEY (draft_id, school_id, academic_year_id, subject_offering_id) REFERENCES gradebook_structure_drafts (id, school_id, academic_year_id, subject_offering_id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    KEY ix_receipt_actor_user_id (actor_user_id),
+    CONSTRAINT fk_receipt_actor_user_id FOREIGN KEY (actor_user_id) REFERENCES users (id) ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT ck_receipt_revisions CHECK (draft_revision > 0 AND annual_revision > 0 AND result_annual_revision > 0 AND published_structure_revision > 0 AND result_annual_revision >= annual_revision)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
